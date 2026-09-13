@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { AppShell } from "./AppShell";
+import { SelectionProvider } from "@/lib/selection";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,7 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* window.QICONS — the 180-glyph runtime set the Icon binding reads.
             beforeInteractive so the registry exists before hydration. */}
         <Script src="/ds/icons/icons.js" strategy="beforeInteractive" />
-        <AppShell>{children}</AppShell>
+        <SelectionProvider>
+          <AppShell>{children}</AppShell>
+        </SelectionProvider>
       </body>
     </html>
   );

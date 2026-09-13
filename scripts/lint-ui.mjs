@@ -31,7 +31,10 @@ let proved = false;
 
 for (const route of routes) {
   const url = `${BASE}${route}`;
-  const res = await page.goto(url, { waitUntil: "networkidle" });
+  // domcontentloaded, not networkidle: these pages hold many lazy CDN images,
+  // so the network never goes quiet and networkidle times out on a healthy page.
+  const res = await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(2500);
   if (!res || !res.ok()) {
     console.error(`\n✗ ${route} — HTTP ${res ? res.status() : "no response"}`);
     totalErrors++;

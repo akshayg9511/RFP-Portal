@@ -20,3 +20,326 @@ body,
 body > div:first-of-type {
   block-size: 100%;
 }
+
+/* ---------------------------------------------------------------- style sets
+
+   Layout only. Everything visual — surface, radius, elevation, type — comes
+   from the .card and .carousel components; these rules size them and nothing
+   more. Tier-2 semantic tokens only. */
+
+.set-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+.set-card {
+  overflow: hidden;
+}
+
+/* A fixed media band, so a row of cards does not ripple as images of different
+   aspect ratios load. */
+.set-card-media {
+  aspect-ratio: 16 / 10;
+  background: var(--color-bg-surface-sunken);
+}
+
+.set-card-media .carousel-track {
+  block-size: 100%;
+}
+
+.set-card-media .carousel-slide {
+  inline-size: 100%;
+  flex: 0 0 100%;
+  block-size: 100%;
+}
+
+.set-card-media img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The title is the card's affordance, so it is a real button — styled as the
+   heading it reads as. */
+.set-card-title {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: start;
+  font-size: var(--type-heading-3-size);
+  line-height: var(--type-heading-3-line);
+  font-weight: var(--type-heading-3-weight);
+  color: var(--color-fg-default);
+}
+
+.set-card-title:hover {
+  color: var(--color-fg-accent);
+}
+
+.set-card-desc {
+  color: var(--color-fg-muted);
+  margin-block: var(--space-xs) 0;
+}
+
+.set-card-stats {
+  display: flex;
+  gap: var(--space-xl);
+  margin-block-start: var(--space-lg);
+}
+
+.set-card-stats dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.set-card-stats dd {
+  margin: 0;
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- style grid */
+
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-lg);
+}
+
+.style-card {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: start;
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  display: block;
+  inline-size: 100%;
+}
+
+.style-card-media {
+  aspect-ratio: 1 / 1;
+  background: var(--color-bg-surface-sunken);
+  position: relative;
+}
+
+.style-card-media img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.style-card .num {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.style-card .nm {
+  display: block;
+  margin-block: var(--space-2xs) var(--space-xs);
+  font-weight: var(--type-label-weight);
+}
+
+.style-card .meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The selection checkbox floats over the image, so the whole card stays a
+   target for opening the detail. */
+.style-card-select {
+  position: absolute;
+  inset-block-start: var(--space-sm);
+  inset-inline-start: var(--space-sm);
+  z-index: 1;
+}
+
+.style-card.on {
+  outline: 2px solid var(--color-border-accent);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------- drawer */
+
+.detail-gallery {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.detail-hero {
+  /* The catalogue is shot portrait-ish on a light ground; 4:3 cropped the
+     product and left a band of backdrop. 1:1 frames it without cropping. */
+  aspect-ratio: 1 / 1;
+  background: var(--color-bg-surface-sunken);
+  border-radius: var(--radius-inner);
+  overflow: hidden;
+}
+
+.detail-hero img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.detail-thumbs {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding-block-end: var(--space-2xs);
+}
+
+.detail-thumbs button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+  border-radius: var(--radius-inner);
+  overflow: hidden;
+  inline-size: 56px;
+  block-size: 56px;
+}
+
+.detail-thumbs button.on {
+  outline: 2px solid var(--color-border-accent);
+  outline-offset: -2px;
+}
+
+.detail-thumbs img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------------------------------------------------------------- skeletons
+
+   The design system ships no skeleton class on purpose — a placeholder is
+   composition, and it must be sized to the SHAPE of the data rather than to
+   four identical bars. This is the one shared primitive; each screen sizes it.
+
+   Pulses between the two muted surfaces on the ambient motion token, and goes
+   static under prefers-reduced-motion. Never animates longer than ~10s: past
+   that the surface has failed and should say so. */
+
+.sk {
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-inner);
+  animation: sk-pulse var(--motion-ambient-duration, 1.6s) ease-in-out infinite;
+}
+
+@keyframes sk-pulse {
+  0%,
+  100% {
+    background: var(--color-bg-muted);
+  }
+  50% {
+    background: var(--color-border-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- drawer
+
+   `.drawer-frame` ships as a SPECIMEN frame — `height: 420px`, `position:
+   static` — sized to demo a drawer inside documentation. In a product it has
+   to be the viewport overlay, so the app promotes it here rather than editing
+   the vendored stylesheet.
+
+   The mobile bottom-sheet rules in components-extra.css target `body > .drawer`
+   and still apply, since SideDrawer portals to the end of <body>. This rule is
+   scoped above the turn so it cannot fight them. */
+
+@media (min-width: 768px) {
+  body > .drawer-frame {
+    position: fixed;
+    inset: 0;
+    block-size: auto;
+    border-radius: 0;
+    z-index: var(--z-modal);
+  }
+
+  body > .drawer-frame > * {
+    /* The wrapper the focus trap holds is display: contents, so the drawer
+       itself is the flex child. */
+    block-size: 100%;
+  }
+
+  body > .drawer-frame .drawer {
+    block-size: 100%;
+    max-block-size: none;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+  }
+
+  /* The body scrolls, not the drawer, so a long detail stays readable. */
+  body > .drawer-frame .drawer-b {
+    overflow-y: auto;
+    min-block-size: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- rfp create
+
+   The split headline — "20 products → 2 RFPs". Stated large, because it is the
+   consequence the user is confirming. */
+
+.split-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.split-headline .v {
+  font-size: var(--type-heading-1-size);
+  line-height: var(--type-heading-1-line);
+  font-weight: var(--type-heading-1-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.split-headline .k {
+  font-size: var(--type-body-lg-size);
+  color: var(--color-fg-muted);
+}
+
+.split-headline .ms {
+  align-self: center;
+  color: var(--color-fg-muted);
+}
+
+/* A page-level action row: secondary then primary, trailing. */
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-2xl);
+}
+
+/* The card header's .sub runs right into the first field's label; the header
+   already separates on its own hairline, so the body needs the breathing room
+   rather than the header. */
+.card-b > .field:first-child {
+  margin-block-start: var(--space-xs);
+}
