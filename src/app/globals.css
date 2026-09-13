@@ -457,63 +457,70 @@ body > .drawer-frame .drawer {
 
 /* ================================================================ nav
 
-   Hover-to-expand.
+   Always expanded, a touch narrower than the system default. 256 is right for a
+   product whose destination names run long; Procura's are two words at most, so
+   220 gives the content back 36px without ellipsising anything.
 
-   The system argues against a collapsed rail because it communicates through
-   hover tooltips, which a touch user cannot reach. That objection is about
-   TOOLTIPS. Here the rail expands to the real drawer — full labels, group
-   captions, counts — so nothing is ever communicated by a tooltip alone, and
-   below the turn the shell's own off-canvas rules take over and this never
-   applies.
+   Doubled to match the specificity the shell declares these at. */
+.shell.nav-fixed.nav-fixed {
+  --shell-panel-w: 220px;
+  --shell-panel-min-w: 220px;
+}
 
-   .shell.nav-collapsed is the system's built rail; the hover simply removes
-   the class's effect by restoring the two width tokens. Doubled selectors to
-   match the specificity .nav-collapsed declares them at. */
+/* ---------------------------------------------------------------- brandmark
 
-@media (min-width: 768px) and (hover: hover) {
-  /* The shell's grid track narrows to the rail width. Doubled to match the
-     specificity .nav-collapsed declares these at, so the two agree. */
-  .shell.nav-hover-expand.nav-hover-expand {
-    --shell-panel-w: var(--shell-panel-w-collapsed);
-    --shell-panel-min-w: var(--shell-panel-w-collapsed);
-  }
+   The system's brandmark is a letter tile sized for chrome that recedes. This
+   is the product's name at the top of its own navigation, so it gets a real
+   mark and room to breathe — still inside the panel's own padding, still on the
+   nav ground. */
+.pn-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-sm) var(--space-lg);
+  color: var(--color-fg-on-nav-strong);
+  text-decoration: none;
+}
 
-  /* The panel keeps its full width and OVERLAYS the content when expanded,
-     rather than widening the track — so hovering the nav never reflows the
-     grid the user is reading. */
-  .shell.nav-hover-expand > .pn {
-    inline-size: var(--shell-panel-w-collapsed);
-    overflow: hidden;
-    transition: inline-size var(--motion-enter-duration)
-      var(--motion-enter-easing);
-  }
+.pn-brand-mark {
+  flex: 0 0 auto;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: var(--radius-element);
+  /* The one place the brand hue is allowed to sit as a fill on the nav — it is
+     the product's own mark, not a status. */
+  background: linear-gradient(
+    140deg,
+    var(--ref-cobalt-400),
+    var(--ref-cobalt-700)
+  );
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--ref-cobalt-300) 30%, transparent),
+    0 2px 10px color-mix(in oklch, var(--ref-cobalt-700) 45%, transparent);
+}
 
-  .shell.nav-hover-expand > .pn:hover,
-  .shell.nav-hover-expand > .pn:focus-within {
-    inline-size: var(--shell-panel-w-default);
-    overflow: visible;
-    z-index: var(--z-raised);
-    box-shadow: var(--elevation-overlay);
-  }
+.pn-brand-mark svg {
+  inline-size: 18px;
+  block-size: 18px;
+  display: block;
+}
 
-  /* Labels and captions fade rather than reflow. They keep their box, so the
-     glyph column never moves. */
-  .shell.nav-hover-expand > .pn .nav-item .lbl,
-  .shell.nav-hover-expand > .pn .brandmark .name,
-  .shell.nav-hover-expand > .pn .grp {
-    opacity: 0;
-    white-space: nowrap;
-    transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
-  }
+.pn-brand-word {
+  font-size: var(--type-heading-3-size);
+  line-height: 1;
+  font-weight: var(--ref-font-weight-medium);
+  letter-spacing: -0.01em;
+}
 
-  .shell.nav-hover-expand > .pn:hover .nav-item .lbl,
-  .shell.nav-hover-expand > .pn:focus-within .nav-item .lbl,
-  .shell.nav-hover-expand > .pn:hover .brandmark .name,
-  .shell.nav-hover-expand > .pn:focus-within .brandmark .name,
-  .shell.nav-hover-expand > .pn:hover .grp,
-  .shell.nav-hover-expand > .pn:focus-within .grp {
-    opacity: 1;
-  }
+.pn-brand-sub {
+  display: block;
+  font-size: var(--type-caption-size);
+  line-height: 1.2;
+  color: var(--color-fg-on-nav);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-block-start: 2px;
 }
 
 /* ================================================================ fixes
@@ -710,4 +717,122 @@ body > .drawer-frame .drawer {
 .set-card-title:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* ================================================================ dialogs
+
+   .scrim is the overlay fill; positioning it over the viewport is the
+   product's job, the same as .drawer-frame. */
+.app-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+  animation: fade-in var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+.app-scrim .modal {
+  animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+/* A native <select> inside a .control. The system's .select is its own custom
+   dropdown with a menu; a short country list does not need one, and the native
+   control is keyboard- and screen-reader-correct for free. */
+.control-select select {
+  appearance: none;
+  inline-size: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ================================================================ nomination */
+
+.owner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+}
+
+.vendor-group-label {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-block: var(--space-lg) var(--space-sm);
+}
+
+.vendor-group-label:first-child {
+  margin-block-start: 0;
+}
+
+.vendor-row {
+  border-block-end: 1px solid var(--color-border-muted);
+  padding-block: var(--space-sm);
+}
+
+.vendor-row.on {
+  background: var(--color-bg-selected-accent);
+  border-radius: var(--radius-inner);
+  padding-inline: var(--space-sm);
+  margin-inline: calc(var(--space-sm) * -1);
+}
+
+.vendor-row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.vendor-row-id {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.vendor-row-id .nm {
+  display: block;
+  font-weight: var(--type-label-weight);
+}
+
+.vendor-row-id .meta {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vendor-row-tags {
+  display: flex;
+  gap: var(--space-2xs);
+  flex-shrink: 0;
+}
+
+.vendor-row-note {
+  margin-inline-start: var(--space-2xl);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+
+/* The per-vendor product subset — vendor A may get products 1-4, vendor C only
+   1-3 (Build Doc §5.3). */
+.vendor-subset {
+  margin-inline-start: var(--space-2xl);
+  margin-block-start: var(--space-sm);
+  display: grid;
+  gap: var(--space-2xs);
+  padding: var(--space-sm);
+  background: var(--color-bg-surface-sunken);
+  border-radius: var(--radius-inner);
+}
+
+.vendor-subset-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--type-body-sm-size);
+  cursor: pointer;
 }

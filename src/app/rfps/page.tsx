@@ -72,7 +72,9 @@ export default function RfpsPage() {
                 ))
               : (data ?? []).map((rfp) => (
                   <tr key={rfp.id}>
-                    <td>{rfp.name}</td>
+                    <td>
+                      <Link href={`/rfps/${rfp.id}`}>{rfp.name}</Link>
+                    </td>
                     <td>
                       <Badge tone={STATUS_TONE[rfp.status]}>{rfp.status}</Badge>
                     </td>

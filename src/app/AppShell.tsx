@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/ds/components";
+import { ProcuraMark } from "./ProcuraMark";
 
 type Dest = {
   href: string;
@@ -64,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
 
   return (
-    <div className="shell panel-first nav-hover-expand">
+    <div className="shell panel-first nav-fixed">
       <header className="hd dark">
         <div className="control search hd-search">
           <Icon name="search" size="sm" />
@@ -84,12 +85,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <nav className="pn nav dark" aria-label="Sections">
-        <div className="pn-top">
-          <div className="brandmark">
-            <span className="glyph">P</span>
-            <span className="name">Procura</span>
-          </div>
-        </div>
+        <Link className="pn-brand" href="/">
+          <span className="pn-brand-mark">
+            <ProcuraMark />
+          </span>
+          <span>
+            <span className="pn-brand-word">Procura</span>
+            <span className="pn-brand-sub">Sourcing</span>
+          </span>
+        </Link>
         <NavGroup title="Sourcing" items={MAIN} pathname={pathname} />
         <NavGroup title="Award" items={AWARD} pathname={pathname} />
         <NavGroup title="Setup" items={SETUP} pathname={pathname} />
