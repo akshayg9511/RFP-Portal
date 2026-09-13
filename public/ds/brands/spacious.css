@@ -1,0 +1,189 @@
+/* ============================================================
+   THEME · SPACIOUS  (external customer surfaces)
+   ------------------------------------------------------------
+   Personality:   trustworthy · modern · approachable · premium
+   Visual style:  spacious · strong visual hierarchy · emotional
+   Colors:        primary = cobalt (cobalt-700 #1A439D), on the shared warm ramp
+   Typography:    readability — Inter at 16px body with
+                  relaxed leading; comfortable for sustained reading
+   Shape:         inherited ladder (16px cards, 8px controls)
+
+   A brand layer. Load AFTER foundation.css. Overrides ONLY
+   Tier-1 color refs, the type family, radius personality, and
+   density — never a semantic or component token.
+
+============================================================ */
+
+[data-brand="spacious"] {
+  /* Type is foundation-fixed (Inter); brands never override the face. */
+
+  /* Neutrals: inherits the shared warm ramp from the foundation.
+     This layer owns only the accent, density, leading, and shadow ink. */
+
+  /* — Accent: COBALT, mapped from the --ref-cobalt-* palette in the foundation.
+     No hexes here: the brand owns which rung plays which role, not what the rung
+     IS, so a palette correction lands in one place and both themes take it.
+
+     cobalt-700 is the primary. Hover and pressed step DOWN the same ramp — 800
+     then 900 — so the fill darkens within its own hue instead of muddying toward
+     black, and the three steps stay recognisably one colour under a pointer. The
+     pale end carries the tints: 100 behind a selected row or a brand badge, 50
+     for the faintest wash. — */
+  --ref-hue-tint: var(--ref-cobalt-100);   /* pale wash on a light surface */
+  --ref-hue-100: var(--ref-cobalt-100);   /* pale end of the ramp */
+  --ref-hue-200: var(--ref-cobalt-200);
+  --ref-hue-300: var(--ref-cobalt-300);
+  --ref-hue-700: var(--ref-cobalt-700);
+  --ref-hue-800: var(--ref-cobalt-800);
+  --ref-hue-900: var(--ref-cobalt-900);
+  --ref-hue-950: var(--ref-cobalt-950);
+
+  /* Accent tint — the brand moment badge. The foundation default is the emphasis
+     surface, because an achromatic theme can only separate this tone from a grey
+     tint by weight; a brand with a hue uses the hue instead. Tint accent-100,
+     label accent-600 — the label step, since text needs 4.5:1 and an edge only
+     3:1. 10.35:1 on cobalt. */
+  --ref-hue-tint-bg-on-light: var(--ref-hue-tint);
+  --ref-hue-tint-fg-on-light: var(--ref-hue-800);
+  /* Selected grid rows take the PALEST rung of the brand tint. They used to take
+     cobalt-100, the same fill as the accent badge, which put a row at 1.02:1
+     against an INFO badge sitting on it — the achromatic status tone and the tint
+     differ in hue but not in lightness, so the pill dissolved into the row behind
+     it.
+
+     Fixed from the ROW, not the badge. A status is a fact about the record, and
+     selecting a row must not look like the record changed — which rules out
+     re-pointing the badge's fill or giving it a stroke, both of which were tried.
+     cobalt-50 clears the pill at 1.16:1.
+
+     IT IS DELIBERATELY SUBTLE, and it can be because COLOUR IS NOT THE SIGNAL. The
+     row carries a checked checkbox; the tint only has to agree with it. Against a
+     HOVERED row this fill measures 1.01:1 — near enough to read the same — and
+     that is survivable here and nowhere else: hover has an empty checkbox and
+     selected has a checked one, so the two states are never told apart by fill
+     alone. A darker rung was tried first (cobalt-200, 1.53 against a rest row) and
+     rejected as too prominent for a state the checkbox already announces.
+
+     Base cannot make this trade — see --color-bg-selected-accent in foundation.css.
+     With no hue to lean on, its tint would land ON the hover fill rather than
+     beside it, so it keeps the lightness step instead. */
+  --ref-hue-selected-on-light: var(--ref-cobalt-50);
+  /* Written against hue-300 and the ground rather than --ref-accent-500 and
+     --color-bg-selected, so the rung means the same thing in either mode and the
+     brand owns one axis only. Same resolved colour as before. */
+  --ref-hue-tint-bg-on-dark:   color-mix(in oklch, var(--ref-hue-300) 14%, var(--ref-ground-raised));
+  --ref-hue-tint-fg-on-dark:   var(--ref-neutral-100);
+  --ref-hue-selected-on-dark:  color-mix(in oklch, var(--ref-hue-300) 22%, var(--ref-neutral-900));
+  /* A hue-bearing brand tints the selected destination with its accent. The
+     foundation default is the neutral selected fill, for the achromatic case —
+     see --color-bg-nav-item-selected there. */
+  --color-bg-nav-item-selected: var(--color-accent-tint-bg);
+  --color-fg-nav-item-selected: var(--color-accent-tint-fg);
+
+
+  /* — Personality: roomier, but the radius ladder is foundation-fixed —
+     B2B inherits Base's corners (6 / 8 / 16 / 32); comfort comes from
+     control height and spacing, not from rounder shapes. */
+
+  /* Density: roomier controls for marketing/customer comfort.
+     The ladder shifts up one rung as a whole — 36 / 44 / 56. Spacious's small
+     equals Default's medium, and large is a genuine step beyond the 44px touch
+     minimum so a hero CTA outweighs the ordinary buttons around it. Retuning
+     md alone would have flattened md and lg onto the same 44. */
+  --size-control-sm: var(--ref-dimension-450);  /* 36 — toolbars, filter chrome */
+  --size-chip-pointer: var(--ref-dimension-450);  /* 36 — at the touch body already, so
+                                                     the coarse max() leaves it alone */
+  --size-token: var(--ref-dimension-450);       /* 36 — already the touch height, so touch does not move it */
+  --size-control-md: var(--ref-dimension-550);  /* 44 — default */
+  --size-control-lg: var(--ref-dimension-700);  /* 56 — prominent CTA */
+  --size-control-lg-pointer: var(--ref-dimension-700);  /* the same, readable under coarse */
+  --grid-gutter: var(--space-xl);   /* 24 — airier columns */
+  /* One rung out from Default on both sides of the turn — 32 desktop, 24 narrow.
+     Retuning the two NAMED values and never --page-inset itself is what keeps this
+     working: the alias is switched by a doubled selector in foundation, which would
+     outrank anything declared here. */
+  --page-inset-wide:   var(--space-2xl);  /* 32 (vs 24 default) */
+  --page-inset-narrow: var(--space-xl);   /* 24 (vs 16 default) */
+
+  /* Table density: 16px cells (--table-cell-size follows body). Padding steps up
+     one rung so the taller body size keeps the optical breathing room it has at
+     14px — a taller row, not a new density. There is no 14 on the spacing scale,
+     and an off-scale value in a brand file is how ladders rot. */
+  --table-cell-pad-y: var(--space-16);
+
+  /* Form density: the separation between fields steps up a rung, the gap INSIDE
+     a field does not. A roomy form has more air around each field; the label,
+     control and helper stay bound as tightly as they are in Default, because that
+     grouping is meaning rather than comfort. */
+  --form-field-gap: var(--space-32);
+
+  /* Type: Spacious is the theme that widens the reading sizes. Every rung moves up
+     one against Base and Default, so the relationship between primary and
+     supporting text is the same — only the absolute size changes. Body 14→16,
+     supporting 13→14, long-form 16→18, and inline code 12→14, which keeps code
+     from reading as a footnote inside a 16px sentence. A caption steps off the
+     12px floor to 13, and helper/error text goes to 14, a rung above supporting:
+     a message the user has to act on outranks a caption. All regular weight.
+     12px survives only where it belongs in every theme — badge and status
+     labels, counts, timestamps, axis values. */
+  --type-body-lg-size:  var(--ref-font-size-500);   /* 18 (vs 16) */
+  --type-body-md-size:  var(--ref-font-size-400);   /* 16 (vs 14) */
+  --type-body-sm-size:  var(--ref-font-size-300);   /* 14 (vs 13) */
+  --type-code-size:     var(--ref-font-size-300);   /* 14 (vs 12) */
+  --type-caption-size:  var(--ref-font-size-200);   /* 13 — off the 12px floor */
+  --type-field-msg-size: var(--ref-font-size-300);  /* 14 — above supporting */
+  --type-label-size:    var(--ref-font-size-400);   /* 16 — matches body */
+
+  /* Readability: relaxed leading */
+  --type-body-md-line: var(--ref-line-height-relaxed);
+  --type-body-lg-line: var(--ref-line-height-relaxed);
+
+
+  /* Slightly deeper shadows */
+  /* Light-ground ink only — see the note in brands/default.css. */
+  --ref-shadow-ambient-on-light:        rgba(22, 27, 32, 0.08);
+  --ref-shadow-key-on-light:            rgba(22, 27, 32, 0.14);
+  --ref-shadow-raised-ambient-on-light: rgba(22, 27, 32, 0.06);
+  --ref-shadow-raised-key-on-light:     rgba(22, 27, 32, 0.105);
+
+  /* Spacious: thicker status pills to match the spacious rhythm */
+  /* --badge-pad-y is GONE, not forgotten: the badge now declares a height, so a
+     vertical padding could only fight it. The roomier pill survives as its own
+     rung — 28 against the default 24 — which is the same 4px step the padding
+     was expressing, said where it now belongs. */
+  --size-badge-sm: var(--ref-dimension-300);  /* 24 (vs 20 default) */
+  --size-badge:    var(--ref-dimension-350);  /* 28 (vs 24 default) */
+  /* Republished for the coarse block's max(), which is what keeps Spacious from
+     SHRINKING on touch: its pointer pair already sits at the touch floor, so a
+     finger changes nothing here. */
+  --size-badge-sm-pointer: var(--ref-dimension-300);
+  --size-badge-pointer:    var(--ref-dimension-350);
+  --badge-pad-x: var(--space-md);   /* 12px (vs 8px default) */
+}
+
+[data-brand="spacious"][data-mode="dark"] {
+  /* Dark inverts the mapping, not the palette. The same eleven cobalt rungs are
+     read from the other end: the accent lifts into the pale blues so a filled
+     primary carries dark ink, and hover and pressed step UP the ramp — 300, 200,
+     100 — because on a dark surface "more pressed" reads as more light, the exact
+     mirror of light mode stepping down. The ink on a filled primary is cobalt-950
+     rather than black, so the darkest thing on the screen still belongs to the
+     hue. accent-50 stays a deep rung (800): it is a dark-surface wash here, not a
+     pale one. */
+  /* No accent overrides here any more: the ramp above is theme-invariant and the
+     foundation's dark block maps roles onto it for every brand. */
+
+  /* Dark cannot read the ramp directly: accent-500 is a PALE blue here, so it is
+     a fill rather than a label. The tint is mixed from it into the dark surface —
+     always darker than the surface — and the text is a light neutral, so the fill
+     carries the hue. 12.69:1 default · 11.84:1 spacious, on cobalt. */
+  /* NOT --color-accent-tint-bg here, unlike light. That role is built to sit
+     ALWAYS DARKER than the dark surface, which is right for a badge and wrong
+     for a selected row: it put selection BELOW hover on the lightness ladder,
+     so hovering a row lightened it and selecting it darkened it again — the
+     state read backwards, and separated from the table at 1.09:1. The tint is
+     mixed into the ladder's own selected rung instead, so the rung keeps its
+     position and only gains hue. Light needs no equivalent: accent-100 already
+     falls between hover and the surface there. */
+
+}

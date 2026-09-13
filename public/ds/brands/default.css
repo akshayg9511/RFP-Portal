@@ -1,0 +1,159 @@
+/* ============================================================
+   THEME · DEFAULT  (the reference theme)
+   ------------------------------------------------------------
+   Personality:   efficient · data-dense · operational · fast
+   Visual style:  compact spacing · high information density ·
+                  minimal illustration
+   Colors:        primary = cobalt (cobalt-700 #1A439D) · danger = red
+   Typography:    functional — Inter, tight & legible, built for
+                  scanning dense grids (no decorative type)
+
+   A brand layer. Load AFTER foundation.css. Overrides ONLY
+   Tier-1 color refs, the type family, radius personality, and
+   density — never a semantic or component token. The foundation
+   contract is preserved, so every product re-skins for free.
+============================================================ */
+
+[data-brand="default"] {
+  /* Type is foundation-fixed (Inter); brands never override the face. */
+
+  /* Neutrals: inherits the shared warm ramp from the foundation.
+     Only the accent, personality, shadow ink and dark ground are brand-owned. */
+
+  /* Cobalt's dark ground is cooler than the warm ramp — a blue-black rather than
+     a brown-black — so the theme sits in the same family as the accent. Declared
+     HERE, at the brand root, not in the dark block: the ground is a property of
+     the brand, and light simply never paints with it. Previously this re-tinted
+     --ref-neutral-950/-1000 inside the dark block, which moved a ramp rung in one
+     brand/mode combination only. */
+  --ref-ground-raised: #1a1b24;   /* was --ref-neutral-950 in dark */
+  --ref-ground-base:   #111218;   /* was --ref-neutral-1000 in dark */
+
+  /* — Accent: COBALT, mapped from the --ref-cobalt-* palette in the foundation.
+     No hexes here: the brand owns which rung plays which role, not what the rung
+     IS, so a palette correction lands in one place and both themes take it.
+
+     cobalt-700 is the primary. Hover and pressed step DOWN the same ramp — 800
+     then 900 — so the fill darkens within its own hue instead of muddying toward
+     black, and the three steps stay recognisably one colour under a pointer. The
+     pale end carries the tints: 100 behind a selected row or a brand badge, 50
+     for the faintest wash. — */
+  --ref-hue-tint: var(--ref-cobalt-100);   /* pale wash on a light surface */
+  --ref-hue-100: var(--ref-cobalt-100);   /* pale end of the ramp */
+  --ref-hue-200: var(--ref-cobalt-200);
+  --ref-hue-300: var(--ref-cobalt-300);
+  --ref-hue-700: var(--ref-cobalt-700);
+  --ref-hue-800: var(--ref-cobalt-800);
+  --ref-hue-900: var(--ref-cobalt-900);
+  --ref-hue-950: var(--ref-cobalt-950);
+
+  /* Accent tint — the brand moment badge. The foundation default is the emphasis
+     surface, because an achromatic theme can only separate this tone from a grey
+     tint by weight; a brand with a hue uses the hue instead. Tint accent-100,
+     label accent-600 — the label step, since text needs 4.5:1 and an edge only
+     3:1. 10.35:1 on cobalt. */
+  --ref-hue-tint-bg-on-light: var(--ref-hue-tint);
+  --ref-hue-tint-fg-on-light: var(--ref-hue-800);
+  /* Selected grid rows take the PALEST rung of the brand tint. They used to take
+     cobalt-100, the same fill as the accent badge, which put a row at 1.02:1
+     against an INFO badge sitting on it — the achromatic status tone and the tint
+     differ in hue but not in lightness, so the pill dissolved into the row behind
+     it.
+
+     Fixed from the ROW, not the badge. A status is a fact about the record, and
+     selecting a row must not look like the record changed — which rules out
+     re-pointing the badge's fill or giving it a stroke, both of which were tried.
+     cobalt-50 clears the pill at 1.16:1.
+
+     IT IS DELIBERATELY SUBTLE, and it can be because COLOUR IS NOT THE SIGNAL. The
+     row carries a checked checkbox; the tint only has to agree with it. Against a
+     HOVERED row this fill measures 1.01:1 — near enough to read the same — and
+     that is survivable here and nowhere else: hover has an empty checkbox and
+     selected has a checked one, so the two states are never told apart by fill
+     alone. A darker rung was tried first (cobalt-200, 1.53 against a rest row) and
+     rejected as too prominent for a state the checkbox already announces.
+
+     Base cannot make this trade — see --color-bg-selected-accent in foundation.css.
+     With no hue to lean on, its tint would land ON the hover fill rather than
+     beside it, so it keeps the lightness step instead. */
+  --ref-hue-selected-on-light: var(--ref-cobalt-50);
+  /* Written against hue-300 and the ground rather than --ref-accent-500 and
+     --color-bg-selected, so the rung means the same thing in either mode and the
+     brand owns one axis only. Same resolved colour as before. */
+  --ref-hue-tint-bg-on-dark:   color-mix(in oklch, var(--ref-hue-300) 14%, var(--ref-ground-raised));
+  --ref-hue-tint-fg-on-dark:   var(--ref-neutral-100);
+  --ref-hue-selected-on-dark:  color-mix(in oklch, var(--ref-hue-300) 22%, var(--ref-neutral-900));
+  /* A hue-bearing brand tints the selected destination with its accent. The
+     foundation default is the neutral selected fill, for the achromatic case —
+     see --color-bg-nav-item-selected there. */
+  --color-bg-nav-item-selected: var(--color-accent-tint-bg);
+  --color-fg-nav-item-selected: var(--color-accent-tint-fg);
+
+
+  /* — Personality — */
+  --radius-inner:     var(--ref-radius-50);   /* 4px  — crisp */
+  --radius-element:   var(--ref-radius-100);  /* 6px  — inputs, buttons, chips */
+  --radius-container: var(--ref-radius-200);  /* 12px — cards, panels */
+  --radius-page:      var(--ref-radius-400);  /* 24px */
+  --radius-chat:      var(--ref-radius-200);  /* 12px — crisp composer */
+
+  /* Density: compact controls for data-dense screens.
+     The whole ladder moves together — 28 / 36 / 44. This is the reference
+     density, so it matches the foundation exactly; it is restated here so the
+     two brands can be read against each other in one glance. */
+  --size-control-sm: var(--ref-dimension-350);  /* 28 — toolbars, table rows, filter chrome */
+  --size-token: var(--ref-dimension-350);       /* 28 on a pointer; foundation lifts it to 36 on touch */
+  --size-control-md: var(--ref-dimension-450);  /* 36 — default */
+  --size-control-lg: var(--ref-dimension-550);  /* 44 — prominent CTA */
+  --size-control-lg-pointer: var(--ref-dimension-550);  /* the same, readable under coarse */
+  --grid-gutter: var(--space-md);   /* 12 — tighter columns */
+
+  /* Type: Default runs the foundation scale unchanged — 14px body, 13px
+     supporting, 13px helper and error text, all at regular weight. It is the
+     reference density, so overriding anything here would only create drift.
+     Spacious is the theme that widens the reading sizes.
+
+     The DATA GRID is unchanged too, and that is the whole table section now: no
+     --table-cell-size, no --table-cell-pad-*. Default used to tighten rows to 8px
+     of block padding, which put a 14px cell in a 30px row and made the grid —
+     the main content of the page it sits on — read as cramped rather than as
+     efficient. Density in this theme is the control ladder and the grid gutter;
+     the reading surface is left alone. Spacious is the theme that moves the row,
+     stepping padding up to keep its 16px cells breathing.
+     Being the reference density means the table tokens are simply absent here. */
+
+  /* Quieter, warm-tinted shadows */
+  /* Light-ground ink only. The dark block must NOT re-tint these: a cobalt dark
+     canvas is darker than any brand ink, so dark uses black from the foundation. */
+  --ref-shadow-ambient-on-light:        rgba(63, 59, 58, 0.10);
+  --ref-shadow-key-on-light:            rgba(34, 32, 31, 0.14);
+  --ref-shadow-raised-ambient-on-light: rgba(63, 59, 58, 0.075);
+  --ref-shadow-raised-key-on-light:     rgba(34, 32, 31, 0.105);
+}
+
+[data-brand="default"][data-mode="dark"] {
+  /* Dark inverts the mapping, not the palette. The same eleven cobalt rungs are
+     read from the other end: the accent lifts into the pale blues so a filled
+     primary carries dark ink, and hover and pressed step UP the ramp — 300, 200,
+     100 — because on a dark surface "more pressed" reads as more light, the exact
+     mirror of light mode stepping down. The ink on a filled primary is cobalt-950
+     rather than black, so the darkest thing on the screen still belongs to the
+     hue. accent-50 stays a deep rung (800): it is a dark-surface wash here, not a
+     pale one. */
+  /* No accent overrides here any more: the ramp above is theme-invariant and the
+     foundation's dark block maps roles onto it for every brand. */
+
+  /* Dark cannot read the ramp directly: accent-500 is a PALE blue here, so it is
+     a fill rather than a label. The tint is mixed from it into the dark surface —
+     always darker than the surface — and the text is a light neutral, so the fill
+     carries the hue. 12.69:1 default · 11.84:1 spacious, on cobalt. */
+  /* NOT --color-accent-tint-bg here, unlike light. That role is built to sit
+     ALWAYS DARKER than the dark surface, which is right for a badge and wrong
+     for a selected row: it put selection BELOW hover on the lightness ladder,
+     so hovering a row lightened it and selecting it darkened it again — the
+     state read backwards, and separated from the table at 1.09:1. The tint is
+     mixed into the ladder's own selected rung instead, so the rung keeps its
+     position and only gains hue. Light needs no equivalent: accent-100 already
+     falls between hover and the surface there. */
+
+}

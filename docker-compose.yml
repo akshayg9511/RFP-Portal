@@ -1,0 +1,20 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: procura-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: procura
+      MYSQL_DATABASE: procura
+    ports:
+      - "3307:3306"
+    volumes:
+      - procura-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pprocura"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  procura-mysql-data:

@@ -1,49 +1,22 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Product CSS only.
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+   Quince Core owns the document base (box-sizing, body face/size/leading/
+   colour/background) in foundation.css — do not restate any of it here.
 
-html {
-  height: 100%;
-}
+   Rules for anything added to this file:
+     - Tier-2 semantic tokens only (--color-*, --space-*, --radius-*, --type-*,
+       --size-*, --elevation-*, --motion-*, --z-*)
+     - never a hex/rgb/hsl literal, never a --ref-* token, never an invented one
+     - logical properties only (inline-start/end), never left/right
+*/
 
+/* .shell is `height: 100%`, so its ancestors must have a height for the grid to
+   fill the viewport — without this the panel stops at content height and leaves
+   canvas below it. The design system leaves this to the host app deliberately;
+   a shell embedded in a larger page should not force viewport height.
+   Next injects #__next between body and the shell, so all three need it. */
 html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+body,
+body > div:first-of-type {
+  block-size: 100%;
 }

@@ -1,69 +1,105 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
+import * as React from "react";
+import {
+  Badge,
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  Icon,
+} from "@/ds/components";
+
+type Health = {
+  ok: boolean;
+  database: string;
+  counts?: Record<string, number>;
+  hint?: string;
+  error?: string;
+};
+
+// F1 landing page. It exists to prove the stack is wired — Next -> route
+// handler -> Prisma -> MySQL -> Quince Core — and is replaced by the real
+// dashboard later. Note it calls /api/health, never Prisma directly.
 export default function Home() {
+  const [health, setHealth] = React.useState<Health | null>(null);
+  const [failed, setFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then(setHealth)
+      .catch(() => setFailed(true));
+  }, []);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <div className="page-hd">
+        <h1>Procura</h1>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Foundation</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <p style={{ color: "var(--color-fg-muted)" }}>
+            Component F1 — scaffold, design system, database and the API
+            boundary. Every screen from here reads through <code>/api/*</code>.
           </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+          <dl className="meta-list" style={{ marginBlockStart: "var(--space-lg)" }}>
+            <div>
+              <dt>Design system</dt>
+              <dd>
+                <Badge tone="success">Quince Core v3.2</Badge>
+              </dd>
+            </div>
+            <div>
+              <dt>Database</dt>
+              <dd>
+                {failed ? (
+                  <Badge tone="danger">Unreachable</Badge>
+                ) : !health ? (
+                  <Badge>Checking…</Badge>
+                ) : health.ok ? (
+                  <Badge tone="success">MySQL 8.4 connected</Badge>
+                ) : (
+                  <Badge tone="danger">{health.database}</Badge>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Seeded rows</dt>
+              <dd>
+                {health?.counts
+                  ? Object.entries(health.counts)
+                      .map(([k, v]) => `${k} ${v}`)
+                      .join(" · ")
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+
+          {health && !health.ok && health.hint ? (
+            <div className="bar bar--danger" style={{ marginBlockStart: "var(--space-lg)" }}>
+              <Icon name="alert_triangle" />
+              <div>
+                <strong>The database is not reachable.</strong> {health.hint}
+              </div>
+            </div>
+          ) : null}
+
+          <p
+            style={{
+              color: "var(--color-fg-muted)",
+              marginBlockStart: "var(--space-lg)",
+            }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            Next: F2 seeds ~91 styles with real bids from the Wave 1 tracker.
+          </p>
+        </CardBody>
+      </Card>
+    </>
   );
 }

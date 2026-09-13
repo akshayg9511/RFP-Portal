@@ -1,0 +1,1991 @@
+/* ============================================================
+   QUINCE CORE — Shared design foundation (brand-agnostic)
+   ------------------------------------------------------------
+   Source of truth for every business surface (internal ops,
+   external B2B, …). Contains NO branding: no brand names, no
+   brand hues, no product specifics.
+
+   TWO-TIER TOKEN MODEL
+   ┌──────────────────────────────────────────────────────────┐
+   │ Tier 1  REFERENCE   raw scales & primitives (--ref-*)      │
+   │         Dimensional refs (space/size/type/motion) have     │
+   │         real, brand-independent values. Color refs ship    │
+   │         an ACHROMATIC default ramp; brands override them.  │
+   ├──────────────────────────────────────────────────────────┤
+   │ Tier 2  SEMANTIC    role-based, abstract (--color-*,       │
+   │         --space-*, --radius-*, --type-* …). PRODUCTS AND   │
+   │         COMPONENTS CONSUME ONLY THIS TIER.                 │
+   └──────────────────────────────────────────────────────────┘
+
+   THERE IS NO THIRD TIER, and this box claimed one until v121: "Tier 3
+   COMPONENT — per-component knobs (--control-* …) that resolve to Tier 2."
+   No token has ever been named --control-*: before v121 the only occurrence of
+   the prefix anywhere in the codebase was the sentence above, describing it.
+   --badge-pad-*, the other example the spec gave, DOES exist, but not as a
+   tier: brands/spacious.css declares --badge-pad-x and .badge reads it
+   through a var() fallback (components.css), so unset brands get --space-2xs /
+   --space-sm. That is a component-local knob with a default, not a layer.
+   --table-cell-* is a Tier 2 token sitting in this file.
+
+   What DOES exist is about thirty component-local custom properties declared
+   in components.css and components-extra.css — --card-elevation, --drawer-w,
+   --surface-f-pad-x, --drop-line, --hd-height. Those are LOCAL KNOBS a
+   component reads from its own rules: no shared prefix, no home in this file,
+   and nothing outside the declaring component consumes them. Calling them a
+   tier promised products a layer they could target and a naming convention
+   nobody ever wrote.
+
+   THE MODEL IS FLAT, and staying flat is the decision rather than a gap.
+   Measured across all 277 semantic tokens: 65% point straight at a Tier 1 ref,
+   18% alias another semantic token, 17% are literals — 169 of them one hop
+   from a value, and only 9 deeper than two. A role resolving in one hop is
+   what makes a brand override predictable, and it is why the semantic tier
+   maps cleanly onto a design tool's variable collection.
+
+   A BRAND LAYER overrides Tier-1 color refs (+ optionally type
+   family, radius personality, density) and nothing else. See
+   brands/default.css and brands/spacious.css.
+============================================================ */
+
+/* The token block is applied to :root AND to any [data-brand] scope, so
+   nested brand wrappers (e.g. a themed preview) RE-DECLARE the Tier-2
+   semantic tokens — their var(--ref-*) references then recompute against
+   that element's overridden refs. Without the [data-brand] selector here,
+   semantic tokens resolve once at :root and inherit as fixed values,
+   ignoring a nested brand. Brand layers (loaded after) win at equal
+   specificity via source order; combined [data-brand][data-mode] wins on
+   specificity. */
+:root,
+[data-brand] {
+  /* ========================================================
+     TIER 1 · REFERENCE — DIMENSIONAL (brand-independent)
+     ======================================================== */
+
+  /* Base grid unit. The whole space scale derives from this. */
+  --ref-unit: 4px;
+
+  /* Dimension scale — 4px grid with 2px half-step */
+  --ref-dimension-25:  2px;
+  --ref-dimension-50:  4px;
+  --ref-dimension-75:  6px;
+  --ref-dimension-100: 8px;
+  --ref-dimension-150: 12px;
+  --ref-dimension-200: 16px;
+  --ref-dimension-250: 20px;
+  --ref-dimension-300: 24px;
+  --ref-dimension-350: 28px;
+  --ref-dimension-400: 32px;
+  --ref-dimension-450: 36px;
+  --ref-dimension-500: 40px;
+  --ref-dimension-550: 44px;
+  --ref-dimension-600: 48px;
+  --ref-dimension-700: 56px;
+  --ref-dimension-800: 64px;
+  --ref-dimension-1000: 80px;
+  --ref-dimension-1200: 96px;
+
+  /* Type — font size scale (px) */
+  --ref-font-size-50:   11px;
+  --ref-font-size-100:  12px;
+  --ref-font-size-200:  13px;
+  --ref-font-size-300:  14px;  /* default body */
+  --ref-font-size-400:  16px;
+  --ref-font-size-500:  18px;
+  --ref-font-size-600:  20px;
+  --ref-font-size-700:  24px;
+  --ref-font-size-800:  30px;
+  --ref-font-size-900:  38px;
+  --ref-font-size-1000: 48px;
+  --ref-font-size-1100: 60px;
+
+  /* Type — line heights (unitless multipliers) */
+  --ref-line-height-tight:   1.2;
+  --ref-line-height-snug:    1.35;
+  --ref-line-height-normal:  1.5;
+  --ref-line-height-relaxed: 1.65;
+
+  /* Type — weights
+     Three sanctioned weights: light, regular, medium. Nothing thinner
+     than light (no extra-light, no thin), nothing heavier than medium
+     (no bold, no black) — with one approved exception, the semibold the
+     page title carries. --ref-font-weight-exception exists only for that
+     kind of documented one-off; never reach for it to add emphasis. */
+  --ref-font-weight-light:    300;
+  --ref-font-weight-regular:  400;
+  --ref-font-weight-medium:   500;
+  /* Approved for exactly one role: --type-page-title-weight. Anything else
+     asking for a weight above medium needs the same conversation this one had. */
+  --ref-font-weight-exception: 600;   /* treated exception — approval required */
+
+  /* Type — tracking */
+  --ref-letter-spacing-tighter: -0.02em;
+  --ref-letter-spacing-tight:   -0.01em;
+  --ref-letter-spacing-normal:   0;
+  --ref-letter-spacing-wide:     0.04em;
+  --ref-letter-spacing-wider:    0.08em;
+
+  /* Type — families
+     One interface family: Inter, everywhere — body, headings, labels,
+     code and record IDs (tabular figures do the aligning work a mono
+     face would). --ref-font-family-brand is the brand face, reserved
+     for logo lockups and welcome/sign-in headlines. */
+  --ref-font-family-sans:  "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* A real monospace stack, and only for CODE: token names, snippets, keyboard
+     keys, hex values, docs. It used to alias the sans, which meant the system
+     named a face it did not have. It is deliberately NOT used in product UI —
+     an invoice number or a total set in a system mono reads as a terminal, and a
+     dashboard should read as Quince. Figures that need to line up in product use
+     tabular numerals in the brand face instead (.txt-num). */
+  --ref-font-family-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --ref-font-family-brand: "Grosa", "Inter", system-ui, sans-serif;
+
+  /* Radius scale */
+  --ref-radius-0:    0px;
+  --ref-radius-25:   2px;
+  --ref-radius-50:   4px;
+  --ref-radius-100:  6px;
+  --ref-radius-150:  8px;
+  --ref-radius-200:  12px;
+  --ref-radius-300:  16px;
+  --ref-radius-400:  24px;
+  --ref-radius-500:  28px;
+  --ref-radius-600:  32px;
+  --ref-radius-full: 9999px;
+
+  /* Border width */
+  --ref-border-width-0:  0px;
+  --ref-border-width-25: 1px;
+  --ref-border-width-50: 2px;
+  --ref-border-width-75: 3px;
+  --ref-border-width-100: 4px;
+
+  /* Motion — durations.
+     Three bands, each with a min / default / max so a designer can tune
+     within a band without leaving the scale. Fast = feedback on something
+     already on screen. Medium = a surface arriving or leaving. Slow =
+     ambient, looping, or long-running movement (skeletons, progress). */
+  --ref-duration-instant:    0ms;
+  --ref-duration-fast-min:   130ms;
+  --ref-duration-fast:       175ms;
+  --ref-duration-fast-max:   230ms;
+  --ref-duration-medium-min: 310ms;
+  --ref-duration-medium:     410ms;
+  --ref-duration-medium-max: 550ms;
+  --ref-duration-slow-min:   730ms;
+  --ref-duration-slow:       975ms;
+  --ref-duration-slow-max:   1300ms;
+
+  /* Motion — easings */
+  --ref-easing-standard:   cubic-bezier(0.24, 1, 0.4, 1); /* most transitions */
+  --ref-easing-decelerate: cubic-bezier(0, 0, 0, 1);      /* entrances */
+  --ref-easing-accelerate: cubic-bezier(0.3, 0, 1, 1);    /* exits */
+  --ref-easing-linear:     linear;                        /* looping / ambient only */
+
+  /* ========================================================
+     TIER 1 · REFERENCE — COLOR (ACHROMATIC DEFAULT)
+     Pure grayscale so the foundation is brand-free but runnable.
+     A brand layer REPLACES these refs to inject hue.
+     ======================================================== */
+
+  /* Neutral ramp (light-to-dark) — warm greys.
+     Every step is authored from the brand palette except 850, derived
+     to give dark mode a pressed fill between 900 and 700.
+     Shared by all brands — a brand layer owns its accent, not its greys.
+     Contrast-critical steps are noted. */
+  --ref-neutral-0:    #ffffff;
+  --ref-neutral-50:   #fbfbf9;   /* canvas */
+  --ref-neutral-100:  #f7f7f5;   /* sunken · hover fill */
+  --ref-neutral-200:  #eeeeec;   /* hairline borders · active fill */
+  --ref-neutral-250:  #e5e5e3;   /* dividers */
+  --ref-neutral-300:  #d9d9d9;   /* card edges · control borders */
+  --ref-neutral-400:  #b4b4b2;   /* disabled text */
+  --ref-neutral-500:  #8f8f8f;   /* 3.2:1 — borders & icons, never text */
+  --ref-neutral-550:  #80807f;   /* interpolated — light disabled text */
+  --ref-neutral-600:  #717171;   /* 4.9:1 — tertiary text */
+  --ref-neutral-700:  #606060;   /* 6.3:1 — secondary text */
+  --ref-neutral-850:  #4d4c4b;   /* derived — dark-mode pressed fill */
+  --ref-neutral-900:  #3f3e3d;   /* inverse surface · dark selected fill */
+  --ref-neutral-925:  #292827;   /* interpolated — dark raised surface */
+  --ref-neutral-910:  #333231;   /* interpolated — dark hover & muted fill */
+  --ref-neutral-960:  #1b1a19;   /* interpolated — dark disabled fill */
+  --ref-neutral-950:  #21201f;   /* primary text */
+  --ref-neutral-1000: #141312;   /* interpolated — dark canvas */
+
+  /* THE DARK GROUND, split out from the ramp above. neutral-950/-1000 were doing
+     two jobs: the near-black INK in light, and the SURFACE a dark theme is drawn
+     on. A brand that wants a cooler dark ground had to re-tint the ramp inside its
+     dark block, which made the value depend on brand AND theme at once — the ramp
+     rung moved only in one of six brand/mode combinations. These two carry the
+     ground job alone, are declared per BRAND (never per mode), and default to the
+     ramp so an unbranded build is unchanged. Consume them only where a dark
+     surface is being painted; ink stays on neutral-950. */
+  --ref-ground-raised: var(--ref-neutral-950);   /* dark surface / nav plate */
+  --ref-ground-base:   var(--ref-neutral-1000);  /* dark canvas — furthest back */
+
+  /* COBALT — the brand palette, eleven rungs, defined once as raw material.
+     It lives here rather than in the brand files because both hue-bearing themes
+     draw from the same ramp, and two copies of eleven hexes is two places for
+     them to drift. What a brand OWNS is the mapping: which rung becomes the
+     primary fill, which becomes its hover, which becomes the tint behind a
+     selected row. Base maps none of them and stays achromatic.
+
+     The rung names are the palette's own, not the accent slots' — cobalt-700 is
+     the primary, and it lands in --ref-accent-500 because that is the slot the
+     semantic layer reads for a resting primary action. The two numbering schemes
+     are not meant to line up: one describes a colour's place in a ramp, the other
+     a role's place in a state ladder. */
+  --ref-cobalt-50:   #F2F6FD;
+  --ref-cobalt-100:  #DFE8FA;
+  --ref-cobalt-200:  #C0D2F3;
+  --ref-cobalt-300:  #9BB6EA;
+  --ref-cobalt-400:  #7699DE;
+  --ref-cobalt-500:  #537CCF;
+  --ref-cobalt-600:  #345FB9;
+  --ref-cobalt-700:  #1A439D;   /* primary */
+  --ref-cobalt-800:  #0C2D75;
+  --ref-cobalt-900:  #051C51;
+  --ref-cobalt-950:  #020F37;
+
+  /* Accent ramp — achromatic by default (brand injects hue).
+     Defaults trace the neutral dark end so primary actions
+     remain usable with no brand applied. */
+  /* THE BRAND HUE RAMP — seven rungs a brand declares ONCE, at its root, never
+     per mode. The hue belongs to the brand; the light/dark mapping below belongs
+     to the theme. Before this split each brand restated the whole accent role set
+     in BOTH its light and its dark block, so every accent role depended on brand
+     and theme jointly and no role could be expressed as a single value indexed by
+     one axis. Base has no hue: the ramp falls back to the neutral spine, which is
+     why anything reading an accent must still work with no hue at all. */
+  --ref-hue-tint: var(--ref-neutral-250);
+  --ref-hue-100: var(--ref-neutral-0);
+  --ref-hue-200: var(--ref-neutral-100);
+  --ref-hue-300: var(--ref-neutral-200);
+  --ref-hue-700: var(--ref-neutral-900);
+  --ref-hue-800: var(--ref-neutral-950);
+  --ref-hue-900: var(--ref-neutral-1000);
+  --ref-hue-950: var(--ref-neutral-950);
+
+  /* THE BRAND MOMENT, as brand-owned rungs rather than brand-owned ROLES. The
+     accent tint and the accent-selected row are the last three semantic roles the
+     brand sheets used to override directly, and they did it differently per mode:
+     a hue brand mixed a dark tint in dark and used a pale rung in light, while
+     Base leaned on the emphasis surface in both. That made the role depend on
+     brand and theme jointly — the one shape a single Figma variable cannot hold.
+     Split the same way as the hue ramp: brand owns the two ends, the foundation
+     picks between them by mode. Base's values below are exactly what
+     --color-bg-emphasis / --color-fg-on-emphasis resolved to before. */
+  --ref-hue-tint-bg-on-light:   var(--ref-neutral-900);
+  --ref-hue-tint-bg-on-dark:    var(--ref-neutral-100);
+  --ref-hue-tint-fg-on-light:   var(--ref-neutral-0);
+  --ref-hue-tint-fg-on-dark:    var(--ref-ground-raised);
+  --ref-hue-selected-on-light:  var(--ref-neutral-300);
+  --ref-hue-selected-on-dark:   var(--ref-neutral-850);
+
+  /* The two translucent brand derivations. Both were authored inline as a mix of
+     a ROLE (--color-focus-ring, --color-action-primary-fg), which reads well in
+     CSS but cannot survive export: Figma has no color-mix, so it stores a flat
+     literal, and a literal that varies by brand AND mode at once is the one shape
+     a single Figma variable cannot hold. Pointing the mix at the brand-owned hue
+     rungs instead makes the value brand-only and the role mode-only, with the
+     same resolved colour. Declared here, unscoped by mode, on purpose. */
+  --ref-hue-glow-on-light:      color-mix(in oklch, var(--ref-hue-700) 20%, transparent);
+  --ref-hue-glow-on-dark:       color-mix(in oklch, var(--ref-hue-300) 28%, transparent);
+  --ref-hue-on-accent-on-light: color-mix(in oklab, #ffffff 30%, transparent);
+  --ref-hue-on-accent-on-dark:  color-mix(in oklab, var(--ref-hue-950) 30%, transparent);
+
+  /* Accent ROLES read that ramp, and this mapping is the only place either theme
+     states it. Light steps DOWN for the stronger state (700 → 800 → 900) so the
+     fill darkens within its own hue instead of muddying toward black; dark steps
+     UP (300 → 200 → 100) because on a dark surface "more pressed" reads as more
+     light.
+
+     hue-tint is a rung apart from hue-100 on purpose. accent-100 is a pale wash
+     laid on a LIGHT surface, while the dark ladder's pressed step is the PALEST
+     thing on a dark one. A hue brand can serve both from one rung; an achromatic
+     brand cannot, because its ramp is the same spine the surfaces use — collapsing
+     them put Base's pressed state DARKER than its rest state and read the ladder
+     backwards. Two rungs, both brand-owned, both mode-invariant.
+     Retired here: accent-50 and accent-300 — declared in all three brands and
+     referenced by nothing, in any sheet. */
+  --ref-accent-100:  var(--ref-hue-tint);
+  --ref-accent-500:  var(--ref-hue-700);   /* accent base */
+  --ref-accent-600:  var(--ref-hue-800);   /* accent hover */
+  --ref-accent-700:  var(--ref-hue-900);   /* accent active */
+  --ref-accent-contrast: #ffffff; /* text/icon on accent */
+
+  /* Feedback ramps — FUNCTIONAL defaults (meaning, not brand).
+     Muted, warm-leaning hues to sit with the neutral ramp. Every
+     fg-on-bg pair clears AA (≥4.5:1); every solid clears 4.5:1
+     against white text. Borders are decorative container edges —
+     the text, not the edge, carries the meaning.
+     Brands may retune hue but must preserve the semantic. */
+  --ref-danger-fg:     #B1262A;   /* 5.70:1 on danger-bg · 6.60:1 on surface */
+  --ref-danger-bg:     #FFEAE2;
+  --ref-danger-border: #F8AD9B;   /* 1.84:1 on surface — see the border note below */
+  /* The filled destructive button runs the same hue as the danger text, so a red
+     button and a red sentence on one screen read as one signal. THE REST STEP IS
+     NOW LITERALLY --ref-danger-fg, not merely near it: when the feedback palette
+     moved and this ramp did not, the danger BADGE filled #B1262A while the Delete
+     BUTTON filled #af3535 — two reds, one screen, and the rule above quietly
+     false. Tying the value rather than restating it is what stops that recurring.
+
+     Hover and active are the same colour mixed toward black in OKLCH by 8% and
+     18%, which keeps one hue down the ramp and lands within a tenth of the
+     contrast progression the old steps had: 7.79 against 7.75, 9.52 against 9.58.
+     Written as hexes because a ref is where a value IS, and mixing here would put
+     a computation in the layer that exists to hold constants.
+
+     THIS RAMP HAS NO DARK OVERRIDE, AND THAT IS A DECISION RATHER THAN AN
+     OVERSIGHT. In dark the badge solid inverts to --ref-danger-fg (#FD736D, a
+     light red) so the fill carries the hue and the ink goes dark; the button keeps
+     this deep fill with white ink. So the two DELIBERATELY diverge below, and the
+     tie stated above holds in light only.
+
+     The difference is one of kind. A badge is an indicator — it reports a fact
+     about a record and inverting keeps it legible as a small tinted mark. A button
+     is an action surface, and a light-red filled Delete would be the loudest thing
+     on a dark screen: the most destructive control drawn as the brightest object.
+
+     Written down because the divergence currently looks like an omission — there
+     is simply no dark block for these three — and the next person to notice it
+     would be right to think it a bug. Confirmed as intended, 2026-08-17. */
+  --ref-danger-solid:  #B1262A;   /* = --ref-danger-fg · 6.60:1 with white text */
+  --ref-danger-solid-hover: #9E2124;   /* 7.79:1 */
+  --ref-danger-solid-active: #871B1E;  /* 9.52:1 */
+
+  /* Success is the one tone whose text and tint had to move together. The bg
+     used to sit one step paler than the brand's green-10 (#ecf9eb) because at
+     that pairing the text landed at 4.45:1, a hair under AA — the tint was the
+     cheaper of the two to move. That left #f0fbef at 1.02:1 against the canvas,
+     so a success banner read as a blank region, and the text was pinned at the
+     4.5 floor with no room to darken the tint alone. Both stepped down: the
+     green deepened, then the tint followed to 1.13:1 against the canvas. The
+     filled badge follows the text colour (see the solid roles), so it moved
+     with them — from 4.84:1 to 5.50:1 with white. */
+  --ref-success-fg:     #1A763F;  /* 5.10:1 on success-bg · 5.66:1 on surface */
+  --ref-success-bg:     #EAF7E1;
+  --ref-success-border: #AED19E;
+
+  --ref-warning-fg:     #7E5E00;  /* 5.32:1 on warning-bg · 6.02:1 on surface */
+  --ref-warning-bg:     #FFEFD4;
+  --ref-warning-border: #EBBB79;
+
+  /* Info is deliberately achromatic — "neutral news" borrows the
+     neutral ramp rather than introducing a fifth hue. */
+  --ref-info-fg:     #606060;   /* 5.61:1 on info-bg · 6.29:1 on surface */
+  /* Info separates from the canvas by LIGHTNESS ALONE — the other three have a
+     hue to do it for them — so the fill has to be a deliberate step rather than
+     a whisper: neutral-100 measured 1.04:1 against the canvas and an info banner
+     effectively disappeared on a page. This fill reads at 1.12:1, which is the
+     same job the old neutral-250 was doing one step darker.
+     Written as hexes now rather than borrowed from the neutral ramp: the tone is
+     warmer than the ramp it used to trace, and pointing at neutral-250 would
+     have meant re-tuning the whole ramp to move one banner. */
+  --ref-info-bg:     #F3F2EE;
+  --ref-info-border: #C1BEB9;
+
+  /* A FIFTH FEEDBACK TONE, and the only one carrying the brand hue. It is for a
+     message that is neither good news nor bad but the PRODUCT talking — a new
+     feature, a tip, a branded notice — where achromatic info would read as
+     system chrome.
+
+     The foreground is exactly --ref-cobalt-600, so this tone belongs to the same
+     ramp the accent does; the fill and the edge are hand-tuned a shade warmer
+     than cobalt-50 and cobalt-300 rather than snapped to them, which is worth
+     knowing if the ramp is ever re-cut.
+
+     Declared at Tier 1 with the other tones rather than in the brand layer,
+     which is a deliberate compromise: the brand owns the ACCENT, so strictly a
+     hue-bearing feedback tone should be re-pointed per brand. Both brands in
+     this system are cobalt, so a second declaration would be two copies of one
+     value today. A brand introducing a different hue must override these three.
+     fg 5.50:1 on its own fill · 6.03:1 on surface. */
+  --ref-accent-tone-fg:     #345FB9;
+  --ref-accent-tone-bg:     #EFF5FE;
+  --ref-accent-tone-border: #A4BEEF;
+
+  /* Categorical hues — SIX numbered slots, and the numbers are the point.
+     These do not mean anything. A slot is assigned per view ("cat-3 is the
+     Logistics team on this screen") and means something else on the next one,
+     which is what a categorical scale IS — so naming them purple and teal would
+     invite an author to read meaning into a hue that carries none, and would
+     put "orange" one word away from warning.
+
+     Every slot is the same lightness and chroma; only the hue angle moves. That
+     is what keeps six pills reading as one family rather than six decisions, and
+     it means one ratio holds for all of them instead of six measurements.
+
+     Hue space is genuinely full: status already spends red, amber and green, and
+     the brand spends blue. cat-2 (azure) sits nearest the accent and cat-5
+     (amber) nearest warning — the cost of a six-slot scale in a system that has
+     already assigned five hues, and the reason a categorical badge must never
+     share a column with a status badge. Tint only: there is no solid
+     categorical, because emphasis is a statement about importance and a
+     category is not more or less important than its neighbour. */
+  --ref-cat-1-bg: oklch(0.945 0.042 190);  --ref-cat-1-fg: oklch(0.42 0.12 190);   /* teal */
+  --ref-cat-2-bg: oklch(0.945 0.042 230);  --ref-cat-2-fg: oklch(0.42 0.12 230);   /* azure */
+  --ref-cat-3-bg: oklch(0.945 0.042 300);  --ref-cat-3-fg: oklch(0.42 0.12 300);   /* purple */
+  --ref-cat-4-bg: oklch(0.945 0.042 340);  --ref-cat-4-fg: oklch(0.42 0.12 340);   /* pink */
+  --ref-cat-5-bg: oklch(0.945 0.042 50);  --ref-cat-5-fg: oklch(0.42 0.12 50);   /* amber */
+  --ref-cat-6-bg: oklch(0.945 0.042 115);  --ref-cat-6-fg: oklch(0.42 0.12 115);   /* moss */
+
+  /* SHADOW INK FOR A LIGHT GROUND — brand-tintable, and the only shadow layer a
+     brand owns. A tinted ink works because on a pale surface the shadow is darker
+     than what it falls on. On a DARK ground it is not: rgb(63,59,58) is lighter
+     than a #111218 canvas, so a brand-tinted ink there renders a faint GLOW with
+     the wrong sign rather than a shadow. Dark therefore takes black for every
+     brand, set once in the dark block — brands must not re-tint it.
+
+     Until v300 the brand sheets declared the four ROLE tokens at their root with
+     no dark override, so Default and Spacious reused these light values in dark
+     and every raised surface, overlay and modal in those themes glowed. Splitting
+     the ink from the role fixes that and makes the roles depend on mode alone. */
+  --ref-shadow-ambient-on-light:        rgba(33, 32, 31, 0.08);
+  --ref-shadow-key-on-light:            rgba(33, 32, 31, 0.12);
+  /* Raised sits close to the surface: wider blur, much lighter ink */
+  --ref-shadow-raised-ambient-on-light: rgba(33, 32, 31, 0.06);
+  --ref-shadow-raised-key-on-light:     rgba(33, 32, 31, 0.09);
+
+  /* The four roles the elevation recipes read. Light points at the brand ink
+     above; the dark block swaps all four to black. */
+  --ref-shadow-ambient:        var(--ref-shadow-ambient-on-light);
+  --ref-shadow-key:            var(--ref-shadow-key-on-light);
+  --ref-shadow-raised-ambient: var(--ref-shadow-raised-ambient-on-light);
+  --ref-shadow-raised-key:     var(--ref-shadow-raised-key-on-light);
+
+  /* ========================================================
+     TIER 2 · SEMANTIC — the contract products consume.
+     Abstract role names only. No brand, no hue literal.
+     ======================================================== */
+
+  /* —— Color: backgrounds / surfaces —— */
+  --color-bg-canvas:          var(--ref-neutral-50);   /* app shell / page */
+  --color-bg-surface:         var(--ref-neutral-0);    /* default container */
+  --color-bg-surface-raised:  var(--ref-neutral-0);    /* cards/modals over canvas */
+  --color-bg-surface-sunken:  var(--ref-neutral-100);  /* wells, insets */
+  --color-bg-muted:           var(--ref-neutral-100);  /* subtle fill */
+  /* The ground for a COMMITTED ENTRY — a token, and anything else that is a mark
+     the user put there rather than a region of the page. Its own role rather
+     than --color-bg-muted, which is one rung too shallow to survive the surface
+     these actually sit on: an applied-filter row lives on the CANVAS, and muted
+     measured 1.035:1 there in light — four points of RGB, a fill you cannot see.
+     Its own role rather than --color-bg-selected too, which lands on the same
+     rung today: that one means "selected", and pointing tokens at it would move
+     every token the next time selection is retuned. Same rung, different jobs,
+     and the system has been bitten by exactly that coupling before — see the
+     info-tint collision on .data-grid tbody tr.on.
+     250 and not 200: 200 separates better in dark (2.18:1) but drops the
+     qualifier key to 4.13:1, under AA. 250 holds 4.99 light / 5.14 dark. */
+  --color-bg-entry:           var(--ref-neutral-250);
+  /* The data grid header. Its own rung rather than --color-bg-muted, which is
+     also --color-bg-hover: a header painted in the hover fill and a hovered row
+     were the same colour, so the band at the top of the table read as a row the
+     pointer happened to be sitting on. One step further from the surface, so the
+     header is the darkest thing in the table and hover still brightens under it. */
+  --color-bg-table-head:      var(--ref-neutral-200);
+  /* The segmented control's track. A step further from the surface than
+     --color-bg-muted, which the control used to borrow: muted is 1.04:1 against
+     the canvas, so a segmented control sitting on a page read as a row of loose
+     buttons rather than as one control with a selected segment in it. */
+  --color-bg-seg-track:       var(--ref-neutral-200);
+  --color-bg-hover:           var(--ref-neutral-100);
+  --color-bg-active:          var(--ref-neutral-200);
+  /* Neutral, not the brand's pale accent. Selection is a state, and the system
+     already draws states as tone steps on the surface — hover 100, active 200,
+     selected 250, the darkest because it is the one that persists. A tinted fill
+     put brand colour behind a row whose meaning is positional, and read as an
+     accent-coloured surface rather than as the same fill one step further along.
+     Accent still carries selection where it is a mark rather than a plane: the
+     selected ring, the check, the tab underline. */
+  --color-bg-selected:        var(--ref-neutral-250);
+  /* The tinted variant of the role above, for the one surface that asked for it:
+     a grid row, where selection is a persistent set the user is building rather
+     than a momentary position. It defaults to the neutral fill, so a brand with
+     no hue — the unbranded foundation — renders exactly what it rendered before and
+     the ladder above still holds. Only a brand that HAS an accent overrides it,
+     and it must point at --color-accent-tint-bg rather than the accent ramp
+     directly: accent-500 is a fill for marks, not planes, and text at
+     --color-fg-default does not survive on it.
+     NOT wired to --color-accent-tint-bg here: that role falls back to
+     --color-bg-emphasis (the inverse surface) when a brand supplies no accent,
+     which would paint selected rows near-black on the achromatic brands.
+
+     ONE RUNG OFF --color-bg-selected, and the reason is the INFO badge. This role
+     used to trace --color-bg-selected exactly, which is neutral-250 — the same
+     value --ref-info-bg resolves to — so an info pill sitting on a selected row
+     measured 1.00:1 against it and disappeared. Both arrived there for good
+     separate reasons; together they collided.
+
+     Stepping the ROW is the right end to fix it: a status is a fact about the
+     record, and selecting a row must not restyle the badge that states it. 300
+     light / 850 dark clears the info tint (1.12 / 1.25) and firms the row's own
+     ladder at the same time — 1.41 and 1.90 against a rest row, where tracing
+     --color-bg-selected gave 1.26 and 1.52. The hue-bearing brands solve the same
+     collision with cobalt-50 \u2014 they can go paler than this because a hue
+     separates their tint from the hover fill even at the same lightness, and
+     Base has no hue to spend. See brands/*.css. */
+  --color-bg-selected-accent: var(--ref-hue-selected-on-light);
+  --color-bg-emphasis:        var(--ref-neutral-900);  /* inverse surface */
+  /* The emphasis fill's hover step, defined per mode like --color-bg-hover is.
+     It cannot be derived by mixing toward a foreground: in dark, emphasis and
+     fg-default are two rungs of the same near-white and the mix moved the fill
+     by 2/255 — a selected chip with no hover response. Light steps DOWN to the
+     darkest neutral, dark steps UP to pure white; both are one visible move
+     further into the fill's own direction. */
+  --color-bg-emphasis-hover:  var(--ref-neutral-950);
+
+  /* —— Navigation surface ——
+     A dark side nav in BOTH modes, which is why these are fixed neutral refs
+     and not mode-flipped roles. --color-bg-emphasis was the obvious candidate
+     and is wrong: it inverts, so a dark nav in light mode would become a light
+     nav in dark mode. The panel is chrome that frames the product; it holds its
+     value while the content beside it changes.
+     Measured on --color-bg-nav (#21201f): rest text 7.83:1, selected text
+     16.27:1, and 15.45:1 against the light canvas it sits beside. The selected
+     FILL is only 1.52:1 — it is deliberately a supporting signal, not the
+     indicator: selected is carried by the text stepping from muted to white and
+     by the label weight, both of which survive greyscale. */
+  --color-bg-nav:            var(--ref-neutral-950);
+  --color-bg-nav-hover:      var(--ref-neutral-910);
+  --color-bg-nav-selected:   var(--ref-neutral-900);
+  --color-fg-on-nav:         var(--ref-neutral-400);
+  --color-fg-on-nav-strong:  var(--ref-neutral-0);
+  --color-border-on-nav:     var(--ref-neutral-900);
+  /* The selected destination in a LIGHT nav — a drawer row or a rail pill.
+     Its own pair, because it cannot be written as --color-accent-tint-* directly:
+     that role is the emphasis surface in an achromatic theme (a theme with no hue
+     can only separate a tint from a grey one by weight — see brands/*.css), which
+     would put a solid near-black row inside a white drawer. So the foundation
+     default is the NEUTRAL selected fill, and a brand with a hue points these at
+     its accent tint. A destination is the one place in a product where "you are
+     here" earns a hue: the nav is read dozens of times a day, and the accent makes
+     the current row findable at a glance rather than by comparing greys.
+     Colour is never the only signal — .nav-item.on carries the label weight too. */
+  --color-bg-nav-item-selected: var(--color-bg-selected);
+  --color-fg-nav-item-selected: var(--color-fg-default);
+  /* Selected text in a nav laid on the dark surface. This is the strong
+     foreground, NOT an accent step, and the reason is the ramp rather than
+     taste: --ref-accent-300 is the only accent value that stays legible on the
+     dark surface in both modes, and in the achromatic base brand it resolves to
+     #8f8f8f — 5.0:1, BELOW the 7.8:1 of rest text, which would make selected
+     the dimmest item in the nav. Brand layers may only override Tier-1 refs, so
+     there is no per-brand escape from that. The dark nav therefore marks
+     selected the way the dark drawer already does: the text steps to white and
+     the label takes the emphasis weight. The light bar keeps its accent text,
+     where the accent's dark end is exactly right. */
+  --color-fg-nav-accent:     var(--color-fg-on-nav-strong);
+  /* The workspace badge and the brandmark glyph on a dark nav surface, plus the
+     count pill that sits beside them. NEUTRAL, not an accent step: a component
+     inverted onto a dark surface reads as chrome, and chrome does not carry the
+     brand hue — a pale-blue logo square and a pale-blue count on a near-black
+     panel put the only two saturated marks in the product inside its quietest
+     region. It was --ref-accent-100, which is a pale blue in the hue-bearing
+     brands and only looked neutral in the achromatic one.
+     Not --color-action-primary-rest either, and that is the older lesson: that is
+     the accent's DARK end in light mode, so the badge measured 1.5–1.9:1 against
+     the fixed dark panel and the square vanished, leaving a bare letter.
+     --ref-neutral-250 is the value accent-100 already resolved to in the base
+     brand, so it holds ~14:1 with a dark letter and does not invert with the
+     mode — which is what a surface that never inverts needs. */
+  --color-bg-nav-badge:      var(--ref-neutral-250);
+  --color-fg-on-nav-badge:   var(--ref-neutral-950);
+  /* Shares neutral-200 with --color-bg-active, deliberately. The light state
+     ladder runs hover 100 → active 200 → selected 250, and the only steps left
+     are 50 and 300: 50 measures 1.03:1 against hover (invisible as a fill) and
+     300 drops disabled text to ~2.4:1. Sharing is safe because the two states
+     can never be confused — press is momentary and only ever appears under a
+     live pointer, while a disabled surface is persistent and additionally
+     drops its elevation, mutes its text, and takes not-allowed. Dark has the
+     room and keeps them apart (#4d4c4b vs #1b1a19). */
+  --color-bg-disabled:        var(--ref-neutral-200);
+  --color-bg-overlay:         rgba(20, 19, 18, 0.45);  /* scrim */
+
+  /* —— Color: foreground / text & icons —— */
+  --color-fg-default:   var(--ref-neutral-950);
+  /* Muted sits at 600, one rung weaker than it used to. At 700 (6.3:1) it read as
+     a slightly grey version of default rather than a different tone — the
+     hierarchy was there in the numbers and not on the screen. 600 is 4.9:1: still
+     AA for body text, and visibly support rather than content.
+     That puts muted and subtle on the same value, which is the honest outcome —
+     there is no AA-safe rung between 600 and disabled, so the system carries TWO
+     text tones, not three.
+
+     The two names still divide the work, and an audit of all 105 consumers
+     (2026-08-31) found the split real and almost entirely consistent:
+       MUTED  — support text inside the reading or interaction flow: nav items,
+                breadcrumbs, pager controls, prose, section and empty-state
+                descriptions, table headers, the .k of a card.
+       SUBTLE — the quietest tier: incidental metadata (timestamp, file size,
+                time zone, chat meta, "optional") AND non-text marks (placeholder
+                glyphs and text, .ms chrome icons, thumbnails, .sb-dot borders).
+     Subtle is NOT marks-only — 53 of the 63 uses it had then were text, and that
+     is correct. The audit found 42 muted uses, none on a mark, and exactly two roles
+     contradicting themselves (.select-opt .sub disagreeing with its own .on
+     state, and .pager .ellip with .crumbs .ellip); both were moved to muted.
+     Because the values are equal these were invisible — which is the hazard: a
+     mislabelled consumer costs nothing until the day the tokens diverge, and
+     then every one of them surfaces at once.
+
+     THE EQUALITY IS DELIBERATE — NOT DUPLICATION TO BE TIDIED UP. Two semantic
+     roles that happen to resolve to one value today; 105 consumers across ds/
+     (44 muted, 61 subtle) say which role they are playing, and that stays true
+     whether or not the values ever diverge. Collapsing them to one token would
+     throw away the distinction permanently to save one line. Design owner
+     direction, 2026-08-31: keep both tokens, and keep .txt-muted / .txt-subtle
+     as two utilities, for the same reason.
+
+     What must NOT happen is a component leaning on the equality — anything that
+     needs a VISIBLE step down has to use a different property, not the other
+     token. See .ts.strong in components-extra.css, which promotes on weight
+     because colour could not carry it. */
+  --color-fg-muted:     var(--ref-neutral-600);
+  --color-fg-subtle:    var(--ref-neutral-600);
+  /* Support text sitting ON one of the filled neutral steps — a table header, a
+     selected row. Muted is measured against white and canvas (4.9:1); on the
+     filled steps it drops (4.2:1 on active, 3.9:1 on selected), so a filled
+     region gets its own foreground pinned one rung darker rather than every
+     component patching the pairing locally. */
+  --color-fg-on-fill:   var(--ref-neutral-700);
+  /* Disabled text is exempt from AA but still has to be perceivable. At
+     neutral-400 it measured 1.79:1 on the disabled fill — effectively blank,
+     and half the legibility the same state gets in dark (3.56:1). neutral-550
+     brings light to 3.40:1 while staying visibly weaker than subtle text. */
+  --color-fg-disabled:  var(--ref-neutral-550);
+  --color-fg-on-accent: var(--ref-accent-contrast);
+  --color-fg-on-emphasis: var(--ref-neutral-0);
+  /* Neutral, not accent. The underline is the affordance — present at rest, and
+     the only signal that survives greyscale — so colour was doing nothing a
+     second time, and a page of accent-coloured link text pulled the eye through
+     prose that should read evenly. Links take the body colour and are told
+     apart by the line under them; accent stays with the controls that act. */
+  --color-fg-link:      var(--ref-neutral-950);
+  /* ACCENT TEXT, AND THE OTHER HALF OF THE SENTENCE ABOVE. "Accent stays with the
+     controls that act" needed a role to stay IN, and there was none: eighteen
+     foreground roles and not one of them the accent, so an action rendered as text
+     had to reach for a fill token or a ref. This is that role, and it is scoped by
+     the rule at .lnk.action rather than by the token — a token cannot know whether
+     it is being spent on a control or on prose.
+     --ref-accent-500 and NOT --ref-hue-700: the accent ramp already flips per mode
+     (hue-700 in light, hue-300 in dark), so one declaration is correct on both
+     grounds and stays correct for a brand whose accent is not cobalt. */
+  --color-fg-accent:    var(--ref-accent-500);
+  /* Hover shifts the colour, not the line weight. It has to be a neutral step:
+     in the Base brand the accent is a near-black neutral, so pointing hover at
+     it measured 1.5:1 against the rest colour — invisible. Lightening one step
+     off the body colour is perceptible in every brand and both modes. */
+  --color-fg-link-hover: var(--color-fg-muted);
+
+  /* —— Color: borders —— */
+  --color-border-default: var(--ref-neutral-300);  /* card edges · CAPTIONED seams */
+  --color-border-muted:   var(--ref-neutral-250);  /* BARE hairline dividers */
+  --color-border-control: var(--ref-neutral-600);  /* control boundaries — must clear 3:1 */
+  --color-border-strong:  var(--ref-neutral-700);  /* control hover */
+  --color-border-selected: var(--ref-accent-500);          /* selected FIELDS — input, select, drop zone */
+  --color-border-selected-surface: var(--ref-neutral-950); /* selected SURFACES — the card ring */
+
+  /* —— Color: action / interactive roles —— */
+  /* The lightest accent plane — a tinted surface, not a fill you put text on.
+     Used where a region is momentarily live (a drop zone under a dragged file). */
+  --color-bg-accent-subtle:        var(--ref-accent-100);
+  --color-action-primary-rest:     var(--ref-accent-500);
+  --color-action-primary-hover:    var(--ref-accent-600);
+  --color-action-primary-active:   var(--ref-accent-700);
+  --color-action-primary-fg:       var(--ref-accent-contrast);
+
+  /* Secondary is an accent OUTLINE and an accent LABEL over no fill at all.
+     Rest is transparent rather than the surface colour it used to be: a white
+     rest only looked right on a white surface, and the same button dropped onto
+     canvas, a sunken well, or a dark panel carried a pale card of its own.
+     Transparent inherits whatever it is placed on, so one variant works
+     everywhere.
+     Hover and pressed borrow the generic interaction fills, the same pair ghost
+     uses — a neutral wash that darkens on light surfaces and lightens on dark
+     ones, so the states track the surface too instead of introducing a second
+     colour of their own. */
+  --color-action-secondary-rest:   transparent;
+  --color-action-secondary-hover:  var(--color-bg-hover);
+  --color-action-secondary-active: var(--color-bg-active);
+  /* Secondary carries the accent on its fill, label, and glyph — it is the
+     brand's second voice, and the pairing with a filled primary is what makes
+     an action row read as one decision.
+     The label takes accent-600 and the outline accent-500: text needs 4.5:1 and
+     a border only 3:1, so the label takes the darker step and the edge keeps the
+     base accent. Both are measured against every surface the button can sit on
+     — see Foundations → Contrast & a11y, which now checks the label on surface
+     AND on canvas, since a transparent rest means the surface is the backdrop. */
+  --color-action-secondary-fg:     var(--ref-accent-600);
+  --color-action-secondary-border: var(--ref-accent-500);
+  /* Neutral secondary — the safe path beside a DESTRUCTIVE primary. The accent
+     is the brand's "yes" voice, and next to a red commit an accent outline reads
+     as a second coloured recommendation: two hues competing to be chosen, when
+     the whole point of the pair is one red decision and one way out of it. Grey
+     steps out of the argument. The edge takes --color-border-control (4.9:1 on
+     surface) rather than a lighter hairline, because a control edge owes 3:1. */
+  --color-action-secondary-neutral-fg:     var(--color-fg-default);
+  --color-action-secondary-neutral-border: var(--color-border-control);
+
+  /* Destructive secondary mirrors secondary exactly, one hue over: a danger
+     outline and a danger label over no fill. It keeps the mirror because the
+     variant's whole job is to read as "secondary, but destructive" — when the
+     two treatments diverge, the row stops teaching a rule.
+     The outline takes the danger FOREGROUND, not --color-feedback-danger-border:
+     that border token is a hairline for tinted banners (#e8b8b8) and measures
+     about 1.9:1 on a white surface, under the 3:1 a control edge owes. The
+     foreground reads 5.9:1 and is the same hue. Hover and pressed reuse the
+     tinted danger pair rather than the neutral wash, so a destructive control
+     never washes grey on the way to being pressed. */
+  --color-action-danger-secondary-rest:   transparent;
+  --color-action-danger-secondary-hover:  var(--color-feedback-danger-bg);
+  --color-action-danger-secondary-active: color-mix(in oklch, var(--color-feedback-danger-bg) 90%, var(--ref-danger-solid));
+  --color-action-danger-secondary-fg:     var(--color-feedback-danger-fg);
+  --color-action-danger-secondary-border: var(--color-feedback-danger-fg);
+
+  --color-action-danger-rest:   var(--ref-danger-solid);
+  --color-action-danger-hover:  var(--ref-danger-solid-hover);
+  --color-action-danger-active: var(--ref-danger-solid-active);
+  --color-action-danger-fg:     var(--ref-neutral-0);
+
+  /* —— Color: selection control (checkbox/radio/toggle/tab) —— */
+  --color-selection-rest:  var(--ref-accent-500);
+  --color-selection-hover: var(--ref-accent-600);
+
+  /* —— Color: focus —— */
+  --color-focus-ring:  var(--ref-accent-500);
+  --color-focus-halo:  var(--ref-neutral-0);
+  /* Soft outer glow — the accent at low alpha, so it reads as light spill
+     rather than a second hard edge. */
+  --color-focus-glow:  var(--ref-hue-glow-on-light);
+  /* Danger focus — same structure, error hue. A destructive control or an
+     invalid field focuses in its own colour, so the ring carries the error and
+     the control does not also need an inner danger border. */
+  --color-focus-ring-danger: var(--color-feedback-danger-fg);
+  --color-focus-glow-danger: color-mix(in oklch, var(--color-focus-ring-danger) 20%, transparent);
+
+  /* —— Color: feedback (status) —— */
+  --color-feedback-info-fg:     var(--ref-info-fg);
+  --color-feedback-info-bg:     var(--ref-info-bg);
+  --color-feedback-info-border: var(--ref-info-border);
+  --color-feedback-success-fg:     var(--ref-success-fg);
+  --color-feedback-success-bg:     var(--ref-success-bg);
+  --color-feedback-success-border: var(--ref-success-border);
+  --color-feedback-warning-fg:     var(--ref-warning-fg);
+  --color-feedback-warning-bg:     var(--ref-warning-bg);
+  --color-feedback-warning-border: var(--ref-warning-border);
+  --color-feedback-danger-fg:     var(--ref-danger-fg);
+  --color-feedback-danger-bg:     var(--ref-danger-bg);
+  --color-feedback-danger-border: var(--ref-danger-border);
+
+  /* THE BADGE EDGE — the border token pulled 40% of the way toward its own fill.
+     A status tint is a pale wash, so the FILL carries almost no separation from
+     what it sits on: measured in light, a badge reads 1.13 against a plain
+     surface and 1.04 on a selected row, where the pill stops looking like a pill
+     and reads as a stray word in the cell.
+
+     The full border token was tried and rejected by eye — at 1.79 on a surface it
+     draws as a ring around the pill rather than as its boundary. 40% roughly
+     doubles the separation (1.35 on a surface, 1.24 on a selected row) while
+     staying close enough to the fill to read as the tint getting denser at its
+     edge rather than as a stroke laid on top.
+
+     Mixed INTO THE TONE rather than toward a neutral, so the edge keeps the hue
+     and a green pill never gains a grey outline. Declared here rather than
+     color-mixed in the component, because a colour decision belongs in the token
+     layer — and because both operands are semantic, dark inverts for free.
+
+     It does not solve the problem, and the numbers say so plainly: even at 100%
+     the edge only reaches 1.65 against a selected row. The tints and the row tint
+     are neighbours in lightness. This makes the pill hold its shape; the LABEL is
+     what carries the meaning, at 5.1-6.96 throughout. */
+  --color-feedback-info-edge:    color-mix(in oklch, var(--color-feedback-info-border)    40%, var(--color-feedback-info-bg));
+  --color-feedback-success-edge: color-mix(in oklch, var(--color-feedback-success-border) 40%, var(--color-feedback-success-bg));
+  --color-feedback-warning-edge: color-mix(in oklch, var(--color-feedback-warning-border) 40%, var(--color-feedback-warning-bg));
+  --color-feedback-danger-edge:  color-mix(in oklch, var(--color-feedback-danger-border)  40%, var(--color-feedback-danger-bg));
+
+  /* Solid (inverted) feedback pair — a filled badge, where the tone becomes the
+     fill and the text sits on it. Same meaning as the tinted pair, one volume
+     louder, for the rare status that has to be found rather than read.
+
+     The fill IS the tone's foreground, so a solid badge and a tinted one on the
+     same screen are the same hue rather than two reds. In light the text on it
+     is white; in dark the pair inverts — the fill becomes the light tint and
+     the text becomes the dark one — because the light-mode fills sit at only
+     2.7:1 against a dark surface and a filled badge that cannot be found is a
+     filled badge for nothing. Neutral has no hue to fill with, so it borrows
+     the emphasis surface, which is exactly that: the inverse of the page.
+
+     A filled badge takes the tone's OWN FOREGROUND as its fill — one value per
+     tone governs both the word on the tint and the fill under white text, so a
+     brand retunes a tone once. There is no separate solid ref token: danger
+     keeps --ref-danger-solid only because the destructive BUTTON needs hover and
+     pressed steps a badge has no use for. Measured with white: info 6.3:1 ·
+     success 5.50:1 · warning 5.49:1 · danger 6.21:1. */
+  /* RETIRED AT v173, and recorded so the gap is legible rather than looking like an
+     oversight: the ACCENT feedback tone (bg / fg / border / solid / on-solid) and
+     --color-feedback-neutral-on-solid were declared and consumed by nothing. The
+     Semantic tier states what the system supports and has validated; an unrendered
+     token is one nobody has checked, and the accent tone had never been drawn. If an
+     Accent status tone or a second solid-neutral treatment is wanted later, mint the
+     tokens WITH the component that needs them and validate both together.
+     --color-action-primary-disabled went the same way: every disabled button takes
+     the shared --color-bg-disabled, settled at v164, so a per-variant disabled fill
+     is a direction the system decided against.
+     Left standing on purpose: --ref-accent-tone-* in Tier 1, now consumed by nothing.
+     That is a PRIMITIVE-tier question and a separate decision. */
+  --color-feedback-neutral-solid:    var(--color-bg-emphasis);
+  --color-feedback-info-solid:       var(--ref-info-fg);
+  --color-feedback-info-on-solid:    var(--ref-neutral-0);
+  --color-feedback-success-solid:    var(--ref-success-fg);
+  --color-feedback-success-on-solid: var(--ref-neutral-0);
+  --color-feedback-warning-solid:    var(--ref-warning-fg);
+  --color-feedback-warning-on-solid: var(--ref-neutral-0);
+  --color-feedback-danger-solid:     var(--ref-danger-fg);
+  --color-feedback-danger-on-solid:  var(--ref-neutral-0);
+
+  /* —— Color: accent tint (a brand moment, not a status) ——
+     The one pair that puts TEXT on an accent mark. --color-bg-accent-subtle is
+     the accent as a plane (a live drop zone) and says so; this is the accent as
+     a small filled mark with a word in it. Scarcity is the whole design: it is
+     the only tone in the system that carries no meaning at all, so it borrows
+     the eye's attention on credit. Two on a screen and it has spent it.
+
+     The FOUNDATION default carries weight, not hue, because the achromatic base
+     has no hue to carry. Pointed at the accent ramp this pair resolved to
+     accent-100 → neutral-250 and accent-600 → neutral-950, which is info's fill
+     and info's label exactly: a "New" pill and a "Draft" pill rendered as the
+     same pixels, and in dark the accent came out quieter than the grey it
+     outranks. With no brand applied it inverts instead, to the emphasis surface
+     and its own foreground — the same answer the dark nav reached for selected,
+     where the accent step was not legible either.
+
+     KNOWN COLLISION, and it is a floor rather than a fix. In the achromatic base
+     --ref-accent-500 traces neutral-900, which IS --color-bg-emphasis, so this
+     fallback shares its fill with .btn--primary and with a selected .chip.on —
+     separable from the tints, not from the fills. Nothing is left to move to:
+     the tints belong to info and bg-muted, the emphasis fill to primary and
+     selected, and a bordered transparent pill is a chip at rest. That is the
+     honest shape of the problem — this tone exists to spend brand hue, so a
+     theme with no accent has no brand moment to express, and the fallback's job
+     is to stay legible and obviously deliberate rather than unique. On Base, do
+     not put an accent badge beside a primary button or a selected chip. A brand
+     with a hue overrides both and the collision disappears (see ds/brands/*). */
+  --color-accent-tint-bg: var(--ref-hue-tint-bg-on-light);
+  --color-accent-tint-fg: var(--ref-hue-tint-fg-on-light);
+
+  /* —— Color: categorical (kind, not status) —— */
+  --color-cat-1-bg: var(--ref-cat-1-bg);
+  --color-cat-1-fg: var(--ref-cat-1-fg);
+  --color-cat-2-bg: var(--ref-cat-2-bg);
+  --color-cat-2-fg: var(--ref-cat-2-fg);
+  --color-cat-3-bg: var(--ref-cat-3-bg);
+  --color-cat-3-fg: var(--ref-cat-3-fg);
+  --color-cat-4-bg: var(--ref-cat-4-bg);
+  --color-cat-4-fg: var(--ref-cat-4-fg);
+  --color-cat-5-bg: var(--ref-cat-5-bg);
+  --color-cat-5-fg: var(--ref-cat-5-fg);
+  --color-cat-6-bg: var(--ref-cat-6-bg);
+  --color-cat-6-fg: var(--ref-cat-6-fg);
+
+  /* —— Spacing (semantic aliases of the dimension scale) ——
+     Named by px value, so the number in the token is the number on
+     screen. 4px grid throughout, with 2px and 6px half-steps for
+     dense chrome. 48 is the largest step: bigger gaps are layout,
+     not spacing, and belong to a page shell. */
+  --space-none: 0;
+  --space-2:  var(--ref-dimension-25);   /* dense chrome: badge inset */
+  --space-4:  var(--ref-dimension-50);   /* icon-to-label */
+  --space-6:  var(--ref-dimension-75);   /* tight control padding */
+  --space-8:  var(--ref-dimension-100);  /* related items in a row */
+  --space-12: var(--ref-dimension-150);  /* control padding, list rows */
+  --space-16: var(--ref-dimension-200);  /* default gap, card padding */
+  --space-20: var(--ref-dimension-250);  /* roomy card padding */
+  --space-24: var(--ref-dimension-300);  /* group separation */
+  --space-28: var(--ref-dimension-350);
+  --space-32: var(--ref-dimension-400);  /* section separation */
+  --space-36: var(--ref-dimension-450);
+  --space-40: var(--ref-dimension-500);
+  --space-44: var(--ref-dimension-550);
+  --space-48: var(--ref-dimension-600);  /* major section break */
+
+  /* T-shirt aliases — kept so existing component CSS keeps working.
+     New code should use the numeric names above. */
+  --space-2xs: var(--space-2);
+  --space-xs:  var(--space-4);
+  --space-sm:  var(--space-8);
+  --space-md:  var(--space-12);
+  --space-lg:  var(--space-16);
+  --space-xl:  var(--space-24);
+  --space-2xl: var(--space-32);
+  --space-3xl: var(--space-48);
+
+  /* —— Radius (semantic) ——
+     Named by where the corner sits, not by size. The scale nests:
+     inner < element < container < page, so a rounded thing inside a
+     rounded thing always reads as tucked in rather than fighting it.
+     --radius-none and --radius-full are fixed; brands retune the rest
+     to set personality (crisp on Ops, soft on Spacious). */
+  --radius-none:      var(--ref-radius-0);    /* squared — tables, full-bleed, dividers */
+  --radius-inner:     var(--ref-radius-100);  /* 6  — nested inside a container: wells, thumbnails, inner rows */
+  --radius-element:   var(--ref-radius-150);  /* 8  — buttons, inputs, chips, nav items */
+  --radius-container: var(--ref-radius-300);  /* 16 — cards, panels, menus, popovers */
+  --radius-page:      var(--ref-radius-600);  /* 32 — page shell, modal, drawer, sheet */
+  --radius-chat:      var(--ref-radius-500);  /* 28 — EXCEPTION: the chat composer, nothing else.
+                                                 Sits outside the nesting ladder; brand-tunable. */
+  --radius-full:      var(--ref-radius-full); /* pills, avatars, toggles */
+
+  /* Aliases — earlier role names, kept so existing component CSS works. */
+  --radius-control: var(--radius-element);
+  --radius-overlay: var(--radius-container);
+  --radius-pill:    var(--radius-full);
+
+  /* Hairline drawn ON an accent or danger fill — a split-button divider, a
+     spinner track. Derived from the on-accent foreground so it follows the
+     brand rather than assuming a white fill. */
+  --color-border-on-accent: var(--ref-hue-on-accent-on-light);
+
+  /* —— Border (semantic) —— */
+  --border-width-default:  var(--ref-border-width-25);
+  --border-width-emphasis: var(--ref-border-width-50);
+  /* Focus edge: the element's own 1px border takes the accent, and a SOLID 1px
+     ring of the same accent sits immediately outside it — a hard 2px accent
+     perimeter with no halo.
+
+     THE SOFT 4px GLOW WAS REMOVED, and the 2px solid edge it had replaced is
+     back. The note that stood here argued for 1px-plus-glow because a 2px solid
+     edge "made a focused field the heaviest outline on a form, heavier than the
+     primary button's own border". That is true and it is also fine: exactly ONE
+     field is focused at a time, and the indicator's whole job is to say where
+     typing will land. Weight parity with a resting button is not the thing to
+     optimise for.
+
+     MEASURED, and stated carefully because the numbering is easy to get wrong.
+     The AA rule that applies is 1.4.11 Non-text Contrast — 3:1 for the visual
+     information identifying a component's STATE. The accent edge clears it by a
+     wide margin in every brand and mode: 9.0 / 8.38 default, 9.0 / 7.96
+     spacious, 10.67 / 14.0 base, all against the field's own fill. It cleared it
+     before this change too, via the same 1px border.
+
+     The thickness rule — an indicator at least as large as a 2px perimeter, with
+     3:1 between focused and unfocused states of those pixels — is 2.4.13 Focus
+     Appearance, and it is AAA, not AA. This change moves toward it without fully
+     landing it: the OUTER pixel goes from surface to solid accent (8–14:1), but
+     the inner pixel only goes grey-to-accent (1.58–2.78:1), because the resting
+     border is already a mid grey. Closing that would mean a lighter resting
+     border or a 2px ring outside the border (3px total), and neither is worth
+     spending here. What it replaces was weaker on the same axis: 1px of solid
+     accent plus 4px of wash at roughly 1.5:1, where only the 1px qualified.
+
+     Still a shadow, not a width, so the element never changes size and padding
+     never needs compensating. Note this is the FIELD treatment; buttons and
+     other controls take --focus-ring, whose 3px accent band is unchanged. */
+  --border-glow-emphasis: 0 0 0 var(--ref-border-width-25) var(--color-focus-ring);
+  /* Danger variant — identical geometry, so an invalid field focuses exactly the
+     way a valid one does and only the hue differs. It needs no border rule of its
+     own: .control.invalid is ALREADY a 1px danger edge at rest, so focus adds the
+     second pixel and nothing else. For an invalid field the change on focus is
+     therefore THICKNESS rather than hue, and that still satisfies 2.4.11 — the
+     newly inked 1px band goes from the surface to solid danger. */
+  --border-glow-emphasis-danger: 0 0 0 var(--ref-border-width-25) var(--color-focus-ring-danger);
+
+  /* —— Typography (semantic; size + line-height pairs) —— */
+  --font-family-sans: var(--ref-font-family-sans);
+  --font-family-mono: var(--ref-font-family-mono);   /* code, snippets, docs — never product UI */
+  --font-family-brand: var(--ref-font-family-brand); /* logo + welcome headline only */
+
+  /* Weight roles. Component CSS asks for a ROLE — body vs emphasis — never a
+     raw --ref weight, so a brand that shifts its weight pairing shifts every
+     component with it. */
+  --type-body-weight:     var(--ref-font-weight-regular);
+  --type-emphasis-weight: var(--ref-font-weight-medium);
+
+  --type-display-size:   var(--ref-font-size-1000);
+  --type-display-line:   var(--ref-line-height-tight);
+  --type-display-weight: var(--ref-font-weight-light);
+  --type-display-tracking: var(--ref-letter-spacing-tight);
+
+  /* Headings track tight: at heading sizes the default fitting reads loose.
+     A tracking role per level so a brand can loosen one step without
+     component CSS reaching for a --ref. */
+  --type-heading-1-size:   var(--ref-font-size-900);
+  --type-heading-1-line:   var(--ref-line-height-tight);
+  --type-heading-1-weight: var(--ref-font-weight-medium);
+  --type-heading-1-tracking: var(--ref-letter-spacing-tight);
+  --type-heading-2-size:   var(--ref-font-size-800);
+  --type-heading-2-line:   var(--ref-line-height-tight);
+  --type-heading-2-weight: var(--ref-font-weight-medium);
+  --type-heading-2-tracking: var(--ref-letter-spacing-tight);
+  --type-heading-3-size:   var(--ref-font-size-700);
+  --type-heading-3-line:   var(--ref-line-height-snug);
+  --type-heading-3-weight: var(--ref-font-weight-medium);
+  --type-heading-3-tracking: var(--ref-letter-spacing-tight);
+  --type-heading-4-size:   var(--ref-font-size-600);
+  --type-heading-4-line:   var(--ref-line-height-snug);
+  --type-heading-4-weight: var(--ref-font-weight-medium);
+  --type-heading-4-tracking: var(--ref-letter-spacing-tight);
+
+  /* PAGE TITLE — the one role that outranks the heading ramp, and the one place
+     the weight exception is spent. A page title set at heading-4/medium was 20px
+     four points above body text and the same size as the section headings under
+     it, so the name of the screen read as one more subhead. It steps to 30 and
+     to 600 — a step and a half up the ramp, and the only weight above medium
+     in the system. Semibold rather than bold: at 30px the size is already doing
+     most of the work, and 700 made the title read as a different voice from the
+     screen under it rather than the same voice, louder.
+     Size alone was not enough: 24 beside a 20 section heading is a difference a
+     reader has to look for, and weight is what makes it land as a title.
+     Everything else stays capped at medium — see fonts.css. */
+  --type-page-title-size:     var(--ref-font-size-800);        /* 30 */
+  --type-page-title-line:     var(--ref-line-height-snug);
+  --type-page-title-weight:   var(--ref-font-weight-exception); /* 600 — approved for this role only */
+  --type-page-title-tracking: var(--ref-letter-spacing-tight);
+
+  /* Base and Default read at 14px body with 13px secondary text. Spacious runs the
+     wider ladder — 16 body, 14 secondary, 12 metadata — and it is the theme to
+     reach for when the screen is read rather than scanned.
+     What holds in every theme is what 12px is FOR: text nobody is expected to
+     read closely — timestamps, legal, terms and copyright lines, character
+     counts, chart axis values, code and overline labels. Anything the user is
+     meant to READ — a banner's explanation, a field's helper or error, a card's
+     supporting line — is 13px or above. If a string is at 12px and it matters,
+     it belongs a rung up; if it does not matter, it belongs deleted. */
+  --type-body-lg-size: var(--ref-font-size-400);   /* 16 — long-form reading */
+  --type-body-lg-line: var(--ref-line-height-normal);
+  --type-body-md-size: var(--ref-font-size-300);   /* 14 — default */
+  --type-body-md-line: var(--ref-line-height-normal);
+  --type-body-sm-size: var(--ref-font-size-200);   /* 13 — secondary text */
+  --type-body-sm-line: var(--ref-line-height-normal);
+
+  --type-label-size:   var(--ref-font-size-300);   /* 14 */
+  --type-label-weight: var(--ref-font-weight-medium);
+  /* 12. The metadata role — see the note above for what is allowed to use it. */
+  --type-caption-size: var(--ref-font-size-100);
+  --type-caption-line: var(--ref-line-height-normal);
+  /* Helper and error text under a field. Its own role because a message the
+     user must act on should never be the smallest thing on the screen — it sits
+     above caption size, and a roomy theme scales it up further still. */
+  --type-field-msg-size: var(--ref-font-size-200);   /* 13 */
+  /* Helper and error text wrap, so the role needs a line partner like every
+     other: the error glyph is centred on the FIRST line using this value.
+     SNUG, not normal. A helper line is one or two lines of supporting text under
+     a control, read once — at 1.5 the leading opened the field's lower gap wider
+     than its upper one and a two-line message read as two separate remarks. 1.35
+     keeps a wrapped sentence as one block. Prose measures take normal; this is
+     not prose. */
+  --type-field-msg-line: var(--ref-line-height-snug);
+  --type-overline-size: var(--ref-font-size-100);
+  --type-overline-line: var(--ref-line-height-snug);
+  --type-overline-weight: var(--ref-font-weight-medium);
+  /* Tracking is normal: the overline is sentence case now. Wide tracking exists
+     to keep all-caps readable, so it left with the caps — caps are reserved for
+     the welcome screen and the logo, both of which use the brand face. */
+  --type-overline-tracking: var(--ref-letter-spacing-normal);
+  --type-code-size:    var(--ref-font-size-100);
+
+  /* —— Table (brand-tunable, and in practice only Spacious tunes it): cells are
+     CONTENT, so they read at body size and sit in a 12/16 cell. Default overrides
+     none of this — a grid is the main content of the page it sits on, and it is
+     the last surface a compact theme should compress; Default buys its density
+     from the control ladder and the gutter instead. Spacious steps the padding up
+     to keep its larger cells breathing. —— */
+  --table-cell-size:  var(--type-body-md-size);
+  --table-cell-pad-y: var(--space-12);
+  --table-cell-pad-x: var(--space-16);
+
+  /* —— Form (brand-tunable) ——
+     Two gaps, and the ratio between them is what makes a form readable: the
+     tight one binds a label, its control and its helper text into one field;
+     the loose one separates that field from the next. --form-field-gap has to
+     stay clearly larger than --field-gap, or a helper line reads as the caption
+     of the label below it rather than of the control above it. That is the
+     failure this pair exists to prevent, and 8 against 24 is a 3× ratio.
+     Brand-tunable because it is density: a roomy brand widens the separation
+     while the binding gap holds — the pair inside a field does not get looser
+     just because the form has more air around it. */
+  --field-gap:      var(--space-8);
+  --form-field-gap: var(--space-24);
+  /* A row of fields separates on the INLINE axis, where there is no helper line
+     between one field and the next — so it does not need the 24 the column uses,
+     and 16 keeps a pair of short fields reading as one row. Its own token so a
+     form that wants more air changes a value instead of an inline gap. */
+  --form-row-gap:   var(--space-16);
+
+  /* —— Sizing: illustration scales —— */
+  --size-illus-spot:    48px;   /* inline empty states */
+  --size-illus-feature: 96px;   /* a panel or card with nothing in it */
+  --size-illus-hero:   160px;   /* full-page moments only */
+
+  /* —— Sizing: control heights & touch targets ——
+     A ladder, not one rung. A brand that retunes density retunes ALL THREE
+     steps: leave one alone and the sizes collapse into each other (a Spacious
+     md of 44 against a foundation lg of 44 makes .lg a no-op). Each step
+     stays at least 8px clear of its neighbours so the three are legible
+     side by side. */
+  --nav-brand-size: var(--ref-dimension-300);   /* 24 — the brandmark glyph in a nav or header; the brand's mark, one step above a nav glyph */
+  --size-count: var(--ref-dimension-250);       /* 20 — the count pill in a nav row or a tab; height AND min-width, so one digit is a circle */
+  /* 28 — brands may retune density. THE SMALL RUNG IS A COMPACT DESKTOP DENSITY
+     SIZE, NOT A RUNG EVERY COMPONENT OWNS. Three components carry `.sm` and the
+     list is closed: .btn (an established compact action), .select and .control
+     (a pair, for dense inline editing in a table or data grid). Search and
+     Stepper were retired from it at v170 — a search is where people TYPE, and a
+     stepper's two targets matter more than the row height it saves.
+
+     The token itself is used far more widely than the rung: chip and badge
+     heights, dismiss-target bounds, and several alignment calcs all want the
+     28px DIMENSION without being "a small control". Those are not the rung and
+     do not imply a `.sm` variant exists. */
+  --size-control-sm: var(--ref-dimension-350);
+  /* A COMMITTED ENTRY IS NOT A CONTROL, so it is not on the control ladder —
+     but it is not immune to a finger either, and it took two passes to say that
+     properly. .token is a value the user has already typed, and it is a <span>:
+     the only thing anyone can tap is the dismiss inside it. It shared
+     --size-control-sm for years because 28 was the right number, and the coarse
+     ladder then collapsed that rung and took the chip to 44, which added no
+     target and pushed Token Field from 106 to 138.
+     Leaving it at 28 on touch was the first correction and it over-corrected: 28
+     is legible on a mouse and cramped under a thumb. So this rung takes the
+     COMPACT-TOUCH model the small button already uses — 28 of ink on a pointer,
+     36 on touch, with the dismiss target expanded past the box rather than the
+     box grown to meet it. See the coarse block below for the second half. */
+  /* A CHIP IS A CONTROL WITH A COMPACT BODY AND A FULL TARGET, which is why it has
+     a dimension of its own rather than reading the sm rung. It shared
+     --size-control-sm for as long as the two agreed, and on touch they stopped:
+     the rung collapses to 44 and a 44px pill reads as a button, so a row of
+     filters looked like a row of commands. The body now takes 32 on touch and the
+     44 comes from a centred ::after in components.css — the same compact-touch
+     model .btn.sm and .token already use, and the reason the chip can afford the
+     full 44 where the small button takes 40 is that its overlay grows on ONE axis:
+     full width, taller box, so the --space-sm gaps between chips in a row are
+     untouched and only the wrapped-row gap has to clear it. Measured at 24px.
+     max() in the coarse block, never a flat 32: Spacious runs its compact rung at
+     36 for a pointer and must not shrink when a finger arrives. */
+  --size-chip: var(--size-chip-pointer);
+  --size-token: var(--ref-dimension-350);
+  /* A BADGE IS A DECLARED HEIGHT, and it was not one until now. Its box came out
+     of the type: 13px at line-height 1.2 is 15.6, plus 2px of padding a side and
+     the 1px border each side, which is 21.6 — a fractional pill, and a different
+     fractional pill below the turn where the type rung steps to 14 and it becomes
+     22.8. Nothing was wrong with any single number; the height was simply an
+     accident of three others, so it could not be relied on and could not be even.
+     24 is the smallest rung on the scale that holds the LARGEST line box a badge
+     ever gets (16.8, from the 14px rung that both Spacious and the sub-768 step
+     use) with room to breathe. The border comes out of this height rather than
+     adding to it, because box-sizing is border-box: a painted edge and a
+     transparent one now occupy identical space by construction rather than by
+     every variant remembering to declare a border. */
+  --size-badge-sm: var(--ref-dimension-250);   /* 20 */
+  --size-badge:    var(--ref-dimension-300);   /* 24 */
+  /* AND THE BADGE DOES ANSWER A FINGER AFTER ALL, which reverses what this
+     comment said one version ago. It is still not a control and still not on the
+     control ladder — nothing about it is tappable — but a status pill that stays
+     20px while every field beside it grows to 44 reads as a different, smaller
+     system, and a status column is the densest thing on a touch screen. So both
+     rungs take one step up: 20 → 24 and 24 → 28.
+     The pointer values are republished under a -pointer name the coarse block
+     does not overwrite, so it can take a max() and a brand whose pointer badge
+     is already at or above the touch floor keeps its own. That is the
+     --size-control-lg-pointer pattern, and it exists because pinning touch to a
+     flat number once made Spacious's prominent button SHRINK when a finger
+     arrived. Spacious runs 24/28 for a pointer, so touch does not move it. */
+  --size-chip-pointer:     var(--ref-dimension-350);   /* 28 — the brand's compact body */
+  --size-chip-touch:       var(--ref-dimension-400);   /* 32 — body on touch; the target is 44 */
+  --size-badge-sm-pointer: var(--ref-dimension-250);
+  --size-badge-pointer:    var(--ref-dimension-300);
+  --size-badge-touch-sm:   var(--ref-dimension-300);   /* 24 */
+  --size-badge-touch:      var(--ref-dimension-350);   /* 28 */
+  /* A POSITION INDICATOR'S TARGET, deliberately not a control rung. A carousel
+     dot is an 8px mark, and on touch the primary interaction is the swipe while
+     the arrows carry discrete steps — so the dot reports position and does not
+     have to be a standard target. Left on the ladder it collapsed to 44, and
+     eight of them plus the arrows overflowed a 320 screen by 73px: the row that
+     exists to SHOW you where you are could not fit on the screen it was
+     describing. Brand-invariant, because an 8px mark is 8px in every brand. */
+  --size-dot-target: var(--ref-dimension-350);
+  --size-control-md: var(--ref-dimension-450);  /* 36 */
+  --size-control-lg: var(--ref-dimension-550);  /* 44 */
+  /* The same value under a name the coarse block does NOT override, so touch can take
+     max(pointer, touch) and never shrink a control. See the note in the coarse block. */
+  --size-control-lg-pointer: var(--ref-dimension-550);
+  --size-touch-min:  44px;   /* minimum interactive hit target — touch input */
+  /* ── THE TOUCH LADDER, and it is three rungs rather than one number ──────────
+     --size-touch-min above is the PLATFORM floor: 44, the Apple HIG minimum and
+     WCAG 2.5.5 AAA. It is what every target must CLEAR and it does not move because
+     we have an opinion. These are the opinion — the VISIBLE heights a control takes
+     under a finger, and the two are not the same statement.
+
+     48 IS THE CTA HEIGHT, NOT THE UNIVERSAL CONTROL HEIGHT. Collapsing every rung
+     to 48 was tried and was wrong: it made a compact toolbar button the same size as
+     the page's commit, so a screen of controls had no hierarchy left, and it grew
+     every dense surface for no gain. What a finger needs is a 44px TARGET, which a
+     40px control gets from a centred overlay without becoming 44px of ink.
+
+       VISIBLE                      TARGET
+       bottom-bar CTA          48           48      the commit, pinned to the thumb
+       prominent page CTA      48           48      .btn.lg
+       standard page button    44           44      the default rung; the box IS the target
+       inline / compact        36           40      .btn.sm — overlay, not growth
+       icon button             36 x 36      40      .btn.icon
+
+     THE TWO COLUMNS ARE THE POINT. A control's visible weight and the area a finger may
+     land on are different decisions, and only the standard rung answers both with one
+     number. At a fine pointer the compact control needs no overlay at all: 36 of ink is
+     36 of target, and an overlay there would only steal from its neighbours.
+
+     Monotonic by construction: 40 < 44 < 48. Lint check 6 asserts it stays that way,
+     because the previous version of this block inverted the ladder without a word. */
+  --size-control-touch-sm: var(--ref-dimension-450);  /* 36 — the VISIBLE compact control */
+  /* THE COMPACT TARGET, and it is 40 rather than 44 on purpose. 44 is the PREFERRED
+     standard target and --size-touch-min still says so; it is not something to force
+     onto a control where reaching it would make adjacent hit areas overlap. Measured
+     across 23 compact buttons in real toolbars: gaps run 0, 0, 1, 4, 4, 4, 4, 4 at the
+     tight end against a median of 8, so a 36px control expanded to 44 bleeds 4px a side
+     and collides with eight neighbours, where expanding to 40 bleeds 2 and collides with
+     three. Same bleed as the 40/44 pairing this replaces, at a lighter visual weight.
+
+     WHEN EVEN 40 CANNOT BE REACHED CLEANLY, THE COMPOSITION IS WRONG, not the token:
+     widen the gap, move actions into an overflow, or promote the control to the standard
+     44 rung. An overlapping target is never the acceptable outcome — it makes the wrong
+     control answer the tap, which is worse than a smaller one that answers correctly. */
+  --size-target-touch-sm: var(--ref-dimension-500);   /* 40 — the compact TARGET */
+  /* -md ALIASES THE FLOOR ITSELF rather than restating 44, and the two names are kept
+     apart on purpose: --size-touch-min is the CONSTRAINT (what a target must clear) and
+     this is the CHOICE (what a standard control is). Pointing one at the other says the
+     choice is "sit exactly on the floor" and makes it self-maintaining — if the platform
+     minimum ever moves, the standard control moves with it instead of quietly dropping
+     below the thing it was supposed to clear. It also means there is ONE 44 in the
+     system rather than two that happen to agree today.
+
+     The consequence to know: if the floor ever rose above 48, -lg would stop being the
+     top of the ladder. Check 6's monotonic assertion is what catches that. */
+  --size-control-touch-md: var(--size-touch-min);     /* 44 — the standard page button */
+  --size-control-touch-lg: var(--ref-dimension-600);  /* 48 — a CTA context: the pinned bottom action bar, and a dominant action or PAIR anywhere else. --page-act-bar-h derives from this, so the bar's reservation and its buttons cannot drift apart */
+
+  /* ── BREAKPOINTS ──
+     A MEDIA QUERY CANNOT READ var(). Not a limitation of this system: a media
+     query is evaluated before the cascade produces a computed value, so there is
+     nothing for var() to resolve against. @custom-media would fix it and needs a
+     build step this library deliberately does not have.
+
+     So every @media still writes its number as a literal, and these tokens do
+     NOT drive them. What they do is make the number DECIDED IN ONE PLACE rather
+     than remembered in nine: this is where you change a breakpoint and where you
+     look one up, JavaScript reads them instead of hardcoding (QDS_MOBILE takes
+     its own precondition from --bp-turn), and QDS_LINT reads every @media rule in
+     the ds/ stylesheets and errors on any width that is not declared here. A
+     literal that drifts from the token cannot ship quietly, which is the part
+     that actually matters. */
+  --bp-turn:    768px;   /* the system turn — panel becomes overlay, controls take the touch floor */
+  /* --bp-metrics IS GONE, and this note is the record of why rather than a gap.
+     It was 900, the width where .grid.metrics dropped to two columns, and it was
+     the only rule in the system that turned on a CARD rather than the device. The
+     row is now intrinsic — repeat(auto-fit, minmax(min(213px, half the row), 1fr))
+     — so the count falls out of the width it is given and the same row is correct
+     inside a narrow container, which a viewport query could never be. 213 is
+     derived so the four-column width is still exactly 900. Removed rather than
+     kept: a declared breakpoint with no @media reading it is dead infrastructure,
+     and QDS_LINT would not have caught it because it only checks the other
+     direction. */
+  /* Where a numbered pager gives up its numbers for a "Page 5 of 10" readout.
+     Derived, not chosen: the number row is 328px wide once the buttons take the
+     touch floor, and the page inset spends 32 more, so 360 is the width below
+     which it cannot fit at all. 480 puts the swap comfortably BEFORE the row is
+     cramped rather than just after it breaks, and leaves every tablet the full
+     row. This is a VIEWPORT decision — how much room the composition has — and
+     deliberately not an Interaction one: a tablet with a coarse pointer has the
+     width for numbers and should keep them. */
+  --bp-pager: 480px;
+  /* Pointer-input floor. These are desktop ops tools: a mouse does not
+     need 44px, and a column of checkboxes on 44px rows reads as a list of
+     unrelated switches rather than one group. 32px keeps the target comfortably
+     larger than the 18px swatch while letting the rows sit close enough to
+     group. Coarse pointers get the full 44 back in the media query below. */
+  --size-touch-min-pointer: 32px;
+  /* Widest the page content grows before it centres. A global banner bleeds to
+     the viewport but aligns its text to this measure, so it lines up with the
+     layout underneath instead of sitting flush to the window edge. */
+  --size-page-max:   1280px;
+
+  /* ── THE PAGE INSET ── the one distance every region holds from the screen edge.
+     THE VALUE ALREADY VARIED BY VIEWPORT BEFORE IT HAD A NAME, which is the
+     problem this fixes rather than a feature it adds: .ct carried a literal 32,
+     .hd and .ft a literal 24, and a rule below the turn collapsed all of them to
+     16. Three numbers in three rules, so no brand could retune the page edge and
+     nothing else could ALIGN to it — a page header wanting to sit on the content's
+     leading edge had to know the literal.
+
+     ONE INSET, BECAUSE EVERY REGION TOUCHES THE SAME EDGE. That argument was
+     already written down on the narrow rule — three insets read as three
+     misalignments down the leading edge rather than as depth, and the eye follows
+     the ragged margin instead of the content — and it was applied on one side of
+     the turn only. Desktop kept content at 32 against chrome at 24, so a card's
+     edge sat 8px inside the header's. 24 for both is that argument finished.
+
+     NARROWS TO 16 BELOW THE TURN, and 16 is not an arbitrary smaller number: it
+     is the card's own padding, so a card sitting in the content lines its edge up
+     with the content's rather than stepping in again. On a 375px screen it spends
+     32 of 375 where 24 a side would spend 48 — and touch type is already a rung
+     larger, so the content is being squeezed from both ends.
+
+     THE BRAND OWNS BOTH VALUES AND THE VIEWPORT PICKS ONE. That split is what
+     keeps the cascade honest: --page-inset is declared only here, so a brand
+     retunes the two named values and never fights the media query for the alias.
+     Declaring --page-inset directly in a brand sheet would lose to the doubled
+     selector below at every width, which is exactly the trap that shape avoids.
+
+     NOT A MOBILE TWIN OF A SPACING PRIMITIVE. --space-lg is 16 at every width and
+     stays that way; a primitive that changes meaning by viewport is one you can no
+     longer reason about. This is the SEMANTIC layer resolving differently, the same
+     tier --grid-gutter and --form-field-gap already occupy for brand.
+     THE ONE CONSTRAINT TO KNOW, and it is measured rather than theorised: the two
+     named values are read WHERE --page-inset IS DECLARED, which is the root or an
+     element carrying data-brand — because a custom property is substituted at the
+     declaring element and the result inherits as a finished length. So retuning
+     --page-inset-narrow on the root works (7px, verified), and on a data-brand
+     wrapper works (9px, verified), and on a PLAIN container is silently ignored —
+     --page-inset was already resolved above it. A product that wants a different
+     page edge on one region sets --page-inset there, not the named values. */
+  --page-inset-wide:   var(--space-xl);   /* 24 — desktop: content joins the chrome */
+  --page-inset-narrow: var(--space-lg);   /* 16 — below the turn, every region */
+  --page-inset: var(--page-inset-wide);
+
+  /* ── THE SAFE AREA ── the strip of screen the device has already spent, on a
+     notch, a rounded corner or a home indicator.
+
+     THESE ARE INERT UNTIL THE DOCUMENT ASKS FOR THEM, and that is the single most
+     important thing to know about safe-area handling. env(safe-area-inset-*)
+     resolves to 0 on every platform unless the page carries
+     viewport-fit=cover in its viewport meta — because without it iOS shrinks the
+     LAYOUT viewport to the safe region and nothing can reach an unsafe edge in the
+     first place. Every insetting rule in this system is therefore a no-op on a
+     document that has not opted in, and correct the moment it does. That is why
+     no visual regression comes with adding them.
+
+     The trap that produced this block: --page-act-bar already read env() directly
+     and its comment claimed a bottom-pinned bar "sits under the home indicator
+     without it". Not on any document in this repo — none of the five sets
+     viewport-fit, so that env() had always resolved to 0 and the protection was
+     illusory. A guard whose precondition is missing reads exactly like a guard
+     that works.
+
+     PHYSICAL NAMES, PAIRED WITH PHYSICAL PROPERTIES, and this is the one place in
+     this system where a logical property is the WRONG choice. A notch is on one
+     physical side of the hardware and does not move when the writing direction
+     does, so padding-inline-start: var(--safe-inset-left) is wrong under RTL while
+     padding-left is right in both. Logical everywhere else; physical here, on
+     purpose.
+
+     THE FALLBACK IS LOAD-BEARING. A bare env(safe-area-inset-bottom) is dropped
+     whole by a browser that does not know the variable, taking its declaration
+     with it — so a calc() around it fails and the padding vanishes rather than
+     degrading. The 0px is what makes an unsupported browser simply flat. */
+  --safe-inset-top:    env(safe-area-inset-top, 0px);
+  --safe-inset-right:  env(safe-area-inset-right, 0px);
+  --safe-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-inset-left:   env(safe-area-inset-left, 0px);
+  /* The one rung off the ladder that pairs with text, and its list is CLOSED at six —
+     every one a mark bounded by the thing it sits in rather than a control sized to the
+     pointer: the dismiss on a pill (.chip/.badge/.token .x), on a banner (.bar .x), on a
+     toast (.toast .x) and in a thumbnail corner (.thumb > .x); the grid sort arrow
+     (.data-grid th > button.sort); and the breadcrumb chevron (.crumbs .sep). That is the
+     same list the touch-target floor exempts, for the same reason. All six pair the size
+     with --icon-stroke-xs (1px) in the same rule, the way every rung does. Nowhere else. */
+  --size-icon-xs: 12px;
+  --size-icon-sm: 16px;
+  --size-icon-md: 20px;
+  --size-icon-lg: 24px;
+
+  /* ── ICON STROKE ── one rendered width per rung, and they are QUINCE'S NUMBERS
+     rather than a proportion inherited from the drawing.
+
+     THE GOAL IS CONSISTENT PERCEIVED WEIGHT, NOT IDENTICAL PHYSICAL WIDTH, which
+     is why the ladder is neither flat nor proportional. A flat width is too heavy
+     at the small end — 1.5px is 12.5% of a 12px box against 6.3% of a 24px one, and
+     the small glyph reads bold beside its larger twin. A proportional width is the
+     opposite: correct against the source drawing but visibly light at 24 and heavy
+     at 12 relative to everything else on the page. So the values climb with the box
+     and then STOP: 20 and 24 share 1.5px, because past 20px a heavier line stops
+     reading as the same family and starts reading as a display weight.
+
+     These are RENDERED pixels. vector-effect: non-scaling-stroke on the drawables
+     keeps the stroke in viewport units, so the token says exactly what it draws —
+     no arithmetic between the number here and the number on screen. */
+  --icon-stroke-xs: 1px;      /* 12 — the closed list of utility marks */
+  --icon-stroke-sm: 1.25px;   /* 16 — compact UI, the busiest rung */
+  --icon-stroke-md: 1.5px;    /* 20 — the default */
+  --icon-stroke-lg: 1.5px;    /* 24 — larger and mobile; deliberately not heavier */
+
+  /* —— Elevation (structure; brand may retint via --ref-shadow-*) —— */
+  --elevation-flat:    none;
+  --elevation-raised:  0 1px 8px var(--ref-shadow-raised-key), 0 0 2px var(--ref-shadow-raised-ambient);
+  --elevation-overlay: 0 4px 12px var(--ref-shadow-key), 0 2px 4px var(--ref-shadow-ambient);
+  --elevation-modal:   0 16px 48px var(--ref-shadow-key), 0 8px 16px var(--ref-shadow-ambient);
+  /* Chrome edges — the shell header and side panel. Directional and short: the
+     chrome is not floating above the page, it is fixed to an edge of it, so the
+     spill only falls on the content side. Replaces the hairline on that edge
+     rather than joining it — separation is one device per boundary, and a line
+     plus a shadow reads as two seams. Ink comes from the raised pair (the
+     lightest in the system) and inverts with mode like every other elevation. */
+  /* One weight, two directions: a 1px contact line plus a wide, heavily diluted
+     spill, rotated per edge. They are matched rather than tuned per edge — the
+     header and the panel are the same plane meeting the content at right angles,
+     and two different weights on one L-shaped seam read as two planes. */
+  --elevation-chrome-below:  0 1px 2px -1px var(--ref-shadow-raised-key), 0 2px 6px -3px var(--ref-shadow-raised-ambient);
+  --elevation-chrome-inline: 1px 0 2px -1px var(--ref-shadow-raised-key), 2px 0 6px -3px var(--ref-shadow-raised-ambient);
+
+  /* Interactive rings — inset, so they never shift layout.
+     Hover = light grey · pressed = darker grey · selected = darkest neutral.
+     A selected SURFACE rings in neutral; a selected FIELD borders in accent
+     (--color-border-selected). Two roles, so a picked card never competes
+     with the focused control inside it. */
+  /* Hover and press are no longer drawn as rings — a card answers the pointer
+     with a fill (--color-bg-hover / -active), the same language nav items,
+     menu rows, and table rows use. These two remain for surfaces that need a
+     hairline INSIDE their own box, such as a colour swatch on a light ground. */
+  --elevation-inset-hover:    inset 0 0 0 var(--border-width-default) var(--color-border-default);
+  --elevation-inset-pressed:  inset 0 0 0 var(--border-width-default) var(--color-border-strong);
+  --elevation-inset-selected: inset 0 0 0 var(--border-width-emphasis) var(--color-border-selected-surface);
+
+  /* —— Motion (semantic) ——
+     Each role pairs a duration with an easing; take both or neither. */
+  --motion-hover-duration:   var(--ref-duration-fast-min);   /* fill, border, ring, opacity */
+  --motion-hover-easing:     var(--ref-easing-standard);
+  --motion-enter-duration:   var(--ref-duration-fast);       /* menu, popover, toast arriving */
+  --motion-enter-easing:     var(--ref-easing-decelerate);
+  --motion-exit-duration:    var(--ref-duration-fast-min);   /* the same surface leaving — quicker */
+  --motion-exit-easing:      var(--ref-easing-accelerate);
+  --motion-surface-duration: var(--ref-duration-medium-min); /* drawer, sheet, modal — travels further */
+  --motion-surface-easing:   var(--ref-easing-decelerate);
+  --motion-ambient-duration: var(--ref-duration-slow);       /* skeletons */
+  --motion-ambient-easing:   var(--ref-easing-linear);
+
+  /* —— Focus ring (composed) ——
+     A crisp 2px accent band carries the 3:1 contrast; a 3px glow of the
+     same hue at 20% spills outside it. All three are shadows, so focus
+     never changes an element's size. The 1px halo in the surface colour
+     separates the ring from an accent fill — without it, focus vanishes
+     on a primary button, whose fill IS the ring colour.
+
+     READ THE BANDS, NOT THE SPREADS: each layer's spread is measured from
+     the element's edge, so what the eye sees is the DIFFERENCE between
+     consecutive layers — 0-1px halo, 1-3px accent, 3-6px glow. This said
+     "a crisp 1px accent edge" until v310, which was true before the halo
+     existed: the halo went in at 1px and pushed the accent spread to 3,
+     doubling the visible band, and the sentence was never re-counted. A
+     spread is not a thickness. */
+  --focus-ring: 0 0 0 var(--ref-border-width-25) var(--color-focus-halo),
+                0 0 0 var(--ref-border-width-75) var(--color-focus-ring),
+                0 0 0 calc(2 * var(--ref-border-width-75)) var(--color-focus-glow);
+  /* Danger variant — identical geometry so focus never shifts or resizes. */
+  --focus-ring-danger: 0 0 0 var(--ref-border-width-25) var(--color-focus-halo),
+                       0 0 0 var(--ref-border-width-75) var(--color-focus-ring-danger),
+                       0 0 0 calc(2 * var(--ref-border-width-75)) var(--color-focus-glow-danger);
+
+  /* —— Z-index scale —— */
+  --z-base:      0;
+  --z-raised:    10;
+  --z-sticky:    100;
+  --z-dropdown:  1000;
+  --z-overlay:   2000;
+  --z-modal:     3000;
+  --z-popover:   4000;
+  --z-toast:     5000;
+
+  /* —— Layout: grid & breakpoints —— */
+  --breakpoint-sm:  640px;
+  --breakpoint-md:  768px;
+  --breakpoint-lg:  1024px;
+  --breakpoint-xl:  1280px;
+  --breakpoint-2xl: 1536px;
+
+  --grid-columns:        12;
+  --grid-gutter:         var(--space-lg);   /* 16 */
+  --grid-margin:         var(--space-xl);   /* 24 page padding */
+  --grid-margin-compact: var(--space-lg);   /* 16 tablet/dense */
+  /* Content measures. The content region is FLUID and centres once it reaches its
+     cap — these are the caps, not widths. A standard page sits between about
+     1120 and 1280: below 1120 it simply fills, and 1280 is where a text-and-card
+     layout stops gaining from more width and starts making the eye travel.
+     Wide is for layouts whose value IS density — a dashboard, a gallery, a grid
+     with many columns — where the extra 160px buys another column rather than a
+     longer line. Prose is the reading measure, unchanged. */
+  --container-content:   1280px;            /* standard pages */
+  --container-wide:      1440px;            /* dashboards, galleries, data-heavy views */
+  --container-prose:     720px;             /* readable text measure */
+
+  /* Component-specific container widths — modal, drawer, tooltip */
+  --container-tooltip:        240px;
+  --container-modal-default:  480px;
+  --container-modal-wide:     640px;
+  --container-drawer-sm:      360px;
+  --container-drawer-default: 480px;
+  --container-drawer-lg:      640px;
+
+  /* Component-specific sizing */
+  --textarea-min-height:      64px;        /* minimum height for textarea controls */
+  --search-min-width:         200px;       /* default search field min-width */
+  --search-terms-input-basis:  64px;       /* search with term tags input basis */
+  --search-toggle-min-width:  132px;       /* search highlight toggle field width */
+
+  /* Navigation shell sizing */
+  --shell-panel-w-collapsed: 68px;         /* nav collapsed state width */
+  --shell-panel-w-default:   256px;        /* nav default width */
+  --shell-panel-w-wide:      280px;        /* nav wide variant width */
+  --shell-panel-w-overlay:   320px;        /* nav in its OVERLAY form — the drawer below the turn */
+}
+/* ── THE CONTROL LADDER COLLAPSES TO THE FLOOR ON TOUCH ──
+   The ladder exists to fit more in: 28 for toolbars and table rows, 36 for the
+   default, 44 for a prominent CTA. That purpose is a POINTER purpose. A finger
+   has one size, so on a coarse pointer the small and medium rungs stop being a
+   density choice and become an accuracy problem — a 28px filter button on a
+   phone is a control most people miss.
+
+   So both floor at --size-touch-min. The lg rung is untouched: it is already at
+   or above the floor in every brand, and it is what keeps a CTA CONTEXT
+   prominent when everything else has risen to meet it. A context, not an action
+   — the pinned bottom bar normally carries a PAIR and takes this rung for both,
+   because what earns 48 is that those are the dominant actions on the screen and
+   not that there is exactly one of them.
+
+   ONE CHANGE REACHES 42 CONSUMERS. .btn, .control, .nav-item, .menu-item,
+   .select, .search, the stepper and the sort buttons all size off this ladder,
+   which is why it is fixed here rather than in forty rules that would drift.
+
+   :root:root, doubled, because a brand layer sets the ladder from
+   [data-brand="..."] — (0,1,0), the same weight as a single :root — and loads
+   after this file, so an undoubled rule would lose to every brand it is meant to
+   correct. Same trick .shell.nav-collapsed.nav-collapsed uses.
+
+   It ASSUMES no brand sets a rung above 44 for sm or md; today none does
+   (default 28/36, spacious 36/44). A brand that wanted a larger small control
+   would need this expressed as a max(), which CSS cannot do against a value the
+   custom property is itself declaring. */
+/* AND [data-brand] TOO, which is a different failure from the one above.
+   Doubling :root wins a SPECIFICITY contest against a brand layer declaring the
+   ladder at the root. It does nothing about INHERITANCE: put data-brand on a
+   wrapper — a themed section, a preview pane, an embedded widget, and the
+   storybook's own theme specimens — and that element re-declares the rungs on a
+   NEARER ANCESTOR than :root. A custom property resolves to the closest ancestor
+   that declares it, so no amount of weight at the root reaches past it, and the
+   whole touch collapse is silently lost for that subtree. Measured: 44px with
+   the brand inherited from <html>, 36px with the identical markup inside
+   <div data-brand="default">, and nothing anywhere reported it.
+
+   [data-brand][data-brand] is (0,2,0) against a brand file's
+   [data-brand="default"] at (0,1,0), so it wins at every level it appears, and
+   it is written brand-agnostically so a brand added later is covered without
+   anyone remembering this rule exists. */
+@media (pointer: coarse) {
+  :root:root,
+  [data-brand][data-brand] {
+    /* EVERY RUNG MOVES, and each to a different place. An earlier version pointed
+       sm and md at one value, which flattened the ladder; the one before that left
+       -lg out of the block entirely and INVERTED it, rendering a .btn.lg at 44 next
+       to a default .btn at 48. Both were found by measuring the button story rather
+       than by reading the diff, which is why check 6 now asserts monotonicity. */
+    --size-control-sm: var(--size-control-touch-md);  /* 44 */
+    --size-control-md: var(--size-control-touch-md);  /* 44 */
+    /* max(), NOT a plain assignment, and a pilot caught why. Spacious runs lg at 56 for a
+       POINTER, so pinning touch to a flat 48 SHRANK its prominent button — a control got
+       smaller when a finger arrived, which is the opposite of the whole point. The ladder
+       check could not see it: 44/44/48 is still monotonic, and the defect is across the
+       BRAND axis rather than within the rung order. The invariant it was missing is that
+       touch may RAISE a rung and never lower one. --size-control-lg-pointer carries the
+       brand's own value into this block, since the declaration above it is the one being
+       replaced and cannot be read from here. */
+    --size-control-lg: max(var(--size-control-lg-pointer), var(--size-control-touch-lg));
+    /* THE COMPACT-TOUCH MODEL, APPLIED TO A COMMITTED ENTRY. 36 of ink, the same
+       as the compact button, with a 40 target carried past the box — see
+       .token button.x::after. NOT the 44 the ladder would give it: a token sits
+       INSIDE a 44 field, so a 44 chip fills its own container edge to edge and
+       the field stops reading as a field. Spacious already runs 36 here, so this
+       raises the default brand and leaves Spacious where it was; it can never
+       lower either, which is the invariant the lg rung learned the hard way. */
+    --size-token: var(--size-control-touch-sm);
+    /* THE BODY RISES TO 32 AND STOPS; the 44 target is an overlay, not a height.
+       max() so Spacious keeps its 36 — touch may raise a rung, never lower one, and
+       QDS_LINT asserts that for every --*-pointer twin in the sheets. */
+    --size-chip:     max(var(--size-chip-pointer),     var(--size-chip-touch));
+    --size-badge-sm: max(var(--size-badge-sm-pointer), var(--size-badge-touch-sm));
+    --size-badge:    max(var(--size-badge-pointer),    var(--size-badge-touch));
+    /* -sm COLLAPSES TO 44 HERE, NOT TO THE 40 COMPACT SIZE, and that is deliberate.
+       Pointing this rung at 40 was tried and broke four targets that have nothing to
+       do with compact buttons: --size-control-sm is also spent by .chip, .control.sm,
+       .nav-collapse and — least visibly — by the SIZE OF THE DISMISS OVERLAY on
+       .bar/.search button.x, so lowering it shrank the very overlays that exist to
+       reach the floor. The compact height belongs on the compact BUTTON, which is
+       where the rule now puts it; everything else that spends -sm is a control whose
+       target IS its box and which therefore has to meet 44 outright. */
+  }
+}
+
+/* ══ THE READING SCALE STEPS UP BELOW THE TURN ══════════════════════════
+   14px body is a pointer size. It is comfortable at arm's length on a desk and
+   small in the hand — iOS sets 17 for body, Android 16sp — and every reading
+   rung under it inherits the problem: a 12px caption on a phone is a squint.
+
+   EACH RUNG MOVES UP EXACTLY ONE STEP, not "+1px". The scale is 11/12/13/14/16/
+   18/20/24/30, so a flat +1 would land 15 and 17 between rungs, and this system
+   already calls that out for spacing: a value between two rungs is how a ladder
+   rots. One step happens to BE the 1-2px asked for, and lands on real rungs.
+
+   THE RESULT IS THE SPACIOUS SCALE, for every reading token, exactly. That is not
+   a coincidence engineered here — Spacious is already "the theme that widens the
+   reading sizes", so stepping Default up one rung arrives where Spacious starts.
+   Which means one declaration serves both brands: below the turn everyone reads
+   at Spacious's sizes, Default rises to meet it, Spacious does not move.
+
+   SIZE ONLY. Line heights are unitless ratios and scale on their own, and the one
+   place the brands differ — 1.5 against Spacious's 1.65 on body — is a leading
+   decision belonging to that theme's personality, not something a phone should
+   inherit. Default on a phone reads 16px at 1.5, not at 1.65.
+
+   HEADINGS DO NOT MOVE. Spacious shares Default's 20/24/30/38 exactly, so there
+   is no "one rung up" to borrow, and a 30px page title on a 375px screen is
+   already the largest thing there. The complaint was that small text is small.
+
+   [data-brand][data-brand] beside :root:root for the same reason the touch ladder
+   needs it: a brand layer declares these from [data-brand], so a brand scoped to
+   a wrapper re-declares them on a nearer ancestor and inheritance beats weight.
+   Doubling the attribute wins at every level. */
+/* ══ THE PAGE INSET NARROWS AT THE TURN ══════════════════════════════════
+   A VIEWPORT DECISION AND DELIBERATELY NOT AN INTERACTION ONE. How far content
+   sits from the edge is a question about how much room the composition has, not
+   about what is pointing at it — a tablet with a coarse pointer has the width for
+   a 24 inset and should keep it, exactly as --bp-pager reasons about the pager.
+   Every control on that tablet still takes the touch floor; the page edge does not
+   move because a finger arrived.
+
+   Its own block rather than a row in the type block below: these narrow for
+   different reasons, and merging them would let someone read the inset as part of
+   the type-at-arm's-length argument, which it is not. */
+@media (max-width: 768px) {
+  :root:root,
+  [data-brand][data-brand] { --page-inset: var(--page-inset-narrow); }
+}
+
+@media (max-width: 768px) {
+  :root:root,
+  [data-brand][data-brand] {
+    --type-caption-size:   var(--ref-font-size-200);   /* 12 → 13 */
+    --type-body-sm-size:   var(--ref-font-size-300);   /* 13 → 14 */
+    --type-body-md-size:   var(--ref-font-size-400);   /* 14 → 16 */
+    --type-body-lg-size:   var(--ref-font-size-500);   /* 16 → 18 */
+    --type-label-size:     var(--ref-font-size-400);   /* 14 → 16 */
+    --type-field-msg-size: var(--ref-font-size-300);   /* 13 → 14 */
+  }
+}
+
+/* ══ AND THE SAME STEP ON A COARSE POINTER ═══════════════════════════════
+   THE VIEWPORT BLOCK ABOVE IS NOT ENOUGH, and the gap it leaves is a tablet:
+   coarse pointer, plenty of width, and until now the desktop type scale. A
+   finger implies a reading distance and a device held at arm's length, which is
+   an argument about the INPUT rather than about how much room there is — so the
+   step belongs on this axis too. The two blocks are near-identical on purpose:
+   a phone matches a tablet typographically, which is the point.
+
+   ONE ROW IS NOT A MIRROR. The page title SHRINKS, 30 → 24, alone among these.
+   Everything else grows because a finger reads at a distance; a 30px title on a
+   held device is not hard to read, it is simply eating the screen the content
+   needs. Growth and shrinkage in one block is not an inconsistency — the rule is
+   legibility at arm's length, and for a title that means giving space back.
+
+   NOT HERE, DELIBERATELY: --type-heading-4-size, the section heading, stays 20.
+   It already reads at arm's length and it is the hinge between a 24 title and 16
+   body — moving it would flatten the three-step hierarchy that makes a long page
+   scannable. 24 / 20 / 16 is a tighter ladder than 30 / 20 / 16, and that is the
+   point on a held device: the title stops dominating without the levels merging.
+
+   THE TITLE TAKES AN ON-SCALE RUNG, and the first version of this did not. It
+   reached for 26, which the scale does not contain (20, 24, 30), and declared a
+   --ref-font-size-750 to hold it. That is the magic number this scale exists to
+   prevent, dressed as a token: one consumer, off the ratio, and a step nobody
+   else can use. 24 is the value the scale already has for exactly this distance,
+   so it is the value the title takes.
+
+   THE ASYMMETRY TO KNOW ABOUT: the page title is on this axis and not on the
+   viewport one, so a desktop window dragged narrow keeps a 30px title while a
+   tablet gets 26. That is arguably wrong and is left as a decision rather than
+   assumed — adding it above would change narrow-desktop rendering, which nobody
+   asked for. */
+@media (pointer: coarse) {
+  :root:root,
+  [data-brand][data-brand] {
+    --type-caption-size:    var(--ref-font-size-200);   /* 12 → 13 */
+    --type-body-sm-size:    var(--ref-font-size-300);   /* 13 → 14  (badge, status) */
+    --type-body-md-size:    var(--ref-font-size-400);   /* 14 → 16  (body, table, input, button) */
+    --type-body-lg-size:    var(--ref-font-size-500);   /* 16 → 18 */
+    --type-label-size:      var(--ref-font-size-400);   /* 14 → 16 */
+    --type-field-msg-size:  var(--ref-font-size-300);   /* 13 → 14 */
+    --type-page-title-size: var(--ref-font-size-700);   /* 30 → 24 — the one that DROPS */
+    /* AN ALIAS DOES NOT RE-RESOLVE ON ITS OWN, and this line is here because of
+       that rather than because the table needs a different number. A custom
+       property's value substitutes at the element that DECLARES it: is
+       --table-cell-size: var(--type-body-md-size) at :root computes to 14px
+       there and then inherits as 14px, so redefining the body rung further down
+       the tree cannot reach it. On a real coarse pointer that is moot — this
+       block IS at the root, so the alias re-resolves anyway. It matters for the
+       storybook's Interaction toggle, which scopes these declarations to the
+       canvas, and where a table went on reading 14 while every other role
+       stepped. Restating the alias makes the token honest under both. */
+    --table-cell-size:      var(--type-body-md-size);   /* follows body: 14 → 16 */
+  }
+}
+
+/* ============================================================
+   DARK MODE — re-point semantic tokens only.
+   Brand layers can extend this; structure stays identical.
+============================================================ */
+:root[data-mode="dark"], [data-mode="dark"] {
+  --color-bg-canvas:         var(--ref-ground-base);
+  /* The nav plate is dark in both themes, so it followed the ramp re-tint rather
+     than the mode. Now it names the ground explicitly in dark; the light block
+     keeps neutral-950 so an unbranded build is unchanged. */
+  --color-bg-nav:            var(--ref-ground-raised);
+  --color-fg-on-nav-badge:   var(--ref-ground-raised);
+  --color-bg-surface:        var(--ref-ground-raised);
+  /* Raised takes its own step rather than sharing neutral-900 with selected:
+     while both sat there, a selected range or option drawn on a raised surface
+     measured 1.00:1 against it — invisible. Now raised reads 1.11:1 above
+     surface (plus its shadow) and a selected fill reads 1.38:1 above raised,
+     while subtle text on raised still clears 4.5 (4.55:1). */
+  --color-bg-surface-raised: var(--ref-neutral-925);
+  --color-bg-surface-sunken: var(--ref-ground-base);
+  /* Hover and muted take their own step. While they shared neutral-900 with
+     the selected fill, hovering a calendar day was indistinguishable from a
+     day inside the selected range (1.00:1) — and a neutral badge matched a
+     selected row exactly. Each state fill now has its own rung:
+     surface 950 → raised 925 → hover/muted 910 → selected 900 → active 850. */
+  --color-bg-muted:          var(--ref-neutral-910);
+  --color-bg-entry:          var(--ref-neutral-900);
+  /* Dark has one rung and no choice. Toward the surface is 925, which IS the
+     raised table surface, so the header disappeared into the table it heads.
+     Away from the surface, past hover, only 900 and 850 remain, and 850 is the
+     pressed fill. So the header takes 900 — one step brighter than hover, which
+     inverts light mode's direction, and the same value as a selected row. That
+     collision is survivable because the two never sit in the same region: the
+     band is in thead, selection is in tbody and carries a checked box with it.
+     A header nobody can see is not survivable. */
+  --color-bg-table-head:     var(--ref-neutral-900);
+  --color-bg-hover:          var(--ref-neutral-910);
+  --color-bg-active:         var(--ref-neutral-850);
+  /* Selected lifts to the raised step rather than a mid grey: at neutral-700
+     (#606060) a coloured link on a selected row measured 2.66:1 in spacious and
+     3.57:1 in ops. At neutral-900 every brand clears 4.5:1 — base 9.86,
+     ops 6.05, spacious 4.51 — and the selected ring keeps it distinct from a card. */
+  --color-bg-selected:       var(--ref-neutral-900);
+  /* Same one-rung step as light, in the dark ramp: neutral-900 is what
+     --ref-info-bg resolves to here too, so tracing --color-bg-selected would
+     put an info pill at 1.00:1 on a selected row. 850 clears it at 1.25 and
+     still reads as selected — 1.90 against a rest row, 1.49 against a hover. */
+  --color-bg-selected-accent: var(--ref-hue-selected-on-dark);
+  --color-accent-tint-bg: var(--ref-hue-tint-bg-on-dark);
+  --color-accent-tint-fg: var(--ref-hue-tint-fg-on-dark);
+  --color-border-selected-surface: var(--ref-neutral-200);  /* light ring on dark surfaces */
+  /* Dark goes DARKER, not lighter. The selected segment is --color-bg-surface-raised
+     (925), so a track above that rung left the raised pill darker than the well it
+     sits in and reading as a dent. 960 is below the surface and still clear of the
+     canvas, which is what a well is: recessed from the page, with the selection
+     lifted out of it. */
+  --color-bg-seg-track:      var(--ref-neutral-960);
+  --color-bg-emphasis:       var(--ref-neutral-100);
+  --color-bg-emphasis-hover: var(--ref-neutral-0);
+  /* Disabled sits just below surface. A dark fill can only differ from surface
+     by about 1.07:1, so the visible edge does the work — disabled keeps a muted
+     border rather than dropping to transparent. */
+  --color-bg-disabled:       var(--ref-neutral-960);
+
+  --color-fg-default:    var(--ref-neutral-50);
+  --color-fg-link:       var(--ref-neutral-50);
+  /* Equal on purpose, exactly as in light — see the note at the light declaration.
+     Two roles, one value; do not collapse them into one token. */
+  /* Restated rather than inherited, because every fg role is stated in this block
+     and a reader checking dark should find it here. The VALUE is identical text on
+     purpose: --ref-accent-500 is hue-300 down here, so the expression flips
+     beneath the role and the role itself does not need to know. */
+  --color-fg-accent:     var(--ref-accent-500);
+  --color-fg-muted:      var(--ref-neutral-500);
+  --color-fg-subtle:     var(--ref-neutral-500);
+  --color-fg-on-fill:    var(--ref-neutral-400);
+  --color-fg-disabled:   var(--ref-neutral-600);
+  --color-fg-on-emphasis: var(--ref-ground-raised);
+
+  --color-border-default: var(--ref-neutral-700);
+  --color-border-muted:   var(--ref-neutral-900);
+  --color-border-control: var(--ref-neutral-500);
+  --color-border-strong:  var(--ref-neutral-400);
+
+  /* Dark reads the SAME ramp from the other end, so links, focus and selection
+     stay ≥3:1. One mapping for every brand — the brand supplies the rungs, not
+     the roles. accent-100 is deliberately absent: it is the pale tint in both
+     modes and inherits hue-100 unchanged. */
+  --ref-accent-500: var(--ref-hue-300);
+  --ref-accent-600: var(--ref-hue-200);
+  --ref-accent-700: var(--ref-hue-100);
+  --ref-accent-contrast: var(--ref-hue-950);
+  --color-bg-accent-subtle: var(--ref-neutral-900);
+
+  /* Rest, hover, and pressed need no dark override: rest is transparent, and the
+     interaction fills it borrows are already mode-aware. */
+  /* Dark: the accent's dark end is unreadable on a dark surface, so both the
+     label and the outline take the pale step. */
+  --color-action-secondary-fg:    var(--ref-accent-100);
+  --color-action-secondary-border: var(--ref-accent-100);
+
+  --color-focus-glow: var(--ref-hue-glow-on-dark);
+  --color-border-on-accent: var(--ref-hue-on-accent-on-dark);
+  --color-focus-glow-danger: color-mix(in oklch, var(--color-focus-ring-danger) 28%, transparent);
+
+  /* Feedback ramp, retuned for dark. The light hexes stay legible on paper and
+     fail on ink: the foregrounds lighten to clear 4.5:1 on --color-bg-surface,
+     the backgrounds become dark tints of the same hue instead of light panels.
+
+     TEXT ratios on surface #21201f: danger 6.08 · success 8.84 · warning 9.13 ·
+     info 7.83 · accent 7.96, and on their own fills 4.90 / 6.61 / 6.96 / 5.97 /
+     6.72. All well clear of 4.5.
+
+     BORDERS now read 1.79-2.07 on the surface, where the previous dark ramp ran
+     3.52-4.02 and this comment claimed the 3:1 non-text floor as a feature. It
+     no longer holds, and the honest version is that it never held in LIGHT
+     either: those borders measure 1.41-1.88 and always did. The palette is now
+     consistent across modes rather than strict in one and lax in the other, and
+     the border is decoration on a surface whose fill and label already carry the
+     status. Stated plainly here so nobody reads the old number and believes it. */
+  --ref-danger-fg:      #FD736D;
+  --ref-danger-bg:      #512317;
+  --ref-danger-border:  #813524;
+  /* Green, not the mint this ramp used to carry. Light success moved to the
+     brand green (119°) and dark stayed at 162°, so an Approved pill was grass
+     in light and teal in dark — two hues for one status. The tinted badge hid
+     it as a pale wash; the solid badge makes the hue the whole fill, which is
+     what surfaced it. Danger and warning already hold their hue across modes;
+     success now does too. Ratios preserved: fg 8.91:1 on surface, 8.17:1 on
+     its own bg, border 4.02:1 — the same footing as the ramp it replaces. */
+  --ref-success-fg:     #71D38F;
+  --ref-success-bg:     #273B1B;
+  --ref-success-border: #395A29;
+  --ref-warning-fg:     #EBBC38;
+  --ref-warning-bg:     #492F08;
+  --ref-warning-border: #6F4A07;
+  /* Info stays achromatic. Hand-picked now rather than riding the neutral ramp,
+     for the same reason as light: the tone is warmer than the ramp, and moving
+     one banner should not mean re-tuning every neutral in the system.
+     fg 7.83:1 on surface. */
+  --ref-info-fg:        #B4B4B2;
+  --ref-info-bg:        #363431;
+  --ref-info-border:    #4A4846;
+  /* The accent tone inverts like every other: fill drops to a dark step of the
+     hue, text rises to a light one. The foreground is exactly --ref-cobalt-300,
+     the same rung the dark brand accent uses. fg 6.72:1 on its own fill ·
+     7.96:1 on surface. */
+  --ref-accent-tone-fg:     #9BB6EA;
+  --ref-accent-tone-bg:     #1F2D49;
+  --ref-accent-tone-border: #2F4570;
+  /* Categorical inverts the same way every other tone does: the tint drops to a
+     dark step of its own hue and the text rises to a light one. Same lightness
+     and chroma across all six, so the family holds together in dark too. */
+  --ref-cat-1-bg: oklch(0.30 0.055 190);  --ref-cat-1-fg: oklch(0.86 0.075 190);   /* teal */
+  --ref-cat-2-bg: oklch(0.30 0.055 230);  --ref-cat-2-fg: oklch(0.86 0.075 230);   /* azure */
+  --ref-cat-3-bg: oklch(0.30 0.055 300);  --ref-cat-3-fg: oklch(0.86 0.075 300);   /* purple */
+  --ref-cat-4-bg: oklch(0.30 0.055 340);  --ref-cat-4-fg: oklch(0.86 0.075 340);   /* pink */
+  --ref-cat-5-bg: oklch(0.30 0.055 50);  --ref-cat-5-fg: oklch(0.86 0.075 50);   /* amber */
+  --ref-cat-6-bg: oklch(0.30 0.055 115);  --ref-cat-6-fg: oklch(0.86 0.075 115);   /* moss */
+
+  /* Solid feedback inverts in dark: the fill takes the light tint and the text
+     takes the dark one. Text on fill 7.94 danger · 8.45 success · 8.35 warning
+     · 5.14 info; fill against the dark surface 8.73 / 9.63 / 9.39 / 8.28, so a
+     filled badge separates from the page as clearly as it does on paper. */
+  --color-feedback-info-solid:       var(--ref-info-fg);
+  --color-feedback-info-on-solid:    var(--ref-info-bg);
+  --color-feedback-success-solid:    var(--ref-success-fg);
+  --color-feedback-success-on-solid: var(--ref-success-bg);
+  --color-feedback-warning-solid:    var(--ref-warning-fg);
+  --color-feedback-warning-on-solid: var(--ref-warning-bg);
+  --color-feedback-danger-solid:     var(--ref-danger-fg);
+  --color-feedback-danger-on-solid:  var(--ref-danger-bg);
+
+  /* The halo separates the focus ring from whatever the control is filled with.
+     In dark the accent fill is LIGHT (base #eeeeec, ops a warm light tone), so a
+     white halo measured 1.16:1 against it — invisible in exactly the case the
+     halo exists to cover. Dark flips it to the canvas rung. */
+  --color-focus-halo:  var(--ref-ground-base);
+
+  --ref-shadow-ambient: rgba(0, 0, 0, 0.32);
+  --ref-shadow-key:     rgba(0, 0, 0, 0.48);
+  --ref-shadow-raised-ambient: rgba(0, 0, 0, 0.24);
+  --ref-shadow-raised-key:     rgba(0, 0, 0, 0.36);
+}
+
+/* ============================================================
+   DOCUMENT BASE — the tokens applied to the page.
+   ------------------------------------------------------------
+   This ships. It used to live only in storybook.css, which does not: the
+   foundation declared every type token and then applied none of them, so a
+   consumer page inherited the browser default — 16px Times — for anything a
+   component did not name itself. The failure was hard to spot because the
+   places you check first (a grid's numeric column, an id cell) name the sans
+   family on their own rules and looked right, while grid cells, chip and badge
+   labels, menu rows and drawer copy did not.
+
+   box-sizing is part of the base for the same reason: .control and .select are
+   sized by height plus padding, so a content-box page overflows them the moment
+   one is given width: 100%.
+
+   Four values and no more. Weight, size and line-height come from the body-md
+   pair; every other rung is a component's or a utility's job.
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* FORM ELEMENTS DO NOT INHERIT TYPE, and that is the UA's rule rather than an
+   oversight anyone made here — a <button> defaults to the system font at about
+   13.3px no matter what the body says. Every class in this library that can be
+   rendered as a button therefore has to restate the family, and the ones that
+   forgot were invisible until somebody looked: .cal-day and .cal-h .nav shipped
+   with 2px outset borders and Arial in the middle of the date picker, and a sweep
+   for the same signature found the carousel arrows, the stepper and .select
+   rendered as a button in three patterns.
+
+   Fixed once, at the lowest specificity there is. An element selector is (0,0,1),
+   so every component rule still wins its own size, weight and colour; this only
+   supplies what nothing else declares. `font`, not `font-family`, because the
+   size is wrong too.
+
+   It does NOT cover appearance, border or background — those differ per control
+   and a blanket reset would flatten the ones that want a border. Classes that can
+   be a button still carry their own reset; see the row elements in
+   components.css and .cal-h .nav in components-extra.css. */
+button, input, select, textarea, optgroup { font: inherit; }
+
+/* [hidden] has to WIN, and !important is doing real work here rather than
+   papering over a specificity mistake.
+   The attribute is honoured by the UA stylesheet's `[hidden] { display: none }`,
+   which any author rule beats regardless of specificity — and 90 single-class
+   component rules in this system declare a display (`.btn`, `.badge`, `.chip`,
+   `.field`, `.control`, `.bar`, `.tabs`, `.nav-item`, `.empty`, …). So
+   `<div class="empty" hidden>` rendered VISIBLE on almost every component here.
+   That is worse than an ordinary cascade surprise: `hidden` is the obvious way
+   to toggle a state, it is what assistive tech respects, and it failed
+   silently — the element was simply still there.
+   The alternative is adding :not([hidden]) to ninety rules and remembering it
+   on the ninety-first. */
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  font-family: var(--font-family-sans);
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+  font-weight: var(--ref-font-weight-regular);
+  color: var(--color-fg-default);
+  background: var(--color-bg-canvas);
+}
+
+/* ============================================================
+   REDUCED MOTION — collapse durations.
+============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-hover-duration:   0ms;
+    --motion-enter-duration:   0ms;
+    --motion-exit-duration:    0ms;
+    --motion-surface-duration: 0ms;
+    /* Ambient loops do not collapse to 0 (that would spin at frame rate) —
+       they stop instead; components must not loop under reduced motion. */
+  }
+}
