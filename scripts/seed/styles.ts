@@ -183,17 +183,28 @@ export async function seedStyles(
         })),
       });
 
-      // Clean sheet — the real bucket structure with a should-cost discount.
-      // Structure is real; the target is tuned so bids land across all four
-      // competitiveness bands. Replaced by a real uploader post-prototype.
+      // BOTH cost splits are stored. The baseline is the real per-bucket cost
+      // from the catalogue; the clean sheet is that structure with a per-bucket
+      // should-cost discount. Storing only the clean sheet meant the drawer had
+      // to reverse-derive baseline by scaling it, which forces every bucket to
+      // an identical gap — the per-bucket discounts below became invisible.
+      const live = Object.entries(buckets).filter(([, amount]) => amount > 0);
+
       await db.cleanSheet.createMany({
-        data: Object.entries(buckets)
-          .filter(([, amount]) => amount > 0)
-          .map(([bucket, amount]) => ({
+        data: [
+          ...live.map(([bucket, amount]) => ({
             styleId: style.id,
+            kind: "BASELINE",
+            bucket,
+            amount,
+          })),
+          ...live.map(([bucket, amount]) => ({
+            styleId: style.id,
+            kind: "CLEAN_SHEET",
             bucket,
             amount: amount * CLEAN_SHEET_DISCOUNT[bucket],
           })),
+        ],
       });
 
       seeded.push({

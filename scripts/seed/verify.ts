@@ -60,6 +60,7 @@ async function main() {
   // 4 — clean sheet sums to baseline
   const sheets = await db.cleanSheet.groupBy({
     by: ["styleId"],
+    where: { kind: "CLEAN_SHEET" },
     _sum: { amount: true },
   });
   check(
@@ -111,7 +112,9 @@ async function main() {
       styleNumber: true,
       baselineFob: true,
       quotes: { select: { fob: true } },
-      cleanSheets: { select: { amount: true } },
+      // kind matters: the same table holds BASELINE and CLEAN_SHEET, and
+      // summing both reads the target as double the baseline.
+      cleanSheets: { where: { kind: "CLEAN_SHEET" }, select: { amount: true } },
     },
   });
   const bands = { strong: 0, competitive: 0, needsWork: 0, offTarget: 0 };

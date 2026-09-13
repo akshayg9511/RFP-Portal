@@ -33,6 +33,7 @@ type StyleDetailData = {
     currentFob: number | null;
     type: string;
   }[];
+  baseline: { buckets: Record<string, number>; fob: number };
   cleanSheet: { buckets: Record<string, number>; fob: number };
   readiness: { hasBaseline: boolean; hasCleanSheet: boolean; hasImages: boolean };
 };
@@ -206,11 +207,10 @@ export function StyleDetail({
               </thead>
               <tbody>
                 {Object.entries(data.cleanSheet.buckets).map(([bucket, clean]) => {
-                  // The clean sheet is a discount on the real bucket split, so
-                  // baseline per bucket is recoverable from it.
-                  const baseline = data.baselineFob
-                    ? (clean / data.cleanSheet.fob) * data.baselineFob
-                    : 0;
+                  // The REAL baseline for this bucket. Scaling the clean sheet
+                  // to recover it forced every row to the same gap and hid the
+                  // per-bucket should-cost targets entirely.
+                  const baseline = data.baseline.buckets[bucket] ?? 0;
                   return (
                     <tr key={bucket}>
                       <td>{label(bucket)}</td>
@@ -291,12 +291,20 @@ export function StyleDetail({
   );
 }
 
+/**
+ * One fact in a .fact-list.
+ *
+ * The dt and dd are returned as SIBLINGS, with no wrapper: .fact-list is a
+ * two-column grid, so a wrapping <div> would be the grid item and each pair
+ * would stack inside its own single cell — which is exactly what .meta-list
+ * does on purpose, and what this layout exists to avoid.
+ */
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-    <div>
+    <>
       <dt>{k}</dt>
       <dd>{v}</dd>
-    </div>
+    </>
   );
 }
 

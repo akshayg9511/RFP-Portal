@@ -188,11 +188,17 @@ model CleanSheet {
 
   size    String?
 
+  // BASELINE — what the style costs today, split by bucket.
+  // CLEAN_SHEET — the internal should-cost target, same buckets.
+  // Both live here because they are the same shape and are always read
+  // together; the drawer compares them bucket by bucket.
+  kind      String   @default("CLEAN_SHEET")
+
   bucket    String   // BASE_MATERIALS | TRIM_HARDWARE | PACKAGING | CRAFTING | TESTING_3PL | OVERHEAD_SGA_PROFIT
   lineItem  String?
   amount    Decimal  @db.Decimal(12, 4)
 
-  @@index([styleId, bucket])
+  @@index([styleId, kind, bucket])
 }
 
 // ---------------------------------------------------------------- vendor

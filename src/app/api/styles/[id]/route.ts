@@ -45,10 +45,12 @@ export async function GET(
 
     if (!style) return notFound(`Style ${id}`);
 
+    // Two splits over the same buckets: what it costs today, and the target.
     const cleanSheetBuckets: Record<string, number> = {};
+    const baselineBuckets: Record<string, number> = {};
     for (const row of style.cleanSheets) {
-      cleanSheetBuckets[row.bucket] =
-        (cleanSheetBuckets[row.bucket] ?? 0) + numOr(row.amount);
+      const into = row.kind === "BASELINE" ? baselineBuckets : cleanSheetBuckets;
+      into[row.bucket] = (into[row.bucket] ?? 0) + numOr(row.amount);
     }
 
     // Distinct sizes in display order, derived from the SKUs rather than from
@@ -104,6 +106,12 @@ export async function GET(
         type: vendorType(cs.vendor.isNewToQuince, true),
       })),
 
+      // What the style costs today, by bucket. Safe to show anywhere internal.
+      baseline: {
+        buckets: baselineBuckets,
+        fob: fobFromBuckets(baselineBuckets),
+      },
+
       // INTERNAL ONLY. Never forwarded to a vendor screen or export.
       cleanSheet: {
         buckets: cleanSheetBuckets,
@@ -112,7 +120,7 @@ export async function GET(
 
       readiness: {
         hasBaseline: num(style.baselineFob) !== null,
-        hasCleanSheet: style.cleanSheets.length > 0,
+        hasCleanSheet: style.cleanSheets.some((c) => c.kind === "CLEAN_SHEET"),
         hasImages: style.images.length > 0,
       },
     });
