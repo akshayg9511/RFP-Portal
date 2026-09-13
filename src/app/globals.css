@@ -836,3 +836,121 @@ body > .drawer-frame .drawer {
   font-size: var(--type-body-sm-size);
   cursor: pointer;
 }
+
+/* ================================================================ vendor view
+
+   Impersonation must be unmistakable. The indicator sits in the header where
+   the switcher was, and the whole panel takes an accent edge, so there is no
+   angle from which the portal looks like ordinary procurement use. */
+
+.vendor-view > .pn {
+  box-shadow: inset calc(var(--space-2xs) * -1) 0 0 var(--color-border-accent);
+}
+
+.vv-wrap {
+  position: relative;
+}
+
+.vv-active {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-2xs);
+  border-radius: var(--radius-element);
+  background: var(--color-accent-tint-bg);
+  color: var(--color-accent-tint-fg);
+  white-space: nowrap;
+}
+
+.vv-active-label {
+  font-size: var(--type-body-sm-size);
+}
+
+.vv-exit {
+  /* On the tint, a ghost would vanish. */
+  background: var(--color-bg-surface);
+  color: var(--color-fg-default);
+}
+
+.vv-menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-end: 0;
+  inline-size: 320px;
+  background: var(--color-bg-surface-raised);
+  border-radius: var(--radius-container);
+  box-shadow: var(--elevation-overlay);
+  z-index: var(--z-popover);
+  overflow: hidden;
+  animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+.vv-menu-head {
+  padding: var(--space-sm);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.vv-menu-list {
+  max-block-size: 320px;
+  overflow-y: auto;
+  padding: var(--space-2xs);
+}
+
+.vv-menu-empty {
+  padding: var(--space-md);
+  color: var(--color-fg-muted);
+  margin: 0;
+}
+
+.vv-menu-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vv-menu-meta {
+  color: var(--color-fg-muted);
+  font-size: var(--type-caption-size);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- dashboard */
+
+.vendor-rfp-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-block-end: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.vendor-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1 1 220px;
+}
+
+.vendor-progress-bar {
+  flex: 1 1 auto;
+  block-size: var(--space-xs);
+  border-radius: var(--radius-inner);
+  background: var(--color-bg-muted);
+  overflow: hidden;
+}
+
+.vendor-progress-bar span {
+  display: block;
+  block-size: 100%;
+  background: var(--color-action-primary-rest);
+  transition: inline-size var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+.vendor-progress-label {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}

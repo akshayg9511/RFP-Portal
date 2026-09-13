@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/ds/components";
 import { ProcuraMark } from "./ProcuraMark";
+import { VendorSwitcher } from "./VendorSwitcher";
+import { useVendorView } from "@/lib/vendorView";
 
 type Dest = {
   href: string;
@@ -23,6 +25,11 @@ const MAIN: Dest[] = [
 const AWARD: Dest[] = [
   { href: "/award", label: "Award summary", icon: "list" },
   { href: "/insights", label: "Wave insights", icon: "chart_bar" },
+];
+
+/** What a vendor sees. Their portal is the same app, scoped to them. */
+const VENDOR_DESTS: Dest[] = [
+  { href: "/vendor", label: "My RFPs", icon: "invoice" },
 ];
 
 const SETUP: Dest[] = [
@@ -63,15 +70,17 @@ function NavGroup({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
+  const { active: vendorView, vendorName } = useVendorView();
 
   return (
-    <div className="shell panel-first nav-fixed">
+    <div className={vendorView ? "shell panel-first nav-fixed vendor-view" : "shell panel-first nav-fixed"}>
       <header className="hd dark">
         <div className="control search hd-search">
           <Icon name="search" size="sm" />
           <input placeholder="Search styles, RFPs, vendors" aria-label="Search" />
         </div>
         <div className="hd-global">
+          <VendorSwitcher />
           {/* Vendor View impersonation lands here in S4 — a persistent,
               unmistakable indicator of which vendor is being viewed. */}
           <button className="btn btn--ghost icon" aria-label="Notifications">
@@ -91,12 +100,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           <span>
             <span className="pn-brand-word">Procura</span>
-            <span className="pn-brand-sub">Sourcing</span>
+            <span className="pn-brand-sub">
+              {vendorView ? "Vendor portal" : "Sourcing"}
+            </span>
           </span>
         </Link>
-        <NavGroup title="Sourcing" items={MAIN} pathname={pathname} />
-        <NavGroup title="Award" items={AWARD} pathname={pathname} />
-        <NavGroup title="Setup" items={SETUP} pathname={pathname} />
+        {vendorView ? (
+          <NavGroup title="Vendor" items={VENDOR_DESTS} pathname={pathname} />
+        ) : (
+          <>
+            <NavGroup title="Sourcing" items={MAIN} pathname={pathname} />
+            <NavGroup title="Award" items={AWARD} pathname={pathname} />
+            <NavGroup title="Setup" items={SETUP} pathname={pathname} />
+          </>
+        )}
       </nav>
 
       <main className="ct">{children}</main>
