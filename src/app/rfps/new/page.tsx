@@ -3,9 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Icon } from "@/ds/components";
+import { Icon } from "@/ds/components";
 import { useSelection } from "@/lib/selection";
-import { money, unitCost, units } from "@/lib/format";
+import { RfpGroup, type SplitGroup } from "./RfpGroup";
 
 /**
  * S2 — selection to RFPs.
@@ -14,25 +14,6 @@ import { money, unitCost, units } from "@/lib/format";
  * the user sees the division and the resolution path BEFORE anything is
  * committed. Ends at RFPs created in draft; nomination and issue are S3.
  */
-
-type SplitGroup = {
-  templateId: string;
-  templateName: string;
-  resolutionPath: string;
-  suggestedName: string;
-  styleCount: number;
-  annualSpend: number;
-  styles: {
-    id: string;
-    styleNumber: string;
-    name: string;
-    subDepartment: string;
-    planUnits: number | null;
-    baselineFob: number | null;
-    hasBaseline: boolean;
-    hasCleanSheet: boolean;
-  }[];
-};
 
 type SplitPreview = {
   totalStyles: number;
@@ -49,7 +30,7 @@ export default function NewRfpPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [names, setNames] = React.useState<Record<string, string>>({});
-  const [instructions, setInstructions] = React.useState("");
+  const [instructions, setInstructions] = React.useState<Record<string, string>>({});
   const [creating, setCreating] = React.useState(false);
 
   const styleIds = React.useMemo(
@@ -82,6 +63,9 @@ export default function NewRfpPage() {
             body.groups.map((g) => [g.templateId, g.suggestedName]),
           ),
         );
+        setInstructions(
+          Object.fromEntries(body.groups.map((g) => [g.templateId, ""])),
+        );
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -108,7 +92,7 @@ export default function NewRfpPage() {
           groups: preview.groups.map((g) => ({
             templateId: g.templateId,
             name: names[g.templateId],
-            instructions,
+            instructions: instructions[g.templateId] ?? "",
             styleIds: g.styles.map((s) => s.id),
           })),
         }),
@@ -164,7 +148,11 @@ export default function NewRfpPage() {
             Style sets
           </Link>
         </nav>
-        <h1>Create RFP</h1>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">Create RFP</h1>
+          </div>
+        </div>
       </div>
 
       {error ? (
@@ -228,97 +216,26 @@ export default function NewRfpPage() {
             </div>
           ) : null}
 
-          {preview.groups.map((group) => (
-            <div className="card" key={group.templateId} style={{ marginBlockEnd: "var(--space-lg)" }}>
-              <div className="card-h">
-                <div className="ttl">{group.templateName}</div>
-                <div className="sub">
-                  {group.styleCount} products · {money(group.annualSpend)} annual
-                  spend · template resolves {group.resolutionPath}
-                </div>
-              </div>
-
-              <div className="card-b">
-                <div className="field">
-                  <label className="lbl" htmlFor={`name-${group.templateId}`}>
-                    RFP name
-                  </label>
-                  <div className="control">
-                    <input
-                      id={`name-${group.templateId}`}
-                      value={names[group.templateId] ?? ""}
-                      onChange={(e) =>
-                        setNames((prev) => ({
-                          ...prev,
-                          [group.templateId]: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="msg">
-                    Suggested from the template. Must be set before the
-                    invitation goes out.
-                  </div>
-                </div>
-
-                <table className="data-grid" style={{ marginBlockStart: "var(--space-lg)" }}>
-                  <thead>
-                    <tr>
-                      <th>Style</th>
-                      <th>Sub-department</th>
-                      <th className="num">Plan units</th>
-                      <th className="num">Baseline FOB</th>
-                      <th>Readiness</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.styles.map((style) => (
-                      <tr key={style.id}>
-                        <td>
-                          <span className="id">{style.styleNumber}</span> ·{" "}
-                          {style.name}
-                        </td>
-                        <td>{style.subDepartment}</td>
-                        <td className="num">{units(style.planUnits)}</td>
-                        <td className="num">{unitCost(style.baselineFob)}</td>
-                        <td>
-                          {style.hasBaseline && style.hasCleanSheet ? (
-                            <Badge tone="success">Ready</Badge>
-                          ) : !style.hasBaseline ? (
-                            <Badge tone="danger">No baseline</Badge>
-                          ) : (
-                            <Badge tone="warning">No clean sheet</Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          {preview.groups.map((group, i) => (
+            <RfpGroup
+              key={group.templateId}
+              group={group}
+              name={names[group.templateId] ?? ""}
+              onNameChange={(value) =>
+                setNames((prev) => ({ ...prev, [group.templateId]: value }))
+              }
+              instructions={instructions[group.templateId] ?? ""}
+              onInstructionsChange={(value) =>
+                setInstructions((prev) => ({
+                  ...prev,
+                  [group.templateId]: value,
+                }))
+              }
+              // The first is open so the screen is not a wall of closed rows;
+              // the rest stay shut so the page reads at a glance.
+              defaultOpen={i === 0}
+            />
           ))}
-
-          <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
-            <div className="card-h">
-              <div className="ttl">Instructions to vendors</div>
-              <div className="sub">
-                A one-way note, shown on every RFP created here.
-              </div>
-            </div>
-            <div className="card-b">
-              <div className="field">
-                <div className="control">
-                  <textarea
-                    rows={3}
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    placeholder="All lead times must assume Q1 shipping. Quote in USD only."
-                    aria-label="Instructions to vendors"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
           <div className="page-actions">
             <Link className="btn btn--secondary" href="/style-sets">

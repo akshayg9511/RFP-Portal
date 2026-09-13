@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Icon } from "@/ds/components";
 import { money, units } from "@/lib/format";
 
@@ -23,10 +24,10 @@ export type StyleSetSummary = {
  */
 export function StyleSetCard({
   set,
-  onOpen,
+  href,
 }: {
   set: StyleSetSummary;
-  onOpen: () => void;
+  href: string;
 }) {
   const track = React.useRef<HTMLDivElement>(null);
   const [index, setIndex] = React.useState(0);
@@ -92,9 +93,9 @@ export function StyleSetCard({
       </div>
 
       <div className="card-b">
-        <button className="set-card-title" onClick={onOpen}>
+        <Link className="set-card-title" href={href}>
           {set.name}
-        </button>
+        </Link>
         {set.description ? (
           <p className="set-card-desc">{set.description}</p>
         ) : null}

@@ -343,3 +343,371 @@ body > div:first-of-type {
 .card-b > .field:first-child {
   margin-block-start: var(--space-xs);
 }
+
+/* ================================================================ motion
+
+   The base motion layer.
+
+   Every duration and easing comes from the system's motion roles, which are
+   already set to 0ms under prefers-reduced-motion — so honouring the tokens
+   makes the whole layer reduced-motion safe without a single media query of
+   its own.
+
+   Transform and opacity only: both composite without triggering layout, so
+   nothing here can cost a frame of reflow. */
+
+/* Surfaces arriving. The drawer travels from the edge it belongs to, so the
+   movement says where it came from. */
+@keyframes enter-from-end {
+  from {
+    transform: translateX(2rem);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    transform: translateY(0.5rem);
+    opacity: 0;
+  }
+}
+
+body > .drawer-frame {
+  animation: fade-in var(--motion-surface-duration) var(--motion-surface-easing);
+}
+
+body > .drawer-frame .drawer {
+  animation: enter-from-end var(--motion-surface-duration)
+    var(--motion-surface-easing);
+}
+
+/* The selection tray rises rather than appearing — it is a surface that
+   arrived because of something the user did. */
+.sel-bar {
+  animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+/* Cards lift under the pointer. The shadow and the lift share one duration so
+   they read as one movement. */
+.set-card,
+.style-card {
+  transition:
+    transform var(--motion-hover-duration) var(--motion-hover-easing),
+    box-shadow var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.set-card:hover,
+.style-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elevation-overlay);
+}
+
+/* Product photography fades in as it decodes, so a grid does not flash a
+   mosaic of half-loaded tiles. */
+.set-card-media img,
+.style-card-media img,
+.detail-hero img {
+  animation: fade-in var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+/* Nav destinations. The label and glyph move together. */
+.nav-item {
+  transition:
+    background-color var(--motion-hover-duration) var(--motion-hover-easing),
+    color var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+/* A grid entering, staggered just enough to read as arriving in order rather
+   than all at once. Capped at 12 so a long list does not crawl in. */
+.style-grid > *,
+.set-grid > * {
+  animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing)
+    backwards;
+}
+
+.style-grid > *:nth-child(1),
+.set-grid > *:nth-child(1) { animation-delay: 0ms; }
+.style-grid > *:nth-child(2),
+.set-grid > *:nth-child(2) { animation-delay: 20ms; }
+.style-grid > *:nth-child(3),
+.set-grid > *:nth-child(3) { animation-delay: 40ms; }
+.style-grid > *:nth-child(4),
+.set-grid > *:nth-child(4) { animation-delay: 60ms; }
+.style-grid > *:nth-child(5),
+.set-grid > *:nth-child(5) { animation-delay: 80ms; }
+.style-grid > *:nth-child(6),
+.set-grid > *:nth-child(6) { animation-delay: 100ms; }
+.style-grid > *:nth-child(n + 7),
+.set-grid > *:nth-child(n + 7) { animation-delay: 120ms; }
+
+/* A stagger built from delays would still hold the last card back under
+   reduced motion, because only the DURATION is zeroed. Clear them. */
+@media (prefers-reduced-motion: reduce) {
+  .style-grid > *,
+  .set-grid > * {
+    animation-delay: 0ms !important;
+  }
+}
+
+/* ================================================================ nav
+
+   Hover-to-expand.
+
+   The system argues against a collapsed rail because it communicates through
+   hover tooltips, which a touch user cannot reach. That objection is about
+   TOOLTIPS. Here the rail expands to the real drawer — full labels, group
+   captions, counts — so nothing is ever communicated by a tooltip alone, and
+   below the turn the shell's own off-canvas rules take over and this never
+   applies.
+
+   .shell.nav-collapsed is the system's built rail; the hover simply removes
+   the class's effect by restoring the two width tokens. Doubled selectors to
+   match the specificity .nav-collapsed declares them at. */
+
+@media (min-width: 768px) and (hover: hover) {
+  /* The shell's grid track narrows to the rail width. Doubled to match the
+     specificity .nav-collapsed declares these at, so the two agree. */
+  .shell.nav-hover-expand.nav-hover-expand {
+    --shell-panel-w: var(--shell-panel-w-collapsed);
+    --shell-panel-min-w: var(--shell-panel-w-collapsed);
+  }
+
+  /* The panel keeps its full width and OVERLAYS the content when expanded,
+     rather than widening the track — so hovering the nav never reflows the
+     grid the user is reading. */
+  .shell.nav-hover-expand > .pn {
+    inline-size: var(--shell-panel-w-collapsed);
+    overflow: hidden;
+    transition: inline-size var(--motion-enter-duration)
+      var(--motion-enter-easing);
+  }
+
+  .shell.nav-hover-expand > .pn:hover,
+  .shell.nav-hover-expand > .pn:focus-within {
+    inline-size: var(--shell-panel-w-default);
+    overflow: visible;
+    z-index: var(--z-raised);
+    box-shadow: var(--elevation-overlay);
+  }
+
+  /* Labels and captions fade rather than reflow. They keep their box, so the
+     glyph column never moves. */
+  .shell.nav-hover-expand > .pn .nav-item .lbl,
+  .shell.nav-hover-expand > .pn .brandmark .name,
+  .shell.nav-hover-expand > .pn .grp {
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
+  }
+
+  .shell.nav-hover-expand > .pn:hover .nav-item .lbl,
+  .shell.nav-hover-expand > .pn:focus-within .nav-item .lbl,
+  .shell.nav-hover-expand > .pn:hover .brandmark .name,
+  .shell.nav-hover-expand > .pn:focus-within .brandmark .name,
+  .shell.nav-hover-expand > .pn:hover .grp,
+  .shell.nav-hover-expand > .pn:focus-within .grp {
+    opacity: 1;
+  }
+}
+
+/* ================================================================ fixes
+
+   Page subtitle under the title. */
+.page-sub {
+  color: var(--color-fg-muted);
+  margin: 0;
+}
+
+/* — Drawer detail list.
+
+   .meta-list stacks label above value, which is right for two or three facts
+   and wrong for seven: the details block filled the whole drawer and the user
+   had to scroll past it to reach the costs. A two-column definition list puts
+   the same facts in a third of the height, with the labels forming one
+   scannable edge. */
+.fact-list {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: var(--space-sm) var(--space-lg);
+  margin: 0;
+  align-items: baseline;
+}
+
+.fact-list dt {
+  color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size);
+}
+
+.fact-list dd {
+  margin: 0;
+  font-size: var(--type-body-md-size);
+}
+
+/* — The drawer header's control group. `.x` is drawn for the header's own row;
+   in a custom group it needs the same target and alignment as the ghosts
+   beside it. */
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-inline-start: auto;
+}
+
+/* — Selection affordance.
+
+   A bare checkbox floating on photography read as a stray control. It now sits
+   on its own surface — the same treatment a carousel arrow gets — so it is
+   legible on any image, and the whole tile grows a hover state so the target
+   is obvious before the pointer lands. */
+.style-card-select {
+  position: absolute;
+  inset-block-start: var(--space-sm);
+  inset-inline-start: var(--space-sm);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: var(--size-control-sm);
+  block-size: var(--size-control-sm);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-surface);
+  box-shadow: var(--elevation-raised);
+  opacity: 0;
+  transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+/* Always visible once selected, or while the card is hovered or focused —
+   never hover-only, which would make it unreachable by keyboard. */
+.style-card:hover .style-card-select,
+.style-card:focus-within .style-card-select,
+.style-card.on .style-card-select {
+  opacity: 1;
+}
+
+.style-card.on {
+  outline: 2px solid var(--color-border-accent);
+  outline-offset: -2px;
+}
+
+/* — Textarea.
+
+   The system's .control is built for a single-line input: it sets a fixed
+   block-size, so a textarea's rows attribute is ignored and the field collapses
+   to one line with its placeholder overlapping the label. */
+.control:has(textarea) {
+  block-size: auto;
+  padding-block: var(--space-sm);
+  align-items: start;
+}
+
+.control textarea {
+  resize: vertical;
+  min-block-size: calc(var(--type-body-md-line) * 3em);
+  inline-size: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+/* — The selection tray floated over product names. It now clears the content
+   below it, and the grid reserves room so the last row is never covered. */
+.has-tray {
+  padding-block-end: var(--space-4xl);
+}
+
+/* ================================================================ rfp group */
+
+.rfp-group {
+  margin-block-end: var(--space-lg);
+}
+
+.rfp-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+  margin-block-end: var(--space-lg);
+}
+
+.rfp-group-id {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  color: var(--color-fg-accent);
+}
+
+.rfp-group-template {
+  font-size: var(--type-heading-3-size);
+  line-height: var(--type-heading-3-line);
+  font-weight: var(--type-heading-3-weight);
+  color: var(--color-fg-default);
+}
+
+.rfp-group-path {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.rfp-group-stats {
+  display: flex;
+  gap: var(--space-xl);
+  margin: 0;
+}
+
+.rfp-group-stats dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.rfp-group-stats dd {
+  margin: 0;
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.rfp-group-name {
+  margin-block-end: var(--space-lg);
+}
+
+/* The accordion sits flush in the card's footer edge. */
+.rfp-group .acc-item {
+  border-block-start: 1px solid var(--color-border-muted);
+}
+
+.rfp-group .acc-b {
+  display: none;
+  padding: var(--space-lg);
+  padding-block-start: 0;
+}
+
+.rfp-group .acc-item.open .acc-b {
+  display: block;
+}
+
+.rfp-group .acc-item.open .acc-h .chev {
+  transform: rotate(180deg);
+}
+
+.rfp-group .acc-h .chev {
+  transition: transform var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+/* The set title navigates, so it is an <a> — but it reads as the card's
+   heading, and .lnk's rest-state underline belongs to a link inside prose. */
+.set-card-title {
+  text-decoration: none;
+}
+
+.set-card-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

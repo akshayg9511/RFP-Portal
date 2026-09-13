@@ -118,7 +118,7 @@ export function SideDrawer({
             <span className="ttl" id="drawer-title">
               {title}
             </span>
-            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+            <div className="drawer-actions">
               {onPrev ? (
                 <button
                   className="btn btn--ghost icon"

@@ -143,7 +143,7 @@ export function StyleDetail({
 
           <div className="section">
             <div className="hd">Details</div>
-            <dl className="meta-list">
+            <dl className="fact-list">
               <Row k="Division" v={`${data.division} · ${data.department}`} />
               <Row k="Material" v={data.material ?? "—"} />
               <Row k="Quoted at" v={label(data.variationLevel)} />
@@ -262,7 +262,7 @@ export function StyleDetail({
 
           <div className="section">
             <div className="hd">Readiness</div>
-            <dl className="meta-list">
+            <dl className="fact-list">
               <Row
                 k="Baseline"
                 v={

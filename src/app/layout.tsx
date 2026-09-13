@@ -11,17 +11,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // data-brand="default" data-mode="light" — the Quince Core reference theme.
-    // Both are one attribute to change; nothing in a correct screen hard-codes
-    // what they control.
-    <html lang="en" data-brand="default" data-mode="light">
+    // data-brand="procura" — a custom brand layer over Quince Core: deep navy
+    // chrome, cobalt accent, softer radii. It overrides only Tier-1 refs,
+    // radius and density, which is the contract's sanctioned surface, so every
+    // component and QDS_LINT keep working unchanged.
+    <html lang="en" data-brand="procura" data-mode="light">
       <head>
         {/* Load order is fixed: fonts -> foundation -> brand -> components ->
             components-extra. Served from /public so the relative font URLs
             inside fonts.css resolve. */}
         <link rel="stylesheet" href="/ds/fonts.css" />
         <link rel="stylesheet" href="/ds/foundation.css" />
-        <link rel="stylesheet" href="/ds/brands/default.css" />
+        <link rel="stylesheet" href="/ds/brands/procura.css" />
         <link rel="stylesheet" href="/ds/components.css" />
         <link rel="stylesheet" href="/ds/components-extra.css" />
         {/* Inter is not bundled with the system; 300/400/500/600 are the

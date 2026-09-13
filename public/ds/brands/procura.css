@@ -1,0 +1,104 @@
+/* ============================================================
+   THEME · PROCURA
+   ------------------------------------------------------------
+   Personality:   editorial · confident · product-forward
+   Visual style:  deep navy chrome · cobalt accent · crisp white
+                  content · generous product imagery
+   Colors:        primary = cobalt (cobalt-700) · chrome = navy
+   Typography:    foundation-fixed (Inter) — brands never override
+                  the face
+
+   A brand layer. Load AFTER foundation.css, INSTEAD of
+   default.css. Overrides ONLY Tier-1 colour refs, radius
+   personality and density — never a semantic or component token,
+   with the two exceptions the Default layer itself makes
+   (--color-bg-nav-item-selected / --color-fg-nav-item-selected,
+   which the contract assigns to the brand).
+
+   WHY THIS EXISTS. Default is the reference theme and its
+   personality is "efficient · data-dense · operational". Procura
+   is a screen a CEO looks at while deciding where $50M goes, and
+   the products on it are photographed. The chrome steps back to
+   a deep navy so the photography carries the colour, and the
+   accent is used with intent rather than sparingly.
+============================================================ */
+
+[data-brand="procura"] {
+  /* — Ground: a true blue-black rather than the warm near-black the neutral
+       ramp supplies. The chrome then sits in the same family as the accent
+       instead of reading as an unrelated black bar beside a blue button. */
+  --ref-ground-raised: #141b2d;
+  --ref-ground-base: #0d1220;
+
+  /* — The nav and header ground. The foundation points --color-bg-nav at
+       --ref-neutral-950 (#21201f, a warm near-black) on a LIGHT page, so
+       overriding the ground alone leaves the chrome unchanged. These three
+       rungs are Tier-1 refs and are the brand's to own. */
+  --ref-neutral-1000: #0d1220;
+  --ref-neutral-950: #141b2d; /* nav ground */
+  --ref-neutral-910: #1d2740; /* nav hover */
+  --ref-neutral-900: #26324f; /* nav selected fill · inverse surface */
+
+  /* — Canvas: a hint cooler than the warm cream, so white cards read as
+       white rather than as blue-tinted paper on a yellow ground. */
+  --ref-neutral-50: #f7f8fa; /* canvas */
+  --ref-neutral-100: #f1f3f7; /* sunken · hover fill */
+  --ref-neutral-200: #e6e9f0; /* hairlines */
+  --ref-neutral-250: #dde1ea; /* dividers */
+  --ref-neutral-300: #ccd2e0; /* card edges · control borders */
+
+  /* — Accent: cobalt, mapped from the foundation's palette. No hexes: the
+       brand owns which rung plays which role, not what the rung IS. */
+  --ref-hue-tint: var(--ref-cobalt-100);
+  --ref-hue-100: var(--ref-cobalt-100);
+  --ref-hue-200: var(--ref-cobalt-200);
+  --ref-hue-300: var(--ref-cobalt-300);
+  --ref-hue-700: var(--ref-cobalt-700);
+  --ref-hue-800: var(--ref-cobalt-800);
+  --ref-hue-900: var(--ref-cobalt-900);
+  --ref-hue-950: var(--ref-cobalt-950);
+
+  --ref-hue-tint-bg-on-light: var(--ref-cobalt-50);
+  --ref-hue-tint-fg-on-light: var(--ref-hue-800);
+  --ref-hue-selected-on-light: var(--ref-cobalt-50);
+
+  /* On the navy chrome the tint has to lift off a blue ground rather than a
+     brown one, so it mixes toward the raised ground. */
+  --ref-hue-tint-bg-on-dark: color-mix(
+    in oklch,
+    var(--ref-hue-300) 16%,
+    var(--ref-ground-raised)
+  );
+  --ref-hue-tint-fg-on-dark: var(--ref-neutral-0);
+  --ref-hue-selected-on-dark: color-mix(
+    in oklch,
+    var(--ref-hue-300) 26%,
+    var(--ref-ground-raised)
+  );
+
+  /* The nav's selected item: the accent tint, so the current destination is
+     unmistakable on the navy. Contract-assigned to the brand. */
+  --color-bg-nav-item-selected: var(--ref-hue-selected-on-dark);
+  --color-fg-nav-item-selected: var(--ref-neutral-0);
+
+  /* — Shadow ink: a navy-tinted shadow rather than neutral grey, so a raised
+       card lifts within the palette. */
+  --ref-shadow-key-on-light: 220 45% 16%;
+  --ref-shadow-ambient-on-light: 220 45% 16%;
+  --ref-shadow-raised-key-on-light: 220 45% 16%;
+  --ref-shadow-raised-ambient-on-light: 220 45% 16%;
+
+  /* — Radius: softer than Default's crisp operational corners. A product
+       card carrying photography wants a rounder frame; a control stays
+       tight enough to read as a control. */
+  --radius-inner: var(--ref-radius-100); /* 6px  — images, tiles */
+  --radius-element: var(--ref-radius-150); /* 8px  — inputs, buttons, chips */
+  --radius-container: var(--ref-radius-300); /* 16px — cards, panels */
+  --radius-page: var(--ref-radius-400); /* 24px */
+  --radius-chat: var(--ref-radius-300);
+
+  /* — Density: Default's control ladder, unchanged. This is a data-dense
+       product and the grids need it. Only the grid gutter opens up, because
+       the product cards want air between them. */
+  --grid-gutter: var(--space-lg);
+}

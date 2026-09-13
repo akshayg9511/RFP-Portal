@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
 
   return (
-    <div className="shell panel-first">
+    <div className="shell panel-first nav-hover-expand">
       <header className="hd dark">
         <div className="control search hd-search">
           <Icon name="search" size="sm" />
