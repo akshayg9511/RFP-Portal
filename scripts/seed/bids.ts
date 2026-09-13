@@ -118,23 +118,38 @@ export async function seedBids(
     const styleId = styleIds.get(style.styleNumber)!;
     const baseline = style.baselineFob!;
 
-    // 3-6 bidders, one per region where possible so every region participates.
+    // 3-6 bidders. Regions are weighted to reflect where sourcing actually
+    // happens — an even shuffle gave Americas and EMEA the same footprint as
+    // China, which put Americas at 42% of the wave and made every floor look
+    // met. The floors exist precisely because those regions are thin.
     const count = 3 + Math.floor(next() * 4);
     const picked: VendorSeed[] = [];
-    const shuffled = [...regions].sort(() => next() - 0.5);
-    for (const region of shuffled) {
-      if (picked.length >= count) break;
+    const weighted: string[] = [];
+    for (const region of regions) {
+      const weight =
+        region === "CHINA" ? 4 : region === "ISC" ? 3 : region === "SEA" ? 3 : 1;
+      for (let w = 0; w < weight; w++) weighted.push(region);
+    }
+    while (picked.length < count && weighted.length) {
+      const region = pick(next, weighted);
       const pool = byRegion.get(region) ?? [];
-      if (pool.length) picked.push(pick(next, pool));
+      if (!pool.length) continue;
+      const candidate = pick(next, pool);
+      if (!picked.some((p) => p.id === candidate.id)) picked.push(candidate);
+      else if (picked.length >= 3) break;
     }
     while (picked.length < count) {
       const v = pick(next, vendors);
       if (!picked.some((p) => p.id === v.id)) picked.push(v);
     }
 
-    // Two styles deliberately bid ABOVE baseline, so Wave Insights block 6
-    // ("styles taking cost increases") has real content.
-    const takesIncrease = index >= chosen.length - 2;
+    // Two ALLOCATED styles deliberately come in above baseline landed, so Wave
+    // Insights block 6 ("styles taking cost increases") — named by Tony as
+    // something he needs and absent from the current workbook — has real
+    // content. It must be measured against baseline LANDED, since that is what
+    // Best Cost is compared to; baseline landed runs 37-160% above FOB, so a
+    // bid merely above baseline FOB still shows a saving.
+    const takesIncrease = index === 3 || index === 4;
 
     for (const [i, vendor] of picked.entries()) {
       // Spread bids across all four competitiveness bands. The band is measured
@@ -142,8 +157,11 @@ export async function seedBids(
       // to be within a few points of it to read "strong". Stepping each
       // successive bidder down puts real bids in every band rather than
       // clustering them all at the top.
+      // A style taking an increase bids ABOVE baseline landed, which means a
+      // large negative discount against FOB — the landed cushion is wide.
+      const landedRatio = (style.baselineLanded ?? baseline) / baseline;
       const discount = takesIncrease
-        ? between(next, -0.06, 0.02)
+        ? between(next, -(landedRatio - 1) - 0.08, -(landedRatio - 1) - 0.02)
         : between(next, 0.13 - i * 0.035, 0.19 - i * 0.035);
 
       const fob = round(baseline * (1 - discount), 4);
@@ -389,6 +407,15 @@ function allocateForChinaTarget(
     const units = style.planUnits ?? 0;
     const baseline = style.baselineFob ?? 0;
 
+    // Savings must compare LIKE WITH LIKE. Best Cost is a landed figure (FOB +
+    // tariff + freight), so measuring it against a baseline FOB understates
+    // every bid by the full freight and duty amount — inverted, it made a wave
+    // of genuine savings read as a $8.3M cost increase. This is the Wave 1
+    // -$37,038 error in the other direction, and the Build Doc forbids it
+    // either way: a vendor FOB compares to baseline FOB, a landed figure to
+    // baseline landed.
+    const baselineLanded = style.baselineLanded ?? baseline;
+
     for (const s of splits) {
       const awardedUnits = Math.round(units * (s.pct / 100));
       const dollars = round(awardedUnits * s.bid.bestCost, 2);
@@ -405,7 +432,7 @@ function allocateForChinaTarget(
         basis: s.bid.basis,
         units: awardedUnits,
         dollars,
-        savings: round(awardedUnits * (baseline - s.bid.bestCost), 2),
+        savings: round(awardedUnits * (baselineLanded - s.bid.bestCost), 2),
       });
     }
   }

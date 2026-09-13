@@ -17,6 +17,7 @@ export type StyleSeed = {
   subDepartment: string;
   planUnits: number | null;
   baselineFob: number | null;
+  baselineLanded: number | null;
   buckets: Record<string, number>;
 };
 
@@ -73,6 +74,14 @@ export async function seedStyles(
         median(costRows.map((r) => money(r["Product Cost"])).filter(isNumber)) ||
         null;
 
+      // Baseline LANDED — what Quince pays today delivered, and the only
+      // figure a landed Best Cost may be compared against. Stored and
+      // displayed, but never compared to a vendor FOB (Build Doc 11.4).
+      const baselineLanded =
+        median(
+          costRows.map((r) => money(r["Shipping and Handling Cost"])).filter(isNumber),
+        ) + (baselineFob ?? 0) || null;
+
       // Bedding's Size Model disagrees with the real SKU set on 36% of styles,
       // so sizes come from the rows. Bottoms matches, but the rows are correct
       // for both, so there is no reason to branch.
@@ -106,6 +115,7 @@ export async function seedStyles(
           weightG: money(head["Weight"]),
           planUnits: planUnits.get(styleNumber) ?? null,
           baselineFob,
+          baselineLanded,
         },
       });
 
@@ -194,6 +204,7 @@ export async function seedStyles(
         subDepartment: style.subDepartment,
         planUnits: style.planUnits,
         baselineFob,
+        baselineLanded,
         buckets,
       });
     }
