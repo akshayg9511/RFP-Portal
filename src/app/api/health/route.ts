@@ -20,18 +20,21 @@ import { db } from "@/lib/db";
  */
 export async function GET() {
   try {
-    const [styles, vendors, styleSets, templates, configs] = await Promise.all([
-      db.style.count(),
-      db.vendor.count(),
-      db.styleSet.count(),
-      db.template.count(),
-      db.config.count(),
-    ]);
+    const [styles, images, vendors, styleSets, templates, quotes, awards] =
+      await Promise.all([
+        db.style.count(),
+        db.styleImage.count(),
+        db.vendor.count(),
+        db.styleSet.count(),
+        db.template.count(),
+        db.quote.count(),
+        db.award.count(),
+      ]);
 
     return NextResponse.json({
       ok: true,
       database: "connected",
-      counts: { styles, vendors, styleSets, templates, configs },
+      counts: { styles, images, vendors, styleSets, templates, quotes, awards },
     });
   } catch (error) {
     return NextResponse.json(

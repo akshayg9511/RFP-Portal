@@ -15,7 +15,8 @@
     "test": "vitest run",
     "lint:ui": "node scripts/lint-ui.mjs",
     "typecheck": "tsc --noEmit",
-    "sync:ds": "node scripts/sync-ds.mjs"
+    "sync:ds": "node scripts/sync-ds.mjs",
+    "seed:verify": "tsx scripts/seed/verify.ts"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.10.0",

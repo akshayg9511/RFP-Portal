@@ -47,8 +47,25 @@ model Style {
   // catalog's own "Pricing Variation Level" column does not map to these.
   variationLevel String @default("STYLE")
 
-  imageUrl       String? @db.Text
-  heroImageUrl   String? @db.Text
+  // Images live in StyleImage, keyed by style + colour — a style carries a
+  // median of 9-12 images (max 41), so a column cannot hold them.
+  websiteUrl     String? @db.Text
+
+  productType    String?
+  franchise      String?
+  gender         String?
+
+  // Costs are not comparable across costing scenarios. Stored so the
+  // provenance of a baseline is recoverable.
+  scenarioName   String?
+  scenarioId     String?
+
+  retailPrice    Decimal? @db.Decimal(12, 2)
+
+  // The canonical size run, e.g. "Twin,Full,Queen,King,Cal King". Authoritative
+  // for bottoms; disagrees with the actual SKU set on 36% of bedding styles, so
+  // bedding sizes are derived from variations instead.
+  sizeModel      String?
 
   htsCode        String?
   lengthIn       Decimal? @db.Decimal(10, 3)
@@ -66,6 +83,8 @@ model Style {
   baselineLanded Decimal? @db.Decimal(12, 4)
 
   variations       Variation[]
+  colourways       Colourway[]
+  images           StyleImage[]
   cleanSheets      CleanSheet[]
   currentSuppliers CurrentSupplier[]
   setMembers       StyleSetMember[]
@@ -82,9 +101,12 @@ model Variation {
   styleId String
   style   Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
-  size      String?
-  colour    String?
-  sku       String?
+  size          String?
+  sizeSortOrder Int?
+  colour        String?
+  colourwayId   String?
+  colourway     Colourway? @relation(fields: [colourwayId], references: [id], onDelete: SetNull)
+  sku           String?
 
   planUnits Int?
   // Share of the style's volume. Size allocation is DERIVED from this mix and
@@ -97,6 +119,41 @@ model Variation {
 
   @@index([styleId])
   @@index([sku])
+}
+
+// A style's colour variant. This is the axis images vary on — and the axis the
+// real Lauren Home template quotes on, one sheet per colourway.
+model Colourway {
+  id           String @id @default(cuid())
+  styleId      String
+  style        Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
+
+  styleColorId String  // the source system's style x colour key
+  name         String
+  websiteUrl   String? @db.Text
+
+  images     StyleImage[]
+  variations Variation[]
+
+  @@unique([styleId, styleColorId])
+  @@index([styleId])
+}
+
+// Product photography. Keyed by style + colourway because images vary by
+// colour and not by size — one row per image, hotlinked from the CDN.
+model StyleImage {
+  id          String @id @default(cuid())
+  styleId     String
+  colourwayId String?
+  style       Style      @relation(fields: [styleId], references: [id], onDelete: Cascade)
+  colourway   Colourway? @relation(fields: [colourwayId], references: [id], onDelete: SetNull)
+
+  url      String  @db.Text
+  isHero   Boolean @default(false)
+  position Int     @default(0)
+
+  @@index([styleId, position])
+  @@index([colourwayId])
 }
 
 model StyleSet {
