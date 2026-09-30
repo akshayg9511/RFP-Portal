@@ -38,7 +38,7 @@ const VENDOR_DESTS: Dest[] = [
 
 const SETUP: Dest[] = [
   { href: "/templates", label: "Templates", icon: "table" },
-  { href: "/settings", label: "Settings", icon: "settings" },
+  { href: "/settings", label: "Variation setup", icon: "settings" },
 ];
 
 function NavGroup({

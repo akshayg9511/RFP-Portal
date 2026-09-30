@@ -4960,3 +4960,34 @@ body > .drawer-frame .drawer {
   color: var(--color-fg-subtle);
   line-height: 1.5;
 }
+
+/* --- Variation setup (phase 1a) --- */
+
+/* The rule the screen exists to teach, stated once above the table rather
+   than repeated as a tooltip on every disabled control. */
+.vs-lede {
+  margin-block: 0 var(--space-lg);
+  max-inline-size: 68ch;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+  color: var(--color-fg-muted);
+}
+
+/* A product already at the finest grain has no move to offer. Saying so
+   beats an empty cell, which reads as a missing control. */
+.vs-leaf {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.vs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.vs-bulk-label {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-on-emphasis);
+  align-self: center;
+}

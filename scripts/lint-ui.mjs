@@ -142,6 +142,22 @@ const STATES = {
       },
     },
   ],
+  "/settings": [
+    {
+      // The bulk tray is where the one-way grain ladder is enforced, so it
+      // is the state worth linting — a run that only sees the resting table
+      // never exercises the floating surface.
+      name: "variation setup — bulk grain tray",
+      open: async (page) => {
+        await page.waitForSelector("tbody tr.pc-row", { timeout: 8000 });
+        const boxes = page.locator('tbody tr.pc-row [role="checkbox"]');
+        await boxes.nth(0).click();
+        await boxes.nth(1).click();
+        await page.waitForSelector(".sel-bar", { timeout: 5000 });
+        await page.waitForTimeout(400);
+      },
+    },
+  ],
   "/products": [
     {
       name: "selection tray + save-as-set dialog",
