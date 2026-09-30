@@ -119,6 +119,7 @@ model Variation {
   logisticsAir   Decimal? @db.Decimal(12, 4)
 
   setMembers StyleSetMember[]
+  rfpStyles  RfpStyle[]
 
   @@index([styleId])
   @@index([sku])
@@ -320,13 +321,24 @@ model RfpStyle {
   rfp     Rfp    @relation(fields: [rfpId], references: [id], onDelete: Cascade)
   style   Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
+  /// Which variation is out to bid. NULL = the whole product, which is what a
+  /// style-grained product means and what every pre-variation row is.
+  variationId String?
+  variation   Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
+
+  /// COALESCE(variationId, '@STYLE'). See variationKeyOf() and the note on
+  /// StyleSetMember — MySQL treats each NULL as distinct in a unique index,
+  /// so without the sentinel one product could join one RFP repeatedly.
+  variationKey String @default("@STYLE")
+
   // Products may be added after issue — the vendor's existing products stay
   // submitted and locked while only the new one is editable (Build Doc 5.5).
   addedPostIssue Boolean   @default(false)
   addedAt        DateTime?
 
-  @@unique([rfpId, styleId])
+  @@unique([rfpId, styleId, variationKey])
   @@index([styleId])
+  @@index([variationId])
 }
 
 // An RFP issued to ONE vendor, carrying that vendor's specific product subset.

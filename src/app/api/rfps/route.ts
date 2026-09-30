@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { badRequest, handle, num, ok } from "@/lib/api";
-
+import { variationKeyOf, WHOLE_STYLE_KEY } from "@/domain/grain";
 /**
  * @openapi
  * /api/rfps:
@@ -96,6 +96,13 @@ type CreateBody = {
     name: string;
     instructions?: string;
     styleIds: string[];
+    /**
+     * Variation-level contents, keyed by styleId. A style listed here is out
+     * to bid on only those variations; one absent from the map goes out whole.
+     * Kept beside styleIds rather than replacing it so a caller that does not
+     * deal in variations is unaffected.
+     */
+    variationsByStyle?: Record<string, string[]>;
   }[];
   comment?: string;
 };
@@ -131,12 +138,15 @@ export async function POST(request: Request) {
           comment: body.comment?.trim() || null,
           status: "DRAFT",
           dueDate: wave.dueDate,
-          styles: {
-            create: group.styleIds.map((styleId) => ({ styleId })),
-          },
+          styles: { create: rfpStyleRows(group) },
         },
-        include: { _count: { select: { styles: true } } },
+        // Rows, not products — a style out to bid on 3 sizes makes 3 rows.
+        include: { styles: { select: { styleId: true } } },
       });
+
+      // DISTINCT products, so "4 products" does not become "12" the moment
+      // an RFP carries sizes. Same defect as the style-set count in 1d.
+      const styleCount = new Set(rfp.styles.map((s) => s.styleId)).size;
 
       await db.activityLog.create({
         data: {
@@ -144,15 +154,11 @@ export async function POST(request: Request) {
           entityId: rfp.id,
           action: "CREATED",
           actorSide: "QUINCE",
-          detail: { styleCount: rfp._count.styles } as never,
+          detail: { styleCount } as never,
         },
       });
 
-      created.push({
-        id: rfp.id,
-        name: rfp.name,
-        styleCount: rfp._count.styles,
-      });
+      created.push({ id: rfp.id, name: rfp.name, styleCount });
     }
 
     return ok({ created });
@@ -164,3 +170,42 @@ export async function POST(request: Request) {
     );
   }
 }
+
+/**
+ * The RfpStyle rows one group becomes.
+ *
+ * A style with no variations named goes out WHOLE — one row with a null
+ * variationId, which is what every pre-variation RFP holds. A style with
+ * variations named goes out on exactly those.
+ *
+ * Both branches return the same shape so Prisma's create input stays a
+ * single type; returning `{styleId}` from one and `{styleId, variationId}`
+ * from the other makes the array a union it will not accept.
+ */
+function rfpStyleRows(group: {
+  styleIds: string[];
+  variationsByStyle?: Record<string, string[]>;
+}): RfpStyleRow[] {
+  const rows: RfpStyleRow[] = [];
+  for (const styleId of group.styleIds) {
+    const variationIds = group.variationsByStyle?.[styleId] ?? [];
+    if (!variationIds.length) {
+      rows.push({ styleId, variationId: null, variationKey: WHOLE_STYLE_KEY });
+      continue;
+    }
+    for (const variationId of variationIds) {
+      rows.push({
+        styleId,
+        variationId,
+        variationKey: variationKeyOf(variationId),
+      });
+    }
+  }
+  return rows;
+}
+
+type RfpStyleRow = {
+  styleId: string;
+  variationId: string | null;
+  variationKey: string;
+};

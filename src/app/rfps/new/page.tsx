@@ -94,6 +94,17 @@ export default function NewRfpPage() {
             name: names[g.templateId],
             instructions: instructions[g.templateId] ?? "",
             styleIds: g.styles.map((s) => s.id),
+            // Carry the variation picks through. A style the selection holds
+            // at variation level goes out to bid on exactly those; one held
+            // whole is absent from this map and goes out whole.
+            variationsByStyle: Object.fromEntries(
+              g.styles
+                .map((s) => {
+                  const picked = selection.selected.get(s.id)?.variationIds ?? [];
+                  return [s.id, picked] as const;
+                })
+                .filter(([, picked]) => picked.length > 0),
+            ),
           })),
         }),
       });
