@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { badRequest, handle, num } from "@/lib/api";
-
+import { variationKeyOf, WHOLE_STYLE_KEY } from "@/domain/grain";
 /**
  * @openapi
  * /api/style-sets:
@@ -41,14 +41,26 @@ export function GET() {
     });
 
     const rows = sets.map((set) => {
-      const styles = set.members.map((m) => m.style);
+      // DISTINCT products, not member rows. Once a set can hold three sizes
+      // of one product, `members.map(m => m.style)` counts that product three
+      // times — the card would read "3 products" for one, and annual spend
+      // would be tripled.
+      const byStyle = new Map<string, (typeof set.members)[number]["style"]>();
+      for (const member of set.members) {
+        if (!byStyle.has(member.styleId)) byStyle.set(member.styleId, member.style);
+      }
+      const styles = [...byStyle.values()];
 
       // Annual spend at baseline — what makes the list sortable by where the
-      // money is.
+      // money is. Summed over DISTINCT products for the reason above.
       const annualSpend = styles.reduce(
         (total, s) => total + (s.planUnits ?? 0) * (num(s.baselineFob) ?? 0),
         0,
       );
+
+      // Variation rows, so a card can say "5 products · 3 SKUs" when part of
+      // the set is picked at variation level.
+      const skuCount = set.members.filter((m) => m.variationId !== null).length;
 
       return {
         id: set.id,
@@ -56,6 +68,7 @@ export function GET() {
         description: set.description,
         lastUsedIn: set.lastUsedIn,
         styleCount: styles.length,
+        skuCount,
         annualSpend,
         // The carousel. 8 is the documented ceiling for a Carousel — past it
         // nobody counts the dots.
@@ -89,14 +102,56 @@ export function POST(request: Request) {
     const body = (await request.json()) as {
       name?: string;
       description?: string | null;
+      /** Whole products. Kept for callers that do not deal in variations. */
       styleIds?: string[];
+      /**
+       * Variation-level membership. Takes precedence over styleIds for any
+       * style it names, so a caller may mix the two: three whole products
+       * and two sizes of a fourth.
+       */
+      styles?: { styleId: string; variationIds?: string[] }[];
     };
 
     const name = body.name?.trim();
     if (!name) return badRequest("A style set needs a name");
 
-    const styleIds = [...new Set(body.styleIds ?? [])];
-    if (!styleIds.length) return badRequest("A style set needs at least one product");
+    // Normalise both shapes into one list of rows to create.
+    const rows: { styleId: string; variationId: string | null }[] = [];
+    const seen = new Set<string>();
+
+    for (const entry of body.styles ?? []) {
+      if (!entry.styleId) continue;
+      const ids = entry.variationIds ?? [];
+      if (ids.length === 0) {
+        // No variations named means the whole product — the same thing a
+        // bare styleId means.
+        const key = `${entry.styleId}|${WHOLE_STYLE_KEY}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          rows.push({ styleId: entry.styleId, variationId: null });
+        }
+        continue;
+      }
+      for (const variationId of ids) {
+        const key = `${entry.styleId}|${variationId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push({ styleId: entry.styleId, variationId });
+      }
+    }
+
+    for (const styleId of body.styleIds ?? []) {
+      // A style already carried by `styles` keeps its variation rows; adding
+      // a whole-product row beside them would mean both "all of it" and
+      // "these three", which is a contradiction the set cannot hold.
+      if ([...seen].some((k) => k.startsWith(`${styleId}|`))) continue;
+      const key = `${styleId}|${WHOLE_STYLE_KEY}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({ styleId, variationId: null });
+    }
+
+    if (!rows.length) return badRequest("A style set needs at least one product");
 
     // A name collision is the user's to resolve — two sets called "Bedding
     // priority" is how you lose track of which one an RFP came from.
@@ -107,7 +162,13 @@ export function POST(request: Request) {
       data: {
         name,
         description: body.description?.trim() || null,
-        members: { create: styleIds.map((styleId) => ({ styleId })) },
+        members: {
+          create: rows.map((row) => ({
+            styleId: row.styleId,
+            variationId: row.variationId,
+            variationKey: variationKeyOf(row.variationId),
+          })),
+        },
       },
       include: { _count: { select: { members: true } } },
     });
@@ -116,6 +177,7 @@ export function POST(request: Request) {
       id: set.id,
       name: set.name,
       description: set.description,
+      // Rows, which is products at style level and variations below it.
       styleCount: set._count.members,
     };
   });

@@ -374,6 +374,10 @@ export default function ProductCatalogPage() {
         open={saveOpen}
         onClose={() => setSaveOpen(false)}
         styleIds={[...selection.selected.keys()]}
+        styles={[...selection.selected.values()].map((v) => ({
+          styleId: v.id,
+          variationIds: v.variationIds ?? [],
+        }))}
         onSaved={() => {
           setSaveOpen(false);
           selection.clear();

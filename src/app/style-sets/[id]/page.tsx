@@ -17,6 +17,16 @@ type SetDetail = {
   description: string | null;
   styleCount: number;
   annualSpend: number;
+  /**
+   * The set's own membership, which carries memberVariationIds. Read from
+   * here rather than /api/styles because only this route knows WHICH
+   * variations the set admits — /api/styles answers "is this style in any
+   * set", not "which of its sizes".
+   */
+  styles?: (StyleSummary & {
+    memberVariationIds?: string[];
+    variations?: { id: string; label: string }[];
+  })[];
 };
 
 /**
@@ -39,7 +49,15 @@ export default function StyleSetPage() {
   const [openStyle, setOpenStyle] = React.useState<string | null>(null);
 
   const visible = React.useMemo(() => {
-    const list = styles.data?.styles ?? [];
+    // Membership comes from the set route; the catalog route supplies the
+    // fuller row (facets, counts). Merge rather than choose, so neither
+    // screen loses a field it already renders.
+    const fromSet = new Map((set.data?.styles ?? []).map((s) => [s.id, s]));
+    const list = (styles.data?.styles ?? []).map((s) => ({
+      ...s,
+      memberVariationIds: fromSet.get(s.id)?.memberVariationIds ?? [],
+      variations: fromSet.get(s.id)?.variations ?? [],
+    }));
     if (!query.trim()) return list;
     const q = query.toLowerCase();
     return list.filter(
@@ -47,7 +65,7 @@ export default function StyleSetPage() {
         s.styleNumber.toLowerCase().includes(q) ||
         s.name.toLowerCase().includes(q),
     );
-  }, [styles.data, query]);
+  }, [styles.data, set.data, query]);
 
   const openIndex = visible.findIndex((s) => s.id === openStyle);
 
@@ -160,6 +178,7 @@ export default function StyleSetPage() {
           <StyleCard
             key={style.id}
             style={style}
+            variations={style.variations}
             selected={selection.isSelected(style.id)}
             onToggle={() =>
               selection.toggle({

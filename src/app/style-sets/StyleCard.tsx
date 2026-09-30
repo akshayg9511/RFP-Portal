@@ -19,6 +19,11 @@ export type StyleSummary = {
   colourwayCount: number;
   skuCount: number;
   bidCount: number;
+  /**
+   * Which variations this set admits. EMPTY = the whole product.
+   * Present only on the set-detail read; the catalog does not send it.
+   */
+  memberVariationIds?: string[];
 };
 
 export function StyleCard({
@@ -26,8 +31,15 @@ export function StyleCard({
   selected,
   onToggle,
   onOpen,
+  variations,
 }: {
   style: StyleSummary;
+  /**
+   * Every variation the PRODUCT has, so the ones the set excludes can be
+   * shown greyed rather than simply absent — "which sizes did we leave out"
+   * is a question the set page should answer.
+   */
+  variations?: { id: string; label: string }[];
   selected: boolean;
   onToggle: () => void;
   onOpen: () => void;
@@ -78,6 +90,53 @@ export function StyleCard({
           </div>
         </div>
       </button>
+
+      {variations?.length ? (
+        <VariationChips
+          variations={variations}
+          included={style.memberVariationIds ?? []}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The set's variation membership, inside the card.
+ *
+ * A capped scroll region rather than an expanding section: these cards sit in
+ * a CSS grid, and a card that grows on expand stretches its whole row. With
+ * the 4-5 variation cap the list rarely scrolls at all.
+ *
+ * Excluded variations are GREYED, not omitted — the useful question here is
+ * "which sizes did we leave out", and an absent row cannot answer it.
+ */
+function VariationChips({
+  variations,
+  included,
+}: {
+  variations: { id: string; label: string }[];
+  included: string[];
+}) {
+  // An empty membership list means the whole product is in, so everything
+  // reads as included.
+  const wholeProduct = included.length === 0;
+  const inSet = new Set(included);
+
+  return (
+    <div className="sc-vars">
+      {variations.map((v) => {
+        const isIn = wholeProduct || inSet.has(v.id);
+        return (
+          <span
+            key={v.id}
+            className={isIn ? "sc-var" : "sc-var is-out"}
+            title={isIn ? undefined : "Not part of this style set"}
+          >
+            {v.label}
+          </span>
+        );
+      })}
     </div>
   );
 }

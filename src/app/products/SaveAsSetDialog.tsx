@@ -15,6 +15,11 @@ type Props = {
   open: boolean;
   onClose: () => void;
   styleIds: string[];
+  /**
+   * Variation-level picks, when there are any. Sent alongside styleIds so a
+   * set can hold three sizes of one product and the whole of another.
+   */
+  styles?: { styleId: string; variationIds?: string[] }[];
   onSaved: (set: { id: string; name: string; styleCount: number }) => void;
 };
 
@@ -29,7 +34,7 @@ export function SaveAsSetDialog(props: Props) {
   return <SaveAsSetForm {...props} />;
 }
 
-function SaveAsSetForm({ onClose, styleIds, onSaved }: Props) {
+function SaveAsSetForm({ onClose, styleIds, styles, onSaved }: Props) {
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -50,7 +55,7 @@ function SaveAsSetForm({ onClose, styleIds, onSaved }: Props) {
       const response = await fetch("/api/style-sets", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, description, styleIds }),
+        body: JSON.stringify({ name, description, styleIds, styles }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.message ?? "Could not save");

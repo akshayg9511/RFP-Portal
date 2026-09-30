@@ -22,26 +22,26 @@ datasource db {
 // ---------------------------------------------------------------- wave
 
 model Wave {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   dueDate   DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
-  rfps    Rfp[]
-  awards  Award[]
+  rfps   Rfp[]
+  awards Award[]
 }
 
 // ---------------------------------------------------------------- product
 
 model Style {
-  id             String @id @default(cuid())
-  styleNumber    String @unique
-  name           String
-  division       String
-  department     String
-  subDepartment  String
-  subClass       String?
-  material       String?
+  id            String  @id @default(cuid())
+  styleNumber   String  @unique
+  name          String
+  division      String
+  department    String
+  subDepartment String
+  subClass      String?
+  material      String?
 
   // Variation level: STYLE | SIZE | COLOUR | SKU. Seeded explicitly — the
   // catalog's own "Pricing Variation Level" column does not map to these.
@@ -49,32 +49,32 @@ model Style {
 
   // Images live in StyleImage, keyed by style + colour — a style carries a
   // median of 9-12 images (max 41), so a column cannot hold them.
-  websiteUrl     String? @db.Text
+  websiteUrl String? @db.Text
 
-  productType    String?
-  franchise      String?
-  gender         String?
+  productType String?
+  franchise   String?
+  gender      String?
 
   // Costs are not comparable across costing scenarios. Stored so the
   // provenance of a baseline is recoverable.
-  scenarioName   String?
-  scenarioId     String?
+  scenarioName String?
+  scenarioId   String?
 
-  retailPrice    Decimal? @db.Decimal(12, 2)
+  retailPrice Decimal? @db.Decimal(12, 2)
 
   // The canonical size run, e.g. "Twin,Full,Queen,King,Cal King". Authoritative
   // for bottoms; disagrees with the actual SKU set on 36% of bedding styles, so
   // bedding sizes are derived from variations instead.
-  sizeModel      String?
+  sizeModel String?
 
-  htsCode        String?
-  lengthIn       Decimal? @db.Decimal(10, 3)
-  widthIn        Decimal? @db.Decimal(10, 3)
-  heightIn       Decimal? @db.Decimal(10, 3)
-  weightG        Decimal? @db.Decimal(10, 3)
+  htsCode  String?
+  lengthIn Decimal? @db.Decimal(10, 3)
+  widthIn  Decimal? @db.Decimal(10, 3)
+  heightIn Decimal? @db.Decimal(10, 3)
+  weightG  Decimal? @db.Decimal(10, 3)
 
-  planUnits      Int?
-  revenue2026    Decimal? @db.Decimal(14, 2)
+  planUnits   Int?
+  revenue2026 Decimal? @db.Decimal(14, 2)
 
   // Baseline FOB is the ceiling a bid is measured against. Baseline landed is
   // stored and displayed but NEVER compared against a vendor FOB (the Wave 1
@@ -109,14 +109,16 @@ model Variation {
   colourway     Colourway? @relation(fields: [colourwayId], references: [id], onDelete: SetNull)
   sku           String?
 
-  planUnits Int?
+  planUnits   Int?
   // Share of the style's volume. Size allocation is DERIVED from this mix and
   // displayed read-only; award % is entered at style level only (Build Doc 11.3).
   volumeShare Decimal? @db.Decimal(8, 6)
 
-  baselineFob      Decimal? @db.Decimal(12, 4)
-  logisticsOcean   Decimal? @db.Decimal(12, 4)
-  logisticsAir     Decimal? @db.Decimal(12, 4)
+  baselineFob    Decimal? @db.Decimal(12, 4)
+  logisticsOcean Decimal? @db.Decimal(12, 4)
+  logisticsAir   Decimal? @db.Decimal(12, 4)
+
+  setMembers StyleSetMember[]
 
   @@index([styleId])
   @@index([sku])
@@ -125,11 +127,11 @@ model Variation {
 // A style's colour variant. This is the axis images vary on — and the axis the
 // real Lauren Home template quotes on, one sheet per colourway.
 model Colourway {
-  id           String @id @default(cuid())
-  styleId      String
-  style        Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  styleId String
+  style   Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
-  styleColorId String  // the source system's style x colour key
+  styleColorId String // the source system's style x colour key
   name         String
   websiteUrl   String? @db.Text
 
@@ -143,7 +145,7 @@ model Colourway {
 // Product photography. Keyed by style + colourway because images vary by
 // colour and not by size — one row per image, hotlinked from the CDN.
 model StyleImage {
-  id          String @id @default(cuid())
+  id          String     @id @default(cuid())
   styleId     String
   colourwayId String?
   style       Style      @relation(fields: [styleId], references: [id], onDelete: Cascade)
@@ -158,9 +160,9 @@ model StyleImage {
 }
 
 model StyleSet {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  description String? @db.Text
+  description String?  @db.Text
   lastUsedIn  String?
   createdAt   DateTime @default(now())
 
@@ -174,9 +176,24 @@ model StyleSetMember {
   styleSet   StyleSet @relation(fields: [styleSetId], references: [id], onDelete: Cascade)
   style      Style    @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
+  /// Which variation this row admits. NULL = the whole product, which is
+  /// what a style-grained product means and what every pre-variation row is.
+  variationId String?
+  variation   Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
+
+  /// COALESCE(variationId, '@STYLE'), written by the app.
+  ///
+  /// MySQL treats every NULL as DISTINCT in a unique index, so a key of
+  /// [styleSetId, styleId, variationId] would enforce nothing for
+  /// whole-product rows — one style could be added to one set without limit.
+  /// The sentinel collapses those NULLs so the constraint still bites.
+  /// See variationKeyOf() in src/domain/grain.ts.
+  variationKey String @default("@STYLE")
+
   // A style may belong to several sets — membership is many-to-many by design.
-  @@unique([styleSetId, styleId])
+  @@unique([styleSetId, styleId, variationKey])
   @@index([styleId])
+  @@index([variationId])
 }
 
 // Internal only. NEVER reaches a vendor screen, a generated Excel, or any
@@ -187,17 +204,17 @@ model CleanSheet {
   styleId String
   style   Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
-  size    String?
+  size String?
 
   // BASELINE — what the style costs today, split by bucket.
   // CLEAN_SHEET — the internal should-cost target, same buckets.
   // Both live here because they are the same shape and are always read
   // together; the drawer compares them bucket by bucket.
-  kind      String   @default("CLEAN_SHEET")
+  kind String @default("CLEAN_SHEET")
 
-  bucket    String   // BASE_MATERIALS | TRIM_HARDWARE | PACKAGING | CRAFTING | TESTING_3PL | OVERHEAD_SGA_PROFIT
-  lineItem  String?
-  amount    Decimal  @db.Decimal(12, 4)
+  bucket   String // BASE_MATERIALS | TRIM_HARDWARE | PACKAGING | CRAFTING | TESTING_3PL | OVERHEAD_SGA_PROFIT
+  lineItem String?
+  amount   Decimal @db.Decimal(12, 4)
 
   @@index([styleId, kind, bucket])
 }
@@ -210,7 +227,7 @@ model Vendor {
   name       String
   country    String?
   countryIso String?
-  cooRegion  String?   // CHINA | SEA | ISC | AMERICAS | EMEA
+  cooRegion  String? // CHINA | SEA | ISC | AMERICAS | EMEA
   city       String?
 
   // The ONLY stored half of vendor type. Frozen at wave start.
@@ -218,10 +235,10 @@ model Vendor {
 
   // A temp vendor (two letters of the name + an incrementing number) stops
   // being temp when onboarded through the existing vendor portal process.
-  isTemp     Boolean @default(false)
-  email      String?   // synthetic in the prototype — real vendor emails are PII
+  isTemp Boolean @default(false)
+  email  String? // synthetic in the prototype — real vendor emails are PII
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   currentSupplierOf CurrentSupplier[]
   invitations       Invitation[]
@@ -250,13 +267,13 @@ model CurrentSupplier {
 // ---------------------------------------------------------------- template
 
 model Template {
-  id             String @id @default(cuid())
-  name           String
-  division       String?
-  department     String?
-  subDepartment  String?
-  version        Int     @default(1)
-  published      Boolean @default(true)
+  id            String  @id @default(cuid())
+  name          String
+  division      String?
+  department    String?
+  subDepartment String?
+  version       Int     @default(1)
+  published     Boolean @default(true)
 
   // Buckets are fixed and global; line items inside a bucket are
   // template-defined and variable. All comparison runs on bucket totals.
@@ -271,24 +288,24 @@ model Template {
 // ---------------------------------------------------------------- rfp
 
 model Rfp {
-  id         String @id @default(cuid())
+  id         String   @id @default(cuid())
   waveId     String
   templateId String
   wave       Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
   template   Template @relation(fields: [templateId], references: [id])
 
   name         String
-  instructions String?  @db.Text
-  status       String   @default("DRAFT") // DRAFT | ISSUED | CLOSED
+  instructions String?   @db.Text
+  status       String    @default("DRAFT") // DRAFT | ISSUED | CLOSED
   dueDate      DateTime?
-  currentRound Int      @default(1)
+  currentRound Int       @default(1)
 
   sourcingPartner String?
   gm              String?
 
-  comment   String?  @db.Text
+  comment   String?   @db.Text
   issuedAt  DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   styles      RfpStyle[]
   invitations Invitation[]
@@ -305,7 +322,7 @@ model RfpStyle {
 
   // Products may be added after issue — the vendor's existing products stay
   // submitted and locked while only the new one is editable (Build Doc 5.5).
-  addedPostIssue Boolean @default(false)
+  addedPostIssue Boolean   @default(false)
   addedAt        DateTime?
 
   @@unique([rfpId, styleId])
@@ -323,8 +340,8 @@ model Invitation {
   status       String @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | SUBMITTED | AWAITING_RESPONSE | ROUND_N | AWARDED | NOT_PROCEEDING
   currentRound Int    @default(1)
 
-  declined       Boolean @default(false)
-  declineReason  String? @db.Text
+  declined      Boolean @default(false)
+  declineReason String? @db.Text
 
   issuedAt  DateTime?
   createdAt DateTime  @default(now())
@@ -338,7 +355,7 @@ model Invitation {
 }
 
 model InvitationStyle {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   invitationId String
   styleId      String
   invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
@@ -354,7 +371,7 @@ model InvitationStyle {
 // ---------------------------------------------------------------- quote
 
 model Quote {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   invitationId String
   styleId      String
   vendorId     String
@@ -394,14 +411,14 @@ model Quote {
 
   // Section 8 — commercial terms, captured as attributes and NEVER summed
   // into FOB.
-  maxVolumeCapacity Int?
+  maxVolumeCapacity  Int?
   productionLeadTime Int?
   moq                Int?
   notes              String? @db.Text
 
   submittedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([invitationId, styleId, round])
   @@index([styleId])
@@ -412,7 +429,7 @@ model Quote {
 
 // Asks replace chat. Anchored, typed, stateful, resolvable.
 model Ask {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   invitationId String
   invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
 
@@ -426,7 +443,7 @@ model Ask {
   // FILL (system, mandatory blank) | FIX (system, wrong unit or type)
   type String
 
-  body        String? @db.Text
+  body        String?  @db.Text
   targetPctLo Decimal? @db.Decimal(6, 2)
   targetPctHi Decimal? @db.Decimal(6, 2)
 
@@ -454,23 +471,19 @@ model Ask {
 
 /**
  * A NAMED, SAVED allocation candidate for one product.
- *
  * Distinct from Award, which is the committed split: an Award row must total
  * 100% across the style and there is exactly one live set. A strategy is a
  * candidate you named to compare against others, so a product can carry
  * several and none of them is "the" allocation until it is applied and saved.
- *
  * `split` is a SNAPSHOT of {vendorId: awardPct}. Deliberately not a relation to
  * Award rows: the point of naming a split is to come back to the split you
  * named, and pointing at the live allocation would silently rewrite history
  * the moment someone reallocated.
- *
  * Savings, blended cost and the region mix are NEVER stored — they are
  * recomputed through domain/award.allocate() on read. One function owns that
  * arithmetic (the recurring "compare like with like" bug class is what happens
  * when two do), and it means a figure refreshes if a vendor revises their bid
  * while the split stays exactly as saved.
- *
  * The four built-in rules (lowest bid, 3 lowest existing, equal non-China,
  * incumbent/new ratio) are NOT stored here. They are derived from the bids on
  * every load, so a new bid changes them — which is correct.
@@ -512,20 +525,20 @@ model Award {
 
   // Snapshotted at save so the award reads consistently even if a later quote
   // revision moves Best Cost.
-  bestCost      Decimal? @db.Decimal(12, 4)
-  bestCostBasis String?  // QUINCE_BLEND | DDP_BLEND — min() picks silently, so basis must be visible
-  awardedUnits  Int?
+  bestCost       Decimal? @db.Decimal(12, 4)
+  bestCostBasis  String? // QUINCE_BLEND | DDP_BLEND — min() picks silently, so basis must be visible
+  awardedUnits   Int?
   awardedDollars Decimal? @db.Decimal(16, 2)
   savingsDollars Decimal? @db.Decimal(16, 2)
 
   // UNTOUCHED -> ALLOCATED -> READY_FOR_REVIEW -> AWARDED
   status String @default("ALLOCATED")
 
-  comment    String? @db.Text
-  awardedAt  DateTime?
-  awardedBy  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  comment   String?   @db.Text
+  awardedAt DateTime?
+  awardedBy String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([waveId, styleId, vendorId])
   @@index([styleId])
@@ -550,7 +563,7 @@ model TariffRate {
 // Per style+size ocean and air $/unit. Women's rows carry a blank size
 // segment, so lookup is exact-then-style-level fallback.
 model LogisticsRate {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   styleNumber String
   size        String?
   countryIso  String?
@@ -570,9 +583,9 @@ model Config {
 }
 
 model ActivityLog {
-  id     String @id @default(cuid())
+  id String @id @default(cuid())
 
-  entity   String  // AWARD | QUOTE | RFP | INVITATION
+  entity   String // AWARD | QUOTE | RFP | INVITATION
   entityId String
 
   styleId  String?

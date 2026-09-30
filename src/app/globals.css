@@ -5048,3 +5048,35 @@ body > .drawer-frame .drawer {
   font-size: var(--type-caption-size);
   color: var(--color-fg-muted);
 }
+
+/* --- Style set variation membership (phase 1d) --- */
+
+/* Inside the card, capped. These cards sit in a CSS grid, so a card that
+   grows on expand stretches its whole row; with the 4-5 variation cap this
+   rarely scrolls at all. */
+.sc-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  max-block-size: 76px;
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.sc-var {
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-inner);
+  background: var(--color-bg-muted);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-default);
+}
+
+/* Excluded variations are GREYED, not omitted — "which sizes did we leave
+   out" is the question this list exists to answer, and an absent row cannot
+   answer it. */
+.sc-var.is-out {
+  background: none;
+  color: var(--color-fg-disabled);
+  text-decoration: line-through;
+  cursor: help;
+}

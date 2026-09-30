@@ -117,6 +117,25 @@ export function grainGroups(
   return [...groups.values()];
 }
 
+/**
+ * The sentinel that stands in for "the whole product" in a unique key.
+ *
+ * MySQL treats every NULL as DISTINCT in a unique index, so a nullable
+ * variationId alone enforces nothing for whole-product rows — the same
+ * style could join one style set without limit, and the same vendor could
+ * hold two style-level quotes for one round. Collapsing the NULLs to a
+ * constant is what makes the constraint bite.
+ *
+ * Written by the app rather than a MySQL generated column: Prisma flags a
+ * generated expression as drift on every subsequent `migrate dev`, and this
+ * prototype has migrations that must keep replaying from empty.
+ */
+export const WHOLE_STYLE_KEY = "@STYLE";
+
+export function variationKeyOf(variationId: string | null | undefined): string {
+  return variationId ?? WHOLE_STYLE_KEY;
+}
+
 /** Does this product have anything to expand? Drives the chevron. */
 export function isExpandable(grain: Grain): boolean {
   return grain !== "STYLE";

@@ -6,6 +6,8 @@ import {
   grainGroups,
   isExpandable,
   type VariationLike,
+  variationKeyOf,
+  WHOLE_STYLE_KEY,
 } from "./grain";
 
 describe("the grain ladder is one-way", () => {
@@ -148,5 +150,25 @@ describe("isExpandable", () => {
     expect(isExpandable("COLOUR")).toBe(true);
     expect(isExpandable("SIZE")).toBe(true);
     expect(isExpandable("SKU")).toBe(true);
+  });
+});
+
+describe("variationKeyOf — the MySQL NULL-uniqueness defence", () => {
+  it("passes a real id through", () => {
+    expect(variationKeyOf("var_123")).toBe("var_123");
+  });
+
+  // The whole point: NULL and undefined must collapse to ONE value, or a
+  // unique index treats every whole-product row as distinct and enforces
+  // nothing.
+  it("collapses null and undefined to the same sentinel", () => {
+    expect(variationKeyOf(null)).toBe(WHOLE_STYLE_KEY);
+    expect(variationKeyOf(undefined)).toBe(WHOLE_STYLE_KEY);
+    expect(variationKeyOf(null)).toBe(variationKeyOf(undefined));
+  });
+
+  it("uses a sentinel no cuid could collide with", () => {
+    // cuids are lowercase alphanumeric and never contain '@'.
+    expect(WHOLE_STYLE_KEY).toMatch(/^@/);
   });
 });
