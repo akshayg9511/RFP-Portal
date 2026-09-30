@@ -33,6 +33,10 @@ export function GET(request: Request) {
           ? { where: { styleId }, select: { currentFob: true } }
           : { select: { styleId: true } },
         _count: { select: { quotes: true, awards: true } },
+        // Award dollars in this wave — the vendor master's whole reason to
+        // exist is answering "who are we placing business with", and a count
+        // of award ROWS does not answer that.
+        awards: { select: { awardedDollars: true, savingsDollars: true } },
       },
       orderBy: { name: "asc" },
     });
@@ -60,6 +64,8 @@ export function GET(request: Request) {
       stylesSupplied: v.currentSupplierOf.length,
       quoteCount: v._count.quotes,
       awardCount: v._count.awards,
+      awardedDollars: v.awards.reduce((s, a) => s + (num(a.awardedDollars) ?? 0), 0),
+      savingsDollars: v.awards.reduce((s, a) => s + (num(a.savingsDollars) ?? 0), 0),
     }));
   });
 }

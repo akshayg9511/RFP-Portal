@@ -28,14 +28,18 @@ export default function StyleSetPage() {
   const id = params.id;
 
   const set = useApi<SetDetail>(`/api/style-sets/${id}`);
-  const styles = useApi<StyleSummary[]>(`/api/styles?styleSetId=${id}`);
+  // /api/styles now returns { styles, facets, total } — the catalogue screen
+  // needs facet counts, and one shape for both consumers beats two endpoints.
+  const styles = useApi<{ styles: StyleSummary[] }>(
+    `/api/styles?styleSetId=${id}`,
+  );
   const selection = useSelection();
 
   const [query, setQuery] = React.useState("");
   const [openStyle, setOpenStyle] = React.useState<string | null>(null);
 
   const visible = React.useMemo(() => {
-    const list = styles.data ?? [];
+    const list = styles.data?.styles ?? [];
     if (!query.trim()) return list;
     const q = query.toLowerCase();
     return list.filter(

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { handle, num } from "@/lib/api";
+import { handle, num, numOr } from "@/lib/api";
 
 /**
  * @openapi
@@ -55,6 +55,43 @@ export async function GET(
       orderBy: { issuedAt: "desc" },
     });
 
+    /**
+     * THE VENDOR'S OWN AWARD OUTCOME — and only their own.
+     *
+     * Same boundary as the competitiveness signal: their share and their
+     * volume cross, nothing else does. No rival's price, no other vendor's
+     * name, no wave total, no indication of how many vendors the product was
+     * split across. A vendor learns what they won, never what they lost to.
+     *
+     * Released only when procurement marks the style AWARDED — an ALLOCATED
+     * row is a working decision that can still change.
+     */
+    const releasedAwards = await db.award.findMany({
+      where: { vendorId, status: "AWARDED" },
+      select: {
+        styleId: true,
+        awardPct: true,
+        awardedUnits: true,
+      },
+    });
+    const awardByStyle = new Map(releasedAwards.map((a) => [a.styleId, a]));
+
+    // Which styles have been awarded AT ALL — a style awarded to someone else
+    // is how a vendor learns they are not proceeding. Only the fact, never who.
+    const decidedStyleIds = new Set(
+      (
+        await db.award.findMany({
+          where: {
+            status: "AWARDED",
+            styleId: {
+              in: invitations.flatMap((i) => i.styles.map((s) => s.styleId)),
+            },
+          },
+          select: { styleId: true },
+        })
+      ).map((a) => a.styleId),
+    );
+
     return invitations.map((inv) => {
       const submitted = new Set(
         inv.quotes.filter((q) => q.status === "SUBMITTED").map((q) => q.styleId),
@@ -82,21 +119,39 @@ export async function GET(
         submittedCount: submitted.size,
         // Completion is what the vendor sees on their dashboard.
         completion: total ? submitted.size / total : 0,
-        products: inv.styles.map((is) => ({
-          id: is.style.id,
-          styleNumber: is.style.styleNumber,
-          name: is.style.name,
-          heroImage: is.style.images[0]?.url ?? null,
-          cannotBid: is.cannotBid,
-          state: submitted.has(is.styleId)
-            ? "SUBMITTED"
-            : drafted.has(is.styleId)
-              ? "DRAFT"
-              : "BLANK",
-          fob: num(
-            inv.quotes.find((q) => q.styleId === is.styleId)?.fob ?? null,
-          ),
-        })),
+        // How many of this RFP's products they won, once released.
+        awardedCount: inv.styles.filter((is) => awardByStyle.has(is.styleId))
+          .length,
+        decidedCount: inv.styles.filter((is) => decidedStyleIds.has(is.styleId))
+          .length,
+        products: inv.styles.map((is) => {
+          const won = awardByStyle.get(is.styleId);
+          const decided = decidedStyleIds.has(is.styleId);
+
+          return {
+            id: is.style.id,
+            styleNumber: is.style.styleNumber,
+            name: is.style.name,
+            heroImage: is.style.images[0]?.url ?? null,
+            cannotBid: is.cannotBid,
+            state: submitted.has(is.styleId)
+              ? "SUBMITTED"
+              : drafted.has(is.styleId)
+                ? "DRAFT"
+                : "BLANK",
+            fob: num(
+              inv.quotes.find((q) => q.styleId === is.styleId)?.fob ?? null,
+            ),
+
+            // THEIR outcome. `null` while undecided — silence is honest; a
+            // premature "not proceeding" would be a lie.
+            outcome: won ? "AWARDED" : decided ? "NOT_PROCEEDING" : null,
+            // Their share and their volume. Nothing about anyone else — a
+            // vendor cannot tell from this whether the product was split.
+            awardPct: won ? numOr(won.awardPct) : null,
+            awardedUnits: won?.awardedUnits ?? null,
+          };
+        }),
       };
     });
   });

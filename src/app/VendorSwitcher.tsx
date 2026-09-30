@@ -123,7 +123,7 @@ export function VendorSwitcher() {
                 <span className="vv-menu-name">{v.name}</span>
                 <span className="vv-menu-meta">
                   {v.vendorCode}
-                  {v.isTemp ? " · temp" : ""}
+                  {/* The code already says TEMP-, so this said it twice. */}
                 </span>
               </button>
             ))}

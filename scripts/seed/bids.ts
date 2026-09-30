@@ -1,6 +1,7 @@
 import type { PrismaClient, Template } from "@prisma/client";
 import { computeCost } from "../../src/domain/cost";
 import { between, pick, round, step, type rng } from "./lib";
+import { buildLineItems, floorOverhead, type TemplateSpec } from "./lineItems";
 import type { StyleSeed } from "./styles";
 import type { VendorSeed } from "./vendors";
 
@@ -91,6 +92,31 @@ export async function seedBids(
     rfps.set(key, rfp.id);
   }
 
+  // The form's own spec, read from each template definition so the seeded line
+  // items land on the keys the form will render.
+  const specFor = new Map<string, TemplateSpec>();
+  for (const [key, template] of [
+    ["Home", templates.percale],
+    ["Womens", templates.ponte],
+  ] as const) {
+    const def = template.definition as unknown as {
+      craftingFormula: TemplateSpec["craftingFormula"];
+      materialFormula: TemplateSpec["materialFormula"];
+      sections: { key: string; lines: { key: string; derived?: boolean; inputType: string }[] }[];
+    };
+    const keysOf = (sectionKey: string) =>
+      (def.sections.find((x) => x.key === sectionKey)?.lines ?? [])
+        .filter((l) => !l.derived && l.inputType === "currency")
+        .map((l) => l.key);
+
+    specFor.set(key, {
+      craftingFormula: def.craftingFormula,
+      materialFormula: def.materialFormula,
+      trimKeys: keysOf("TRIM_HARDWARE"),
+      packagingKeys: keysOf("PACKAGING"),
+    });
+  }
+
   // Bidders per style: enough for the rank band (needs 3+), spread across
   // regions so no guardrail row is empty.
   const byRegion = new Map<string, VendorSeed[]>();
@@ -130,13 +156,43 @@ export async function seedBids(
         region === "CHINA" ? 4 : region === "ISC" ? 3 : region === "SEA" ? 3 : 1;
       for (let w = 0; w < weight; w++) weighted.push(region);
     }
-    while (picked.length < count && weighted.length) {
+    // GUARANTEE THREE DISTINCT REGIONS FIRST, then fill by weight.
+    //
+    // Weighted sampling alone gives no breadth guarantee, and on the two styles
+    // that carry two-thirds of the wave it drew only China and ISC. With China
+    // held near its 29% target every remaining dollar then had nowhere to go
+    // but ISC, which opened the wave at 55% against a 30% cap — a guardrail
+    // already deep red before anyone touches it, which is exactly what the
+    // guardrail design says gets ignored.
+    //
+    // This is a BIDDER POOL fix, not an allocation fix: no split of a two-region
+    // shortlist can produce a three-region outcome. Weighting still decides who
+    // wins, so China and ISC remain the heavyweights.
+    //
+    // CHINA ALWAYS BIDS. China is the incumbent sourcing base — it is not
+    // plausible that it sits out a style, and mechanically a style with no
+    // China bidder cannot contribute to China's share. With the largest style
+    // in the wave drawn without China, the wave could not reach its 28-30%
+    // pre-tip target no matter how the rest was split, because the remaining
+    // styles were already at China's 70% per-style ceiling.
+    const seedRegions = [
+      "CHINA",
+      ...[...regions].filter((r) => r !== "CHINA").sort(() => next() - 0.5),
+    ].slice(0, 3);
+    for (const region of seedRegions) {
+      const pool = byRegion.get(region) ?? [];
+      if (!pool.length) continue;
+      const candidate = pick(next, pool);
+      if (!picked.some((p) => p.id === candidate.id)) picked.push(candidate);
+    }
+
+    let guard = 0;
+    while (picked.length < count && weighted.length && guard++ < 50) {
       const region = pick(next, weighted);
       const pool = byRegion.get(region) ?? [];
       if (!pool.length) continue;
       const candidate = pick(next, pool);
       if (!picked.some((p) => p.id === candidate.id)) picked.push(candidate);
-      else if (picked.length >= 3) break;
     }
     while (picked.length < count) {
       const v = pick(next, vendors);
@@ -171,18 +227,55 @@ export async function seedBids(
       const { ocean, air } = logisticsLookup(style.styleNumber, iso);
 
       // Roughly a third of vendors quote DDP.
+      //
+      // DDP is quoted per MODE, and the three US destinations are a second axis
+      // WITHIN each mode — six numbers. The destination spread is small (a few
+      // percent) because it is inland freight on top of the same import, but it
+      // is real, and Best Cost takes the HIGHEST destination in each mode. West
+      // is cheapest (nearest the port of entry), East dearest.
       const quotesDdp = next() < 0.35;
-      const ddpOcean = quotesDdp ? round(fob * (1 + tariffRate) + ocean * 1.08, 4) : null;
-      const ddpAir = quotesDdp ? round(fob * (1 + tariffRate) + air * 1.06, 4) : null;
 
-      const cost = computeCost({
-        fob,
-        tariffRate,
-        logisticsOcean: ocean,
-        logisticsAir: air,
-        ddpOcean,
-        ddpAir,
-      });
+      // Inland delivery, West/Central/East. This is a FREIGHT cost, so it is
+      // added to the freight component — not applied as a percentage of the
+      // whole landed value. Scaling all of landed by 4.5% is dollars on a
+      // duty-inclusive FOB and swamped every freight saving, which is what
+      // made DDP structurally unable to win.
+      const inlandByDest = [0.0, 0.14, 0.31]; // per unit, USD
+
+      // A vendor's own freight is not automatically dearer than ours. Some
+      // consolidate and genuinely beat the Quince blend; others price in a
+      // margin on freight and lose. Multiplying landed cost by a fixed >1
+      // factor made DDP structurally unable to win, so min() never picked it
+      // and the basis display was dead code — the comparison the Playground
+      // exists to make visible would never have fired on stage.
+      //
+      // The factor straddles 1.0. Applied to the FREIGHT component only, since
+      // duty is duty whoever pays it.
+      // Independent per mode: a vendor consolidating ocean containers can beat
+      // our ocean rate while still paying retail for air, or the reverse. One
+      // shared factor moved both sides together and DDP could never close the
+      // inland-delivery gap, so min() never picked it.
+      const oceanFactor = between(next, 0.70, 1.15);
+      const airFactor = between(next, 0.72, 1.15);
+      const ddpOceanBase = quotesDdp
+        ? fob * (1 + tariffRate) + ocean * oceanFactor
+        : null;
+      const ddpAirBase = quotesDdp
+        ? fob * (1 + tariffRate) + air * airFactor
+        : null;
+
+      const ddpOceanByDest = ddpOceanBase
+        ? inlandByDest.map((d) => round(ddpOceanBase + d, 4))
+        : null;
+      const ddpAirByDest = ddpAirBase
+        ? inlandByDest.map((d) => round(ddpAirBase + d, 4))
+        : null;
+
+      // What Best Cost compares against: the worst destination in each mode, so
+      // a DDP bid wins only if it beats the Quince blend everywhere.
+      const ddpOcean = ddpOceanByDest ? Math.max(...ddpOceanByDest) : null;
+      const ddpAir = ddpAirByDest ? Math.max(...ddpAirByDest) : null;
+
 
       const invitation = await db.invitation.upsert({
         where: { rfpId_vendorId: { rfpId, vendorId: vendor.id } },
@@ -203,7 +296,45 @@ export async function seedBids(
         update: {},
       });
 
-      const buckets = scaleBuckets(style.buckets, fob);
+      // Real line items, not a marker. A seeded quote must open as a filled
+      // sheet: storing only a total meant the form had nothing to populate
+      // while the dashboard showed a price.
+      const spec = specFor.get(style.division === "Home" ? "Home" : "Womens")!;
+      const scaled = floorOverhead(
+        scaleBuckets(style.buckets, fob) as never,
+        next,
+      );
+      const line = buildLineItems(scaled, spec, next);
+
+      // Best Cost derives from the FOB THAT IS STORED, not the one the bid
+      // started as — rounding through the line items can move it by a cent,
+      // and two figures for one bid is the defect this whole change removes.
+      const cost = computeCost({
+        fob: round(line.fob, 4),
+        tariffRate,
+        logisticsOcean: ocean,
+        logisticsAir: air,
+        ddpOcean,
+        ddpAir,
+      });
+
+      /**
+       * The commercial terms go in BOTH places, and that is deliberate.
+       *
+       * The typed columns are what the Playground and the vendor drill-down
+       * query. The `values` blob is what the quote FORM reads and writes, since
+       * the template puts these in its additionalInformation section like any
+       * other line item. Seeding only the columns meant the form rendered the
+       * fields empty and then wrote that emptiness back over them.
+       *
+       * Keys match the template (`additionalNotes`, not `notes`) — domain/terms
+       * owns that rename.
+       */
+      const terms = {
+        maxVolumeCapacity: Math.round(between(next, 50_000, 400_000)),
+        productionLeadTime: Math.round(between(next, 30, 75)),
+        moq: Math.round(between(next, 500, 5000)),
+      };
 
       const quote = await db.quote.create({
         data: {
@@ -213,21 +344,32 @@ export async function seedBids(
           round: 1,
           status: "SUBMITTED",
           submittedAt: new Date("2026-09-20"),
-          values: { generated: true } as never,
-          bucketTotals: buckets as never,
-          fob,
+          values: {
+            ...line.values,
+            maxVolumeCapacity: terms.maxVolumeCapacity,
+            productionLeadTime: terms.productionLeadTime,
+            moq: terms.moq,
+          } as never,
+          bucketTotals: line.buckets as never,
+          fob: round(line.fob, 4),
           dutyType: quotesDdp ? "VDDP" : "QDDP",
-          ddpCentral: ddpAir,
-          maxVolumeCapacity: Math.round(between(next, 50_000, 400_000)),
-          productionLeadTime: Math.round(between(next, 30, 75)),
-          moq: Math.round(between(next, 500, 5000)),
+          // The unsuffixed trio is the OCEAN set (see schema comment).
+          ddpWest: ddpOceanByDest?.[0] ?? null,
+          ddpCentral: ddpOceanByDest?.[1] ?? null,
+          ddpEast: ddpOceanByDest?.[2] ?? null,
+          ddpWestAir: ddpAirByDest?.[0] ?? null,
+          ddpCentralAir: ddpAirByDest?.[1] ?? null,
+          ddpEastAir: ddpAirByDest?.[2] ?? null,
+          maxVolumeCapacity: terms.maxVolumeCapacity,
+          productionLeadTime: terms.productionLeadTime,
+          moq: terms.moq,
         },
       });
 
       bids.push({
         style,
         vendor,
-        fob,
+        fob: round(line.fob, 4),
         bestCost: cost.bestCost,
         basis: cost.bestCostBasis,
         quoteId: quote.id,
@@ -242,7 +384,33 @@ export async function seedBids(
   const toAllocate = chosen.slice(0, PRE_ALLOCATED);
   const allocations = allocateForChinaTarget(next, bids, toAllocate, styleIds);
 
+  /**
+   * A WAVE MID-FLIGHT, not a finished one. Every award row used to be AWARDED,
+   * which left the Award Summary status column showing one value and the
+   * §11.10 ladder — allocate -> review -> award — with nothing to demonstrate.
+   *
+   * The last two allocated styles are held back: one still being worked, one
+   * handed to the reviewer. Status is per style, since a style's rows move
+   * together.
+   */
+  const styleStatuses = new Map<string, string>();
+  const styleIdsInOrder = [...new Set(allocations.map((a) => a.styleId))];
+  styleIdsInOrder.forEach((styleId, i) => {
+    const fromEnd = styleIdsInOrder.length - 1 - i;
+    styleStatuses.set(
+      styleId,
+      fromEnd === 0 ? "ALLOCATED" : fromEnd === 1 ? "READY_FOR_REVIEW" : "AWARDED",
+    );
+  });
+
+  const COMMENT: Record<string, string> = {
+    AWARDED: "Awarded at review.",
+    READY_FOR_REVIEW: "Split agreed with the category team — over to review.",
+    ALLOCATED: "Holding at this split until Yantai confirms capacity.",
+  };
+
   for (const a of allocations) {
+    const status = styleStatuses.get(a.styleId) ?? "AWARDED";
     await db.award.create({
       data: {
         waveId: wave.id,
@@ -254,10 +422,13 @@ export async function seedBids(
         awardedUnits: a.units,
         awardedDollars: a.dollars,
         savingsDollars: a.savings,
-        status: "AWARDED",
-        awardedAt: new Date("2026-09-25"),
-        awardedBy: "Jackie Chen",
-        comment: "Awarded at review.",
+        status,
+        // Only a true award carries the stamp — the other two have not been
+        // awarded, and dating them would be a lie the UI would repeat.
+        ...(status === "AWARDED"
+          ? { awardedAt: new Date("2026-09-25"), awardedBy: "Jackie Chen" }
+          : {}),
+        comment: COMMENT[status],
       },
     });
   }
@@ -352,15 +523,40 @@ function allocateForChinaTarget(
       // Look AHEAD, not behind: pick the China percentage that lands the
       // running total closest to target once THIS style is added. Reacting to
       // the share so far overshoots on the last big style.
-      const styleValue =
-        (style.planUnits ?? 0) * (china[0]?.bestCost ?? 0);
+      // Project China's dollars and the style's TOTAL dollars separately. Both
+      // used china[0].bestCost, which understates the total whenever China is
+      // not the cheapest bidder — the style then looks smaller than it is and
+      // China gets too small a share of it. Now that every style has three
+      // regions bidding, China is frequently not the cheapest, and that bias
+      // pulled the wave to 27.5% against a 28-30% target.
+      const units = style.planUnits ?? 0;
+      const chinaCost = china[0]?.bestCost ?? 0;
+      const otherCost = other[0]?.bestCost ?? chinaCost;
+
       const options = [0, 15, 30, 40, 55, 70];
       let bestPct = 0;
       let bestGap = Number.POSITIVE_INFINITY;
       for (const pct of options) {
-        const projectedChina = runningChina + styleValue * (pct / 100);
-        const projectedTotal = runningTotal + styleValue * 1.0;
-        const gap = Math.abs(projectedChina / projectedTotal - target);
+        const share = pct / 100;
+        const chinaDollars = units * share * chinaCost;
+        const otherDollars = units * (1 - share) * otherCost;
+        const projectedChina = runningChina + chinaDollars;
+        const projectedTotal = runningTotal + chinaDollars + otherDollars;
+
+        // Only China is steered here. ISC lands around 31% — just over its own
+        // cap — and that is LEFT ALONE deliberately: this lever cannot move it.
+        // ISC's share comes from the non-China remainder, which is the same
+        // whichever China percentage is chosen, so every attempt to steer both
+        // from this one knob traded one breach for another (penalising ISC put
+        // China at 35.7%). Fixing it properly means choosing the remainder's
+        // vendors by region, which is allocation policy, not seed tuning.
+        //
+        // It is also arguably the more honest demo: Wave 1's real problem was
+        // concentration, a wave with one region already over cap is what the
+        // team actually faces, and the breach is clickable in Wave Insights.
+        // China at 29.1% is still the one that tips on stage.
+        const chinaShare = projectedTotal ? projectedChina / projectedTotal : 0;
+        const gap = Math.abs(chinaShare - target);
         if (gap < bestGap) {
           bestGap = gap;
           bestPct = pct;
@@ -368,21 +564,73 @@ function allocateForChinaTarget(
       }
 
       const remainder = 100 - bestPct;
+
+      // The non-China remainder used to go to the two CHEAPEST bidders whatever
+      // their region, and those were consistently ISC — which opened the wave
+      // at 54.9% against a 30% cap. A rail that is already deep red before
+      // anyone touches it is the thing the guardrail design explicitly warns
+      // about: it gets ignored within a week, and it steals the moment from
+      // China actually tipping on stage.
+      //
+      // So prefer a SECOND REGION for the runner-up. Still cheapest-first
+      // within that constraint — this changes who gets the smaller half, not
+      // the principle that low cost wins.
+      const pickOther = (exclude: string | null) => {
+        const different = other.find(
+          (b) => b.vendor.cooRegion && b.vendor.cooRegion !== exclude,
+        );
+        return different ?? other[1] ?? other[0];
+      };
+
+      const lead = other[0];
+      const second = pickOther(lead?.vendor.cooRegion ?? null);
+
+      // The remainder is SPLIT, never handed whole to one vendor. Two styles
+      // carry $44.7M of this $61.7M wave, so a single style putting 70% on one
+      // region sets that region's wave-wide share on its own — which is how ISC
+      // opened at 54.9% against a 30% cap while every per-style split looked
+      // reasonable. Splitting the remainder keeps any one style from deciding a
+      // guardrail by itself.
+      const third = other.find(
+        (b) =>
+          b !== lead &&
+          b !== second &&
+          b.vendor.cooRegion !== lead?.vendor.cooRegion &&
+          b.vendor.cooRegion !== second?.vendor.cooRegion,
+      );
+
       splits = bestPct === 0
         ? [
-            { bid: other[0], pct: 60 },
-            { bid: other[1] ?? other[0], pct: 40 },
+            { bid: lead, pct: 45 },
+            { bid: second, pct: 35 },
+            { bid: third ?? second, pct: 20 },
           ]
         : [
             { bid: china[0], pct: bestPct },
-            { bid: other[0], pct: Math.round(remainder * 0.65) },
-            { bid: other[1] ?? other[0], pct: remainder - Math.round(remainder * 0.65) },
+            { bid: lead, pct: Math.round(remainder * 0.55) },
+            { bid: second, pct: remainder - Math.round(remainder * 0.55) },
           ];
     } else if (styleBids.length >= 3) {
+      // Same reasoning: spread across regions where the bidders allow it.
+      const lead = styleBids[0];
+      const rest = styleBids.slice(1);
+      const secondRegion =
+        rest.find(
+          (b) => b.vendor.cooRegion && b.vendor.cooRegion !== lead.vendor.cooRegion,
+        ) ?? rest[0];
+      const thirdRegion =
+        rest.find(
+          (b) =>
+            b !== secondRegion &&
+            b.vendor.cooRegion &&
+            b.vendor.cooRegion !== lead.vendor.cooRegion &&
+            b.vendor.cooRegion !== secondRegion.vendor.cooRegion,
+        ) ?? rest.find((b) => b !== secondRegion) ?? secondRegion;
+
       splits = [
-        { bid: styleBids[0], pct: 50 },
-        { bid: styleBids[1], pct: 30 },
-        { bid: styleBids[2], pct: 20 },
+        { bid: lead, pct: 50 },
+        { bid: secondRegion, pct: 30 },
+        { bid: thirdRegion, pct: 20 },
       ];
     } else {
       splits = [

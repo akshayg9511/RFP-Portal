@@ -149,10 +149,10 @@ export function NewVendorDialog({
           </div>
         </div>
 
+        {/* No Cancel. A FORM modal already has a header × — two dismissals in
+            two places for one job, and the footer is better spent on the
+            commit. A confirm dialog is the exception; a form is not. */}
         <div className="modal-f">
-          <button className="btn btn--secondary" onClick={onClose}>
-            Cancel
-          </button>
           <button
             className="btn btn--primary"
             onClick={submit}

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/ds/components";
 import { ProcuraMark } from "./ProcuraMark";
 import { VendorSwitcher } from "./VendorSwitcher";
@@ -17,6 +17,10 @@ type Dest = {
 // Destinations only. Identity and global actions belong to the App shell
 // header, not to Navigation.
 const MAIN: Dest[] = [
+  // The catalogue comes FIRST because it is the funnel's mouth: 10,000
+  // products, narrowed by revenue and attribute, grouped into style sets, then
+  // sent out as RFPs. Nav order is workflow order.
+  { href: "/products", label: "Product catalog", icon: "sku" },
   { href: "/style-sets", label: "Style sets", icon: "bedding" },
   { href: "/rfps", label: "RFPs", icon: "invoice" },
   { href: "/vendors", label: "Vendors", icon: "users" },
@@ -70,7 +74,33 @@ function NavGroup({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
-  const { active: vendorView, vendorName } = useVendorView();
+  const router = useRouter();
+  const { active: vendorView } = useVendorView();
+
+  /*
+   * The demo gate renders WITHOUT the shell.
+   *
+   * The root layout wraps every route in AppShell, so a nested layout cannot
+   * opt out — the login page was rendering with the full nav visible behind
+   * it, which both looks wrong and shows the product's structure to someone
+   * who has not signed in yet.
+   *
+   * Checked before the hooks below run their effects, but after every hook is
+   * called: an early return above a hook changes the hook order between
+   * renders and React throws.
+   */
+  const isGate = pathname === "/login";
+
+  // Vendor View confines navigation to vendor routes. Without this a vendor
+  // could reach the nomination screen, which lists every rival by name — and
+  // on a demo that is one stray click away.
+  React.useEffect(() => {
+    if (vendorView && !pathname.startsWith("/vendor")) {
+      router.replace("/vendor");
+    }
+  }, [vendorView, pathname, router]);
+
+  if (isGate) return <>{children}</>;
 
   return (
     <div className={vendorView ? "shell panel-first nav-fixed vendor-view" : "shell panel-first nav-fixed"}>
@@ -98,12 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="pn-brand-mark">
             <ProcuraMark />
           </span>
-          <span>
-            <span className="pn-brand-word">Procura</span>
-            <span className="pn-brand-sub">
-              {vendorView ? "Vendor portal" : "Sourcing"}
-            </span>
-          </span>
+          <span className="pn-brand-word">Procura</span>
         </Link>
         {vendorView ? (
           <NavGroup title="Vendor" items={VENDOR_DESTS} pathname={pathname} />

@@ -45,8 +45,17 @@ export function badRequest(message: string) {
  * Wraps a handler so an unexpected failure returns JSON rather than an HTML
  * error page — a screen fetching this should be able to show a real message.
  */
-export function handle<T>(fn: () => Promise<T>) {
-  return fn().then(ok).catch(serverError);
+export function handle<T>(fn: () => Promise<T | Response>) {
+  return fn()
+    .then((result) =>
+      // A handler that has already built a Response — notFound(), badRequest()
+      // — means it. Passing it through ok() would JSON-encode the Response
+      // OBJECT and send it with status 200, so every guard in every route
+      // silently became an empty 200 body. Found when a 99% award, which must
+      // be refused, returned {} instead of a 400.
+      result instanceof Response ? result : ok(result),
+    )
+    .catch(serverError);
 }
 
 function serverError(error: unknown) {

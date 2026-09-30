@@ -4,6 +4,7 @@ import * as React from "react";
 import { Badge } from "@/ds/components";
 import { SideDrawer } from "@/components/SideDrawer";
 import { useApi } from "@/lib/useApi";
+import { ProductGallery } from "@/components/ProductGallery";
 import { label, money, percent, unitCost, units } from "@/lib/format";
 
 type StyleDetailData = {
@@ -53,20 +54,6 @@ export function StyleDetail({
     styleId ? `/api/styles/${styleId}` : null,
   );
 
-  const [colourway, setColourway] = React.useState(0);
-  const [image, setImage] = React.useState(0);
-
-  // A new style resets the gallery, or the second style opens on the first
-  // style's fourth photo.
-  React.useEffect(() => {
-    setColourway(0);
-    setImage(0);
-  }, [styleId]);
-
-  const gallery =
-    data?.colourways[colourway]?.images.length
-      ? data.colourways[colourway].images
-      : (data?.images ?? []);
 
   return (
     <SideDrawer
@@ -93,54 +80,17 @@ export function StyleDetail({
 
       {data ? (
         <>
-          <div className="detail-gallery">
-            <div className="detail-hero">
-              {gallery[image] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={gallery[image]} alt={data.name} />
-              ) : (
-                <div className="thumb blank" />
-              )}
-            </div>
-
-            {gallery.length > 1 ? (
-              <div className="detail-thumbs">
-                {gallery.map((url, i) => (
-                  <button
-                    key={`${i}-${url}`}
-                    className={i === image ? "on" : undefined}
-                    onClick={() => setImage(i)}
-                    aria-label={`Image ${i + 1} of ${gallery.length}`}
-                    aria-pressed={i === image}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" loading="lazy" />
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          {data.colourways.length > 1 ? (
-            <div className="section">
-              <div className="hd">Colourways</div>
-              <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap" }}>
-                {data.colourways.map((c, i) => (
-                  <button
-                    key={c.id}
-                    className={i === colourway ? "chip on" : "chip"}
-                    aria-pressed={i === colourway}
-                    onClick={() => {
-                      setColourway(i);
-                      setImage(0);
-                    }}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          {/* One gallery implementation, shared with the vendor quote form
+              and the Playground — see components/ProductGallery. */}
+          {/* Keyed on the style: a new style must reset the gallery, or the
+              second one opens on the first's fourth photo. React discarding the
+              state is cheaper and safer than an effect that resets it. */}
+          <ProductGallery
+            key={styleId}
+            images={data.images}
+            colourways={data.colourways}
+            alt={data.name}
+          />
 
           <div className="section">
             <div className="hd">Details</div>

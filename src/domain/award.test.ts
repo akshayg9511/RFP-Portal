@@ -23,7 +23,7 @@ describe("the 100% validation", () => {
   const style = {
     styleId: "s1",
     planUnits: 1000,
-    baselineFob: 10,
+    baselineLanded: 10,
     vendors: [] as ReturnType<typeof vendor>[],
   };
 
@@ -75,7 +75,7 @@ describe("allocation arithmetic", () => {
   const style = {
     styleId: "s1",
     planUnits: 10_000,
-    baselineFob: 12,
+    baselineLanded: 12,
     vendors: [vendor("a", 60, 9), vendor("b", 40, 10)],
   };
 
@@ -160,5 +160,62 @@ describe("styleStatus", () => {
       styleStatus([{ awardPct: 100, status: "READY_FOR_REVIEW" }]),
     ).toBe("READY_FOR_REVIEW");
     expect(styleStatus([{ awardPct: 100, status: "AWARDED" }])).toBe("AWARDED");
+  });
+});
+
+describe("landed against landed — the sign regression", () => {
+  /**
+   * This bug has now appeared twice: once as -$8.29M on Wave Insights, once as
+   * a negative savings potential on every row of Award Summary. Both times the
+   * cause was a LANDED Best Cost measured against an FOB baseline.
+   *
+   * Realistic magnitudes: baseline FOB 21.98, baseline landed 37.25, and a
+   * genuinely competitive landed bid at 30.50. Against the landed baseline
+   * that is a real saving; against FOB it reads as a large increase.
+   */
+  const planUnits = 260_051;
+  const baselineFob = 21.98;
+  const baselineLanded = 37.25;
+  const competitiveLandedBid = 30.5;
+
+  it("a competitive bid shows a POSITIVE saving against the landed baseline", () => {
+    const result = savingsPotential(planUnits, baselineLanded, [
+      competitiveLandedBid,
+    ]);
+    expect(result).toBeGreaterThan(0);
+    expect(result).toBeCloseTo(planUnits * (37.25 - 30.5), 2);
+  });
+
+  it("the same bid against an FOB baseline inverts the sign — the defect", () => {
+    // Not an endorsement: this asserts the failure mode so the contrast is on
+    // the record. Award Summary must never pass baselineFob here.
+    expect(
+      savingsPotential(planUnits, baselineFob, [competitiveLandedBid]),
+    ).toBeLessThan(0);
+  });
+
+  it("allocate agrees with savingsPotential at 100% to one vendor", () => {
+    const result = allocate({
+      styleId: "s1",
+      planUnits,
+      baselineLanded,
+      vendors: [
+        {
+          vendorId: "v1",
+          vendorName: "Yantai North",
+          cooRegion: "CHINA",
+          awardPct: 100,
+          bestCost: competitiveLandedBid,
+          bestCostBasis: "QUINCE_BLEND",
+          isNewToQuince: false,
+        },
+      ],
+    });
+
+    expect(result.totalSavingsDollars).toBeCloseTo(
+      savingsPotential(planUnits, baselineLanded, [competitiveLandedBid]),
+      2,
+    );
+    expect(result.savingsPercent).toBeGreaterThan(0);
   });
 });

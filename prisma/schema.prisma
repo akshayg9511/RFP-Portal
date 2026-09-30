@@ -92,6 +92,7 @@ model Style {
   invitationStyles InvitationStyle[]
   quotes           Quote[]
   awards           Award[]
+  strategies       AwardStrategy[]
 
   @@index([division, department, subDepartment])
 }
@@ -377,9 +378,19 @@ model Quote {
   // Duty type is declared by the vendor PER PRODUCT (Build Doc 3.6).
   dutyType String? // VDDP | QDDP
 
+  // DDP is quoted per MODE (air / ocean), and the three US destinations are a
+  // second axis WITHIN each mode — six numbers, not three. The unsuffixed trio
+  // is the OCEAN set; the naming is asymmetric for backwards compatibility and
+  // would otherwise mislead. lib/bestCost.ts takes the HIGHEST destination in
+  // each mode, so a DDP bid wins only if it beats the Quince blend at its most
+  // expensive destination.
   ddpWest    Decimal? @db.Decimal(12, 4)
   ddpCentral Decimal? @db.Decimal(12, 4)
   ddpEast    Decimal? @db.Decimal(12, 4)
+
+  ddpWestAir    Decimal? @db.Decimal(12, 4)
+  ddpCentralAir Decimal? @db.Decimal(12, 4)
+  ddpEastAir    Decimal? @db.Decimal(12, 4)
 
   // Section 8 — commercial terms, captured as attributes and NEVER summed
   // into FOB.
@@ -440,6 +451,50 @@ model Ask {
 }
 
 // ---------------------------------------------------------------- award
+
+/**
+ * A NAMED, SAVED allocation candidate for one product.
+ *
+ * Distinct from Award, which is the committed split: an Award row must total
+ * 100% across the style and there is exactly one live set. A strategy is a
+ * candidate you named to compare against others, so a product can carry
+ * several and none of them is "the" allocation until it is applied and saved.
+ *
+ * `split` is a SNAPSHOT of {vendorId: awardPct}. Deliberately not a relation to
+ * Award rows: the point of naming a split is to come back to the split you
+ * named, and pointing at the live allocation would silently rewrite history
+ * the moment someone reallocated.
+ *
+ * Savings, blended cost and the region mix are NEVER stored — they are
+ * recomputed through domain/award.allocate() on read. One function owns that
+ * arithmetic (the recurring "compare like with like" bug class is what happens
+ * when two do), and it means a figure refreshes if a vendor revises their bid
+ * while the split stays exactly as saved.
+ *
+ * The four built-in rules (lowest bid, 3 lowest existing, equal non-China,
+ * incumbent/new ratio) are NOT stored here. They are derived from the bids on
+ * every load, so a new bid changes them — which is correct.
+ */
+model AwardStrategy {
+  id      String @id @default(cuid())
+  styleId String
+  style   Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
+
+  name    String
+  comment String? @db.Text
+
+  /// {vendorId: awardPct}. Totals 100 — enforced by the route, since a
+  /// strategy is a candidate for a real award.
+  split Json
+
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  // One name per product: two strategies called "Q3 dual-source" on the same
+  // style are indistinguishable in the picker.
+  @@unique([styleId, name])
+  @@index([styleId])
+}
 
 model Award {
   id       String @id @default(cuid())

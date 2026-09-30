@@ -21,8 +21,19 @@ export type VendorAllocation = {
 export type StyleAllocation = {
   styleId: string;
   planUnits: number;
-  /** The ceiling. A bid above it delivers no saving. */
-  baselineFob: number;
+  /**
+   * The ceiling. A bid above it delivers no saving.
+   *
+   * MUST be a LANDED baseline, because bestCost is landed — it carries tariff
+   * and freight. Comparing the two sides at different points in the chain is
+   * the Wave 1 -$37,038 error, and it is symmetric: a landed cost against an
+   * FOB baseline turns every real saving into an apparent increase, which is
+   * exactly how Award Summary first reported -$8.29M.
+   *
+   * The rule is not "always FOB" or "always landed" — it is COMPARE LIKE WITH
+   * LIKE, and Best Cost fixes which side that has to be.
+   */
+  baselineLanded: number;
   vendors: VendorAllocation[];
 };
 
@@ -72,10 +83,8 @@ export function allocate(style: StyleAllocation): AllocationResult {
       bestCostBasis: v.bestCostBasis,
       awardedUnits,
       awardedDollars,
-      // Always against baseline FOB, never baseline landed — comparing a
-      // vendor FOB to a landed baseline overstates every saving by the full
-      // freight and duty amount (the Wave 1 -$37,038 error).
-      savingsDollars: awardedUnits * (style.baselineFob - v.bestCost),
+      // Landed against landed. See the note on baselineLanded above.
+      savingsDollars: awardedUnits * (style.baselineLanded - v.bestCost),
     };
   });
 
@@ -91,7 +100,7 @@ export function allocate(style: StyleAllocation): AllocationResult {
     0,
   );
 
-  const baselineTotal = style.baselineFob * style.planUnits;
+  const baselineTotal = style.baselineLanded * style.planUnits;
 
   return {
     lines,
@@ -107,17 +116,20 @@ export function allocate(style: StyleAllocation): AllocationResult {
 
 /**
  * Savings potential — the ceiling, before anything is allocated. The lowest
- * Best Cost at 100% against baseline FOB annual. This is what makes Award
+ * Best Cost at 100% against the annual baseline. This is what makes Award
  * Summary sortable by where the money actually is (Build Doc 11.6).
+ *
+ * `baselineLanded` must be landed, for the reason given on StyleAllocation:
+ * bestCosts are landed, and comparing across the chain inverts the sign.
  */
 export function savingsPotential(
   planUnits: number,
-  baselineFob: number,
+  baselineLanded: number,
   bestCosts: number[],
 ): number {
   if (!bestCosts.length) return 0;
   const lowest = Math.min(...bestCosts);
-  return planUnits * (baselineFob - lowest);
+  return planUnits * (baselineLanded - lowest);
 }
 
 /**

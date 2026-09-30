@@ -155,16 +155,31 @@ export async function seedConfig(
     // How far above the clean sheet's bucket target reads as "above".
     { key: "bands.bucketFlag", value: { above: 0.1, below: -0.1 } },
 
-    // COO guardrails. Caps breach and are actionable; floors are wave targets
-    // shown only in Wave Insights (Build Doc 11.8).
+    // COO guardrails — a RANGE per region, min to max.
+    //
+    // A region can be wrong in two directions: too concentrated (the Wave 1
+    // problem) or too thin to be a real second source. A single threshold
+    // cannot express that, and a region with no maximum could absorb the whole
+    // wave without ever flagging.
+    //
+    // The specified bounds are business rules. The open end of each range is
+    // derived from what the region can actually SUPPLY, measured as bidding
+    // presence across the wave's bid styles — a region serving 3 of 10 styles
+    // cannot credibly take half the wave:
+    //
+    //   CHINA 10/10 · ISC 9/10 · SEA 7/10 · EMEA 6/10 · AMERICAS 3/10
+    //
+    // Over-max is actionable from one style and shows on the playground rail.
+    // Under-min is a wave-level target and shows only in Wave Insights.
+    // Neither blocks a save (Build Doc 11.8).
     {
       key: "guardrails.coo",
       value: {
-        CHINA: { type: "cap", threshold: 0.3 },
-        ISC: { type: "cap", threshold: 0.3 },
-        SEA: { type: "floor", threshold: 0.3 },
-        AMERICAS: { type: "floor", threshold: 0.07 },
-        EMEA: { type: "floor", threshold: 0.03 },
+        CHINA: { min: 0, max: 0.3 },
+        ISC: { min: 0, max: 0.3 },
+        SEA: { min: 0.3, max: 0.6 },
+        AMERICAS: { min: 0.07, max: 0.2 },
+        EMEA: { min: 0.03, max: 0.2 },
       },
     },
     // Spend caps, per vendor in total. Type is frozen at wave start.

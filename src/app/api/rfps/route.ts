@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { badRequest, handle, ok } from "@/lib/api";
+import { badRequest, handle, num, ok } from "@/lib/api";
 
 /**
  * @openapi
@@ -24,23 +24,69 @@ export function GET() {
         template: { select: { name: true } },
         wave: { select: { name: true } },
         _count: { select: { styles: true, invitations: true } },
+        // The list carried only two counts, so it could not say whether an RFP
+        // was on track — the reason to open one.
+        styles: { select: { style: { select: { id: true, baselineFob: true } } } },
+        invitations: {
+          select: {
+            vendorId: true,
+            quotes: {
+              where: { status: "SUBMITTED" },
+              select: { styleId: true, fob: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return rfps.map((r) => ({
-      id: r.id,
-      name: r.name,
-      status: r.status,
-      templateName: r.template.name,
-      waveName: r.wave.name,
-      dueDate: r.dueDate,
-      currentRound: r.currentRound,
-      styleCount: r._count.styles,
-      vendorCount: r._count.invitations,
-      instructions: r.instructions,
-      createdAt: r.createdAt,
-    }));
+    return rfps.map((r) => {
+      const responded = r.invitations.filter((i) => i.quotes.length > 0).length;
+      const bidCount = r.invitations.reduce((sum, i) => sum + i.quotes.length, 0);
+
+      const bidStyleIds = new Set(
+        r.invitations.flatMap((i) => i.quotes.map((q) => q.styleId)),
+      );
+
+      /**
+       * Lowest bid against baseline, across the products that have bids. The
+       * headline reason to read an RFP once vendors reply — and FOB against
+       * FOB, never landed, which is the error class this build keeps hitting.
+       */
+      let baselineOfBid = 0;
+      let lowestOfBid = 0;
+      for (const rs of r.styles) {
+        const base = num(rs.style.baselineFob);
+        if (!base || !bidStyleIds.has(rs.style.id)) continue;
+        const fobs = r.invitations
+          .flatMap((i) => i.quotes.filter((q) => q.styleId === rs.style.id))
+          .map((q) => num(q.fob))
+          .filter((f): f is number => f !== null);
+        if (!fobs.length) continue;
+        baselineOfBid += base;
+        lowestOfBid += Math.min(...fobs);
+      }
+
+      return {
+        id: r.id,
+        name: r.name,
+        status: r.status,
+        templateName: r.template.name,
+        waveName: r.wave.name,
+        dueDate: r.dueDate,
+        currentRound: r.currentRound,
+        styleCount: r._count.styles,
+        vendorCount: r._count.invitations,
+        respondedCount: responded,
+        bidCount,
+        stylesWithBids: bidStyleIds.size,
+        lowestVsBaseline: baselineOfBid
+          ? (lowestOfBid - baselineOfBid) / baselineOfBid
+          : null,
+        instructions: r.instructions,
+        createdAt: r.createdAt,
+      };
+    });
   });
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  coverage,
   cooBreakdown,
   guardrailStrip,
   unclassifiedDollars,
@@ -9,11 +10,11 @@ import {
 } from "./guardrails";
 
 const RULES: CooRules = {
-  CHINA: { type: "cap", threshold: 0.3 },
-  ISC: { type: "cap", threshold: 0.3 },
-  SEA: { type: "floor", threshold: 0.3 },
-  AMERICAS: { type: "floor", threshold: 0.07 },
-  EMEA: { type: "floor", threshold: 0.03 },
+  CHINA: { min: 0, max: 0.3 },
+  ISC: { min: 0, max: 0.3 },
+  SEA: { min: 0.3, max: 0.6 },
+  AMERICAS: { min: 0.07, max: 0.2 },
+  EMEA: { min: 0.03, max: 0.2 },
 };
 
 const row = (
@@ -31,7 +32,7 @@ const row = (
   awardedDollars,
 });
 
-describe("COO caps and floors behave differently", () => {
+describe("every region carries a RANGE, and both ends are measured", () => {
   const rows = [
     row("s1", "v1", "CHINA", 40),
     row("s2", "v2", "ISC", 20),
@@ -40,38 +41,72 @@ describe("COO caps and floors behave differently", () => {
     row("s5", "v5", "EMEA", 1),
   ];
 
-  it("a cap over threshold breaches", () => {
-    const china = cooBreakdown(rows, RULES).find((c) => c.region === "CHINA")!;
+  const at = (region: string) =>
+    cooBreakdown(rows, RULES).find((c) => c.region === region)!;
+
+  it("above max is over-max, not under-min", () => {
+    const china = at("CHINA");
     expect(china.share).toBeCloseTo(0.4, 5);
-    expect(china.breached).toBe(true);
+    expect(china.overMax).toBe(true);
+    expect(china.underMin).toBe(false);
+    expect(china.gapPoints).toBeCloseTo(10, 1);
   });
 
-  it("a cap under threshold does not", () => {
-    const isc = cooBreakdown(rows, RULES).find((c) => c.region === "ISC")!;
-    expect(isc.breached).toBe(false);
+  it("inside the range is neither, and reports NO gap", () => {
+    const isc = at("ISC");
+    expect(isc.overMax).toBe(false);
+    expect(isc.underMin).toBe(false);
+    // null, not zero — "on the boundary" and "not measured" must not collapse
+    // into the same value.
+    expect(isc.gapPoints).toBeNull();
   });
 
-  it("a floor below target is NEVER a breach — it is a gap", () => {
-    // The distinction the Build Doc is emphatic about: a floor the allocator
-    // cannot fix from a single style must not render as a breach, or the whole
-    // rail gets ignored.
-    const americas = cooBreakdown(rows, RULES).find(
-      (c) => c.region === "AMERICAS",
-    )!;
-    expect(americas.breached).toBe(false);
+  it("below min is under-min, with the distance in points", () => {
+    const americas = at("AMERICAS");
+    expect(americas.share).toBeCloseTo(0.04, 5);
+    expect(americas.underMin).toBe(true);
+    expect(americas.overMax).toBe(false);
     expect(americas.gapPoints).toBeCloseTo(3, 1);
   });
 
-  it("a floor at or above target reports no gap", () => {
-    const sea = cooBreakdown(rows, RULES).find((c) => c.region === "SEA")!;
-    expect(sea.gapPoints).toBeNull();
+  it("a region can be under its own minimum while another is over its maximum", () => {
+    // The whole reason for two ends: concentration and thinness are different
+    // failures and a single threshold cannot express both. Here CHINA is over
+    // its 30% max at 40%, and AMERICAS is under its 7% min at 4% — both true at
+    // once, in the same wave. SEA sits at 35%, inside 30-60%, and flags neither.
+    expect(at("CHINA").overMax).toBe(true);
+    expect(at("AMERICAS").underMin).toBe(true);
+    expect(at("SEA").overMax).toBe(false);
+    expect(at("SEA").underMin).toBe(false);
   });
 
-  it("a region with no award still appears, at zero", () => {
+  it("a region with no award still appears, at zero, and reads as under", () => {
     const only = [row("s1", "v1", "CHINA", 100)];
     const sea = cooBreakdown(only, RULES).find((c) => c.region === "SEA")!;
     expect(sea.dollars).toBe(0);
+    expect(sea.underMin).toBe(true);
     expect(sea.gapPoints).toBeCloseTo(30, 1);
+  });
+
+  it("min 0 means no lower bound — a region at zero is not under", () => {
+    const none = [row("s1", "v1", "SEA", 100)];
+    const china = cooBreakdown(none, RULES).find((c) => c.region === "CHINA")!;
+    expect(china.share).toBe(0);
+    expect(china.underMin).toBe(false);
+    expect(china.gapPoints).toBeNull();
+  });
+
+  it("exactly on a bound is INSIDE the range, not outside", () => {
+    // A boundary value must not flag, or a wave tuned to sit exactly at its cap
+    // reads as breached the moment it hits target.
+    const exact = [
+      row("s1", "v1", "CHINA", 30),
+      row("s2", "v2", "SEA", 70),
+    ];
+    const china = cooBreakdown(exact, RULES).find((c) => c.region === "CHINA")!;
+    expect(china.share).toBeCloseTo(0.3, 5);
+    expect(china.overMax).toBe(false);
+    expect(china.gapPoints).toBeNull();
   });
 });
 
@@ -169,5 +204,86 @@ describe("live strip with a pending edit", () => {
       new: 1e9,
     });
     expect(strip.coo.find((c) => c.region === "CHINA")!.share).toBeCloseTo(0.3, 5);
+  });
+});
+
+
+describe("coverage — progress is baseline-against-baseline", () => {
+  /**
+   * This function previously divided committed spend (awarded units x Best
+   * Cost) by baseline value (plan units x baseline landed). Two quantities from
+   * different points in the cost chain — the same class of error as the Wave 1
+   * -$37,038 defect, and it produced 133% "decided" on a style allocated above
+   * its own baseline.
+   */
+  const inPlay = [
+    { styleId: "a", units: 100, baselineValue: 1000 },
+    { styleId: "b", units: 200, baselineValue: 4000 },
+    { styleId: "c", units: 300, baselineValue: 5000 },
+  ];
+
+  it("measures the share of biddable BASELINE value decided", () => {
+    const c = coverage({
+      inPlay,
+      decidedStyleIds: new Set(["a", "b"]),
+      committedSpend: 4500,
+    });
+    // 1000 + 4000 of 10000 — value-weighted, not a product count.
+    expect(c.baselineDecided).toBe(5000);
+    expect(c.baselineInPlay).toBe(10000);
+    expect(c.shareDecided).toBeCloseTo(0.5, 6);
+  });
+
+  it("NEVER exceeds 100%, even when spend exceeds baseline", () => {
+    // The regression. A style awarded above its own baseline is real — two are
+    // seeded deliberately for the cost-increase block — and must not make
+    // progress read as 133%.
+    const c = coverage({
+      inPlay,
+      decidedStyleIds: new Set(["a", "b", "c"]),
+      committedSpend: 99_999,
+    });
+    expect(c.shareDecided).toBe(1);
+    expect(c.savings).toBeLessThan(0);
+  });
+
+  it("does not FALL when we negotiate a better price", () => {
+    // The old ratio put spend in the numerator, so a cheaper award read as less
+    // progress. Progress must depend only on WHAT is decided.
+    const expensive = coverage({ inPlay, decidedStyleIds: new Set(["b"]), committedSpend: 3900 });
+    const cheap = coverage({ inPlay, decidedStyleIds: new Set(["b"]), committedSpend: 2000 });
+    expect(cheap.shareDecided).toBe(expensive.shareDecided);
+    expect(cheap.savings).toBeGreaterThan(expensive.savings);
+  });
+
+  it("ignores an award on a style with no submitted bid", () => {
+    // Otherwise the numerator counts it and the denominator does not, which
+    // drives "still to decide" negative.
+    const c = coverage({
+      inPlay,
+      decidedStyleIds: new Set(["a", "ghost"]),
+      committedSpend: 900,
+    });
+    expect(c.stylesDecided).toBe(1);
+    expect(c.stylesInPlay - c.stylesDecided).toBeGreaterThanOrEqual(0);
+  });
+
+  it("savings is measured against DECIDED baseline, not the whole wave", () => {
+    const c = coverage({
+      inPlay,
+      decidedStyleIds: new Set(["a"]),
+      committedSpend: 800,
+    });
+    expect(c.savings).toBe(200);
+    // 200/1000, not 200/10000 — measuring against untouched styles would
+    // understate every saving.
+    expect(c.savingsPercent).toBeCloseTo(0.2, 6);
+  });
+
+  it("an empty wave is zero everywhere rather than NaN", () => {
+    const c = coverage({ inPlay: [], decidedStyleIds: new Set(), committedSpend: 0 });
+    expect(c.shareDecided).toBe(0);
+    expect(c.savingsPercent).toBe(0);
+    expect(Number.isNaN(c.shareDecided)).toBe(false);
   });
 });

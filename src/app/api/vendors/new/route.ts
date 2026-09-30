@@ -35,21 +35,31 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Two letters of the name plus an incrementing number, per the Build Doc.
+    /**
+     * Two letters of the name plus an incrementing number (Build Doc 5.3),
+     * carried behind a TEMP- prefix.
+     *
+     * The prefix is on the CODE rather than beside it as a chip, because a chip
+     * does not travel: the code appears in exports, in the vendor's own portal
+     * and in any downstream list, and in all of those a bare `CD101` reads as a
+     * real vendor code. The chip beside the name is then free to mean exactly
+     * one thing — vendor type (3.7) — instead of two.
+     */
     const prefix = name.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
+    const codePrefix = `TEMP-${prefix}`;
     const siblings = await db.vendor.findMany({
-      where: { vendorCode: { startsWith: prefix }, isTemp: true },
+      where: { vendorCode: { startsWith: codePrefix }, isTemp: true },
       select: { vendorCode: true },
     });
     const next =
       siblings.reduce((max, v) => {
-        const n = Number(v.vendorCode.slice(prefix.length));
+        const n = Number(v.vendorCode.slice(codePrefix.length));
         return Number.isFinite(n) && n > max ? n : max;
       }, 0) + 1;
 
     const vendor = await db.vendor.create({
       data: {
-        vendorCode: `${prefix}${String(next).padStart(3, "0")}`,
+        vendorCode: `${codePrefix}${String(next).padStart(3, "0")}`,
         name,
         countryIso: iso,
         cooRegion: region,

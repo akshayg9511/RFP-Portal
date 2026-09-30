@@ -168,7 +168,12 @@ body > div:first-of-type {
 }
 
 .style-card.on {
-  outline: 2px solid var(--color-border-accent);
+  /* BLUE, not the system's ink ring. --color-border-selected-surface is
+     --ref-neutral-950, so the DS draws a selected surface in ink; we keep the
+     accent because selection is the loudest state on these screens. A real
+     Tier-2 token either way, so nothing resolves empty — but it is a
+     deliberate deviation, raised with the design team rather than assumed. */
+  outline: 2px solid var(--color-fg-accent);
   outline-offset: -2px;
 }
 
@@ -216,7 +221,7 @@ body > div:first-of-type {
 }
 
 .detail-thumbs button.on {
-  outline: 2px solid var(--color-border-accent);
+  outline: 2px solid var(--color-fg-accent);
   outline-offset: -2px;
 }
 
@@ -509,7 +514,7 @@ body > .drawer-frame .drawer {
 .pn-brand-word {
   font-size: var(--type-heading-3-size);
   line-height: 1;
-  font-weight: var(--ref-font-weight-medium);
+  font-weight: var(--type-emphasis-weight);
   letter-spacing: -0.01em;
 }
 
@@ -597,7 +602,7 @@ body > .drawer-frame .drawer {
 }
 
 .style-card.on {
-  outline: 2px solid var(--color-border-accent);
+  outline: 2px solid var(--color-fg-accent);
   outline-offset: -2px;
 }
 
@@ -624,9 +629,22 @@ body > .drawer-frame .drawer {
 }
 
 /* — The selection tray floated over product names. It now clears the content
-   below it, and the grid reserves room so the last row is never covered. */
-.has-tray {
-  padding-block-end: var(--space-4xl);
+   below it, and the grid reserves room so the last row is never covered.
+
+   THIS WAS BROKEN FROM THE DAY IT SHIPPED. It read `var(--space-4xl)`, and
+   THERE IS NO --space-4xl — the scale stops at 3xl. An undefined custom
+   property makes the whole declaration invalid, so this computed to 0px and
+   the tray went on covering the last row, silently. Found while fixing the
+   same invented token on the product page footer.
+
+   Tray is ~56px tall; 3xl (48) + the calc below clears it with air to spare. */
+/* `.shell > .ct` sets its own padding, so this has to match that specificity
+   to win — a bare `.has-tray` lost and computed to the shell's 24px. */
+.shell > .ct.has-tray {
+  /* The tray is 52px tall and floats 24px off the bottom, so it occupies 76px
+     of the viewport — measured, not guessed. 3xl (48) + 2xl (32) = 80 clears
+     it with 4px to spare. */
+  padding-block-end: calc(var(--space-3xl) + var(--space-2xl));
 }
 
 /* ================================================================ rfp group */
@@ -723,13 +741,28 @@ body > .drawer-frame .drawer {
 
    .scrim is the overlay fill; positioning it over the viewport is the
    product's job, the same as .drawer-frame. */
-.app-scrim {
+/* `.scrim` is a STORYBOOK SPECIMEN, not a viewport overlay:
+   components-extra.css:479 ships it with `padding: var(--space-2xl)` and
+   `border-radius: var(--radius-container)` so it can sit inside a demo card.
+   Promoting it to `position: fixed; inset: 0` was not enough — the padding and
+   the radius survived, so the dim rendered as an inset ROUNDED BOX in the
+   middle of the screen with the page bright around it.
+
+   Third time this class has bitten: `.drawer-frame`'s 420px height and
+   `.scrim`'s own 16px radius on the new-vendor dialog were the first two. A
+   specimen value has to be reset explicitly, not just overridden in part. */
+.scrim.app-scrim {
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
   display: grid;
   place-items: center;
+  /* The two specimen values, reset. `components-extra.css` is linked AFTER
+     globals.css in layout.tsx, so at equal specificity the specimen wins —
+     which is why an earlier `.app-scrim { border-radius: 0 }` in this file had
+     no effect at all. `.scrim.app-scrim` outranks it without !important. */
   padding: var(--space-lg);
+  border-radius: 0;
   animation: fade-in var(--motion-enter-duration) var(--motion-enter-easing);
 }
 
@@ -844,7 +877,7 @@ body > .drawer-frame .drawer {
    angle from which the portal looks like ordinary procurement use. */
 
 .vendor-view > .pn {
-  box-shadow: inset calc(var(--space-2xs) * -1) 0 0 var(--color-border-accent);
+  box-shadow: inset calc(var(--space-2xs) * -1) 0 0 var(--color-fg-accent);
 }
 
 .vv-wrap {
@@ -953,4 +986,3977 @@ body > .drawer-frame .drawer {
   font-size: var(--type-body-sm-size);
   color: var(--color-fg-muted);
   white-space: nowrap;
+}
+
+/* ================================================================ quote entry
+
+   The form on the left, the running total pinned on the right. The total is
+   the point: it moves as the vendor types, so they can see what a line does to
+   their FOB before they commit to it. */
+
+.quote-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .quote-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.quote-side {
+  position: sticky;
+  inset-block-start: var(--space-lg);
+}
+
+.quote-side-media {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-inner);
+  overflow: hidden;
+  background: var(--color-bg-surface-sunken);
+  margin-block-end: var(--space-md);
+}
+
+.quote-side-media img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.quote-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.quote-total .k {
+  color: var(--color-fg-muted);
+}
+
+.quote-total .v {
+  font-size: var(--type-heading-1-size);
+  line-height: 1;
+  font-weight: var(--type-heading-1-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.quote-buckets {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2xs) var(--space-md);
+  margin-block: var(--space-md) 0;
+}
+
+.quote-buckets dt {
+  color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size);
+}
+
+.quote-buckets dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--type-body-sm-size);
+}
+
+.quote-side-note {
+  color: var(--color-fg-muted);
+  font-size: var(--type-caption-size);
+  margin-block: var(--space-md) 0;
+}
+
+/* ---------------------------------------------------------------- lines */
+
+.quote-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: var(--space-lg);
+  align-items: start;
+  padding-block: var(--space-sm);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.quote-line:last-child {
+  border-block-end: 0;
+}
+
+.quote-line-label {
+  display: grid;
+  gap: 2px;
+  font-size: var(--type-body-md-size);
+}
+
+.quote-line-help {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.quote-line-input input {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A derived value is the system's answer, not the vendor's input — it reads as
+   a result rather than an empty field they forgot to fill. */
+.quote-line-derived {
+  display: block;
+  text-align: end;
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--type-label-weight);
+  color: var(--color-fg-accent);
+  background: var(--color-bg-surface-sunken);
+  border-radius: var(--radius-element);
+}
+
+/* ---------------------------------------------------------------- nav */
+
+.quote-nav {
+  display: grid;
+  gap: var(--space-2xs);
+}
+
+.quote-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-element);
+  text-decoration: none;
+  color: var(--color-fg-default);
+  font-size: var(--type-body-sm-size);
+}
+
+.quote-nav-item:hover {
+  background: var(--color-bg-surface-sunken);
+}
+
+.quote-nav-item.on {
+  background: var(--color-bg-selected-accent);
+  font-weight: var(--type-label-weight);
+}
+
+.quote-nav-item .nm {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The style number must not be squeezed by a long product name, and the row
+   must not push past the card — a flex item's automatic minimum is its
+   CONTENT, so the id needs its own floor and the row needs min-inline-size 0. */
+.quote-nav-item .id {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-muted);
+}
+
+.quote-nav-item {
+  min-inline-size: 0;
+}
+
+/* ---------------------------------------------------------------- quote hierarchy
+
+   Section headings, field labels and the bucket subtotal all rendered at the
+   same size, weight and colour, so the eye could not tell a section from a
+   field. The heading steps up; the subtotal reads as a result. */
+
+.quote-layout .card-h .ttl {
+  font-size: var(--type-heading-3-size);
+  line-height: var(--type-heading-3-line);
+  font-weight: var(--type-heading-3-weight);
+}
+
+.quote-layout .card-h .sub {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+/* The running bucket total belongs to the heading, not the help text. */
+.quote-section-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--type-label-weight);
+  color: var(--color-fg-accent);
+}
+
+/* ---------------------------------------------------------------- style card
+
+   The whole tile is the target, not just the title — a card that only responds
+   on its heading reads as broken. The title keeps its own link semantics for
+   keyboard and screen-reader users; the overlay carries the pointer. */
+
+.set-card {
+  position: relative;
+}
+
+.set-card-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* The carousel arrows sit above the overlay so paging still works. */
+.set-card .carousel-arrow {
+  z-index: 1;
+}
+
+/* ---------------------------------------------------------------- nominated */
+
+.nominated {
+  padding: var(--space-md);
+  background: var(--color-bg-surface-sunken);
+  border-radius: var(--radius-container);
+  margin-block-end: var(--space-lg);
+}
+
+.nominated-label {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-block-end: var(--space-sm);
+}
+
+.nominated-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+/* The list scrolls rather than truncating at 12 with a "24 more" note that
+   told the reader nothing they could act on. */
+.vendor-scroll {
+  max-block-size: 420px;
+  overflow-y: auto;
+  overflow-x: clip;
+}
+
+/* ================================================================ card header
+
+   THE DESIGN SYSTEM SHIPS NO `.card-h .sub` RULE — only `.drawer-h .sub`
+   exists. So a support line inside a card header inherited plain body text
+   with nothing separating it from the title beside it, and `.card-h` is
+   `display: flex; align-items: center`, which never intended two lines.
+
+   Any header that carries a `.sub` therefore stacks, with the title stepped up
+   to a heading rung and the support line dropped to caption size and the muted
+   tone. Scoped to `:has(.sub)` so a single-line header keeps the system's own
+   treatment untouched. */
+
+.card-h:has(.sub) {
+  display: block;
+}
+
+.card-h:has(.sub) .ttl {
+  font-size: var(--type-heading-3-size);
+  line-height: var(--type-heading-3-line);
+  font-weight: var(--type-heading-3-weight);
+}
+
+.card-h:has(.sub) .sub {
+  display: block;
+  margin-block-start: var(--space-2xs);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+
+/* ================================================================ vendor list */
+
+.vl-group-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-block-end: var(--space-sm);
+}
+
+.vl-group-label--spaced {
+  margin-block-start: var(--space-xl);
+}
+
+.vl-count {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  padding-inline: var(--space-xs);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-muted);
+  color: var(--color-fg-default);
+}
+
+.vl-empty {
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--space-md);
+}
+
+/* Both groups scroll. Previously only the pool did, so a 17-vendor "added"
+   list pushed everything below it off the screen. */
+.vl-scroll {
+  max-block-size: 340px;
+  overflow-y: auto;
+  overflow-x: clip;
+  /* A scroll region inside a card needs its own edge, or the last row looks
+     cut off rather than continuing. */
+  padding-inline-end: var(--space-2xs);
+}
+
+.vl-row {
+  border-block-end: 1px solid var(--color-border-muted);
+  padding-block: var(--space-sm);
+}
+
+/* A vendor on the RFP reads as selected — the list IS the state, so the row
+   has to carry it. */
+.vl-row.on {
+  background: var(--color-bg-selected-accent);
+  border-radius: var(--radius-inner);
+  padding-inline: var(--space-sm);
+  margin-inline: calc(var(--space-sm) * -1);
+  border-block-end-color: transparent;
+  margin-block-end: var(--space-2xs);
+}
+
+.vl-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.vl-id {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.vl-name {
+  display: block;
+  font-weight: var(--type-label-weight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vl-meta {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vl-tags {
+  display: flex;
+  gap: var(--space-2xs);
+  flex-shrink: 0;
+}
+
+.vl-subset,
+.vl-status {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.vl-note {
+  margin-block-start: var(--space-2xs);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+
+/* The expanded row — what "1 of 4" was failing to say. */
+.vl-products {
+  margin-block-start: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-inner);
+  display: grid;
+  gap: var(--space-2xs);
+}
+
+.vl-product {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--type-body-sm-size);
+  min-inline-size: 0;
+}
+
+.vl-product-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vl-pending {
+  color: var(--color-fg-muted);
+  font-size: var(--type-caption-size);
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------- vendor row v2
+
+   Vendor TYPE is a qualifier, not a state. As a tinted Badge it shared
+   tone="success" with a Submitted status, so Incumbent and Submitted read as
+   the same kind of thing. It is now quiet text on a neutral fill — it
+   qualifies the name beside it and competes with nothing. */
+
+.vl-type {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--size-badge);
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-muted);
+  color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size);
+  white-space: nowrap;
+}
+
+.vl-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-block-end: var(--space-sm);
+}
+
+.vl-head--spaced {
+  margin-block-start: var(--space-xl);
+}
+
+.vl-head .vl-group-label {
+  margin-block-end: 0;
+  flex: 0 0 auto;
+}
+
+.vl-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-inline-start: auto;
+}
+
+.vl-search {
+  /* .control is a flex row that grows to its container, so a bare inline-size
+     lost to it and the field stretched to ~968px. Fixing the basis and
+     refusing to grow is what actually holds the width. */
+  flex: 0 0 240px;
+  inline-size: 240px;
+  max-inline-size: 240px;
+}
+
+
+
+/* ---------------------------------------------------------------- bid drawer */
+
+.bid-bucket {
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.bid-bucket:last-child {
+  border-block-end: 0;
+}
+
+.bid-bucket-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  padding-block: var(--space-sm);
+  appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: start;
+}
+
+.bid-bucket-head:hover .bid-bucket-name {
+  color: var(--color-fg-accent);
+}
+
+.bid-bucket-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.bid-bucket-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--type-label-weight);
+  flex-shrink: 0;
+}
+
+.bid-bucket-lines {
+  padding: var(--space-sm) 0 var(--space-md) var(--space-lg);
+}
+
+/* The drawer's FOB block carries a status chip beside its label. */
+.quote-total .k {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ---------------------------------------------------------------- vendor identity
+
+   Name, type and code read as one block. The type qualifies the name beside
+   it rather than sitting at the far end of the row where it competed with the
+   submission status. */
+
+.vl-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+.vl-name-row .vl-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vl-name-row .vl-type {
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------- bid drawer
+
+   The hero collapsed to 0px as buckets expanded: `aspect-ratio` gives a box a
+   SHAPE, not a minimum, so as a flex child in a scrolling column it was the
+   first thing squeezed. Refusing to shrink keeps the product visible while the
+   breakdown below it scrolls, which is the point of showing it at all. */
+
+/* A BID drawer is about the numbers — the image is there to confirm which
+   product, not to be browsed. 1:1 on a 640px drawer is a 591px square, most of
+   the viewport before the first cost appears, so this one is a banner. The
+   style-detail drawer keeps the full square. */
+/* The bid drawer's header — image and FOB together.
+
+   These WERE sticky, so the image stayed visible while the breakdown scrolled.
+   That created a worse problem: a sticky element still needs an opaque
+   background or the content scrolls VISIBLY THROUGH it, and with the drawer
+   body's own inline padding the bleed never quite covered the edges. Text ran
+   over the photograph.
+
+   A drawer is a side view of one record, not a dashboard. The image confirms
+   which product at the top and then gets out of the way — the numbers are what
+   the reader came for, and they now scroll cleanly. */
+
+.drawer .detail-gallery:not(.is-compact) .detail-hero,
+.drawer > .detail-hero {
+  flex: 0 0 auto;
+  aspect-ratio: auto;
+  block-size: 180px;
+  min-block-size: 180px;
+}
+
+
+/* ============================================================================
+   S6 — Award summary
+   ==========================================================================*/
+
+/* The two headline numbers sit in the title row's action slot: they are what
+   the screen is FOR, and a reader should not have to scroll to find the size
+   of the prize. */
+.aw-summary {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding-inline-start: var(--space-lg);
+}
+
+/* Two large numbers side by side read as one number unless something separates
+   them — "$15.1M $61.7M" was genuinely ambiguous. A rule, not more space:
+   space alone would need more of it than the title row has. */
+.aw-summary + .aw-summary {
+  margin-inline-start: var(--space-lg);
+  border-inline-start: 1px solid var(--color-border-muted);
+}
+
+.aw-summary .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.aw-summary .v {
+  font-size: var(--type-heading-2-size);
+  line-height: 1.1;
+  font-weight: var(--type-emphasis-weight);
+  color: var(--color-fg-default);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Filters in ONE row above the grid — the dataviz rule. They wrap rather than
+   scroll, because a filter you cannot see is a filter you forget is applied. */
+.aw-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+
+/* `.control` is a flex ROW that grows to its container — a bare inline-size
+   loses to that, which is how the vendor search first rendered at 968px. */
+.aw-search {
+  flex: 0 0 260px;
+}
+
+.aw-filter-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.aw-filter-count {
+  margin-inline-start: auto;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.aw-grid td {
+  vertical-align: middle;
+}
+
+.aw-row {
+  cursor: pointer;
+  transition: background-color var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.aw-row:hover,
+.aw-row:focus-visible {
+  background: var(--color-bg-surface-sunken);
+}
+
+/* A style with no bids cannot be allocated, so the row does not pretend to be
+   a control. It stays readable — it is still inventory someone is looking for. */
+.aw-row.is-disabled {
+  cursor: default;
+}
+
+.aw-row.is-disabled:hover {
+  background: transparent;
+}
+
+.aw-product {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+/* Product photography is what stops this reading as a spreadsheet. 44px keeps
+   the row height honest while still being recognisably the product. */
+/* Bedding photography is shot on white, so a bare image on a white row reads as
+   an empty box. The border gives every thumbnail an edge whatever it contains. */
+.aw-thumb {
+  flex: 0 0 auto;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-muted);
+  object-fit: cover;
+  background: var(--color-bg-surface-sunken);
+}
+
+.aw-thumb--empty {
+  display: block;
+  border: 1px solid var(--color-border-muted);
+}
+
+.aw-product-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+/* Several styles share a product name — four rows read "Women's Ultra-Stretch
+   Ponte Straight Leg Pant" and only the style number tells them apart. So the
+   number leads the line and holds its own column width, which makes it
+   scannable rather than something to read past. */
+.aw-product-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-inline-size: 0;
+}
+
+.aw-product-name .id {
+  flex: 0 0 auto;
+  color: var(--color-fg-default);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The style number is fixed-width and never truncates; only the NAME gives way
+   when the column is tight, and it ellipses at a word boundary rather than
+   mid-word. Truncating the identifier would defeat the point of leading with
+   it. */
+.aw-product-name {
+  overflow: hidden;
+}
+
+.aw-product-name .aw-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+
+.aw-product-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A style bidding ABOVE baseline is real and has its own Wave Insights block.
+   It reads as danger because it IS the thing to look at, not because it is an
+   error. */
+.aw-neg {
+  color: var(--color-feedback-danger-fg);
+}
+
+.aw-muted {
+  color: var(--color-fg-muted);
+}
+
+.aw-split {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.aw-split-part {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aw-split-part .pct {
+  display: inline-block;
+  inline-size: 34px;
+  color: var(--color-fg-default);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   S7 — the Playground
+   ==========================================================================*/
+
+.pg-baseline {
+  display: flex;
+  gap: var(--space-lg);
+  padding: var(--space-md) 0;
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.pg-baseline-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pg-baseline-item .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.pg-baseline-item .v {
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-vendors {
+  display: flex;
+  flex-direction: column;
+}
+
+/* One grid shape for the header and every row, so the columns line up without
+   a table — the award % cell has to hold a real input. */
+.pg-vendor {
+  display: grid;
+  grid-template-columns: 1fr 108px 76px 104px;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.pg-vendor--head {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-block-end: var(--space-xs);
+}
+
+.pg-vendor .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-vendor-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.pg-vendor-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pg-vendor-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.pg-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pg-cost-v {
+  font-weight: var(--type-emphasis-weight);
+}
+
+/* The basis is a QUALIFIER on the number above it, so it is muted and small —
+   it must be visible without competing with the cost itself. DDP gets the
+   accent because it is the exception worth noticing. */
+.pg-basis {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  cursor: help;
+}
+
+.pg-basis.is-ddp {
+  color: var(--color-fg-accent);
+}
+
+.pg-pct {
+  inline-size: 100%;
+  text-align: end;
+}
+
+.pg-awarded {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pg-awarded-v {
+  font-weight: var(--type-emphasis-weight);
+}
+
+.pg-awarded-u {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* THE READOUT — the thing the room watches. It is deliberately the largest
+   number in the drawer. */
+.pg-readout {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-block: var(--space-lg);
+  padding: var(--space-md);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface-sunken);
+  border: 1px solid var(--color-border-muted);
+  transition:
+    background-color var(--motion-hover-duration) var(--motion-hover-easing),
+    border-color var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.pg-readout.is-valid {
+  background: var(--color-bg-accent-subtle);
+  border-color: var(--color-border-selected);
+}
+
+.pg-readout-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.pg-readout-main .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pg-readout-main .v {
+  font-size: var(--type-heading-1-size);
+  line-height: 1.1;
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-readout-main .sub {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+.pg-readout-alloc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.pg-readout-alloc .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.pg-readout-alloc .v {
+  font-size: var(--type-heading-2-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-muted);
+}
+
+.pg-readout-alloc .v.ok {
+  color: var(--color-feedback-success-fg);
+}
+
+/* Reference lines. Display only — they never write a value, so nothing here is
+   a control and nothing is clickable. */
+.pg-scenarios {
+  display: flex;
+  flex-direction: column;
+}
+
+.pg-scenario {
+  display: grid;
+  grid-template-columns: 1fr 84px 104px;
+  gap: var(--space-sm);
+  padding-block: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+.pg-scenario .c,
+.pg-scenario .s {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The user's own split is the one being decided, so it leads and is the only
+   line in full-strength ink. */
+.pg-scenario.is-yours {
+  color: var(--color-fg-default);
+  font-size: var(--type-body-sm-size);
+  border-block-end: 1px solid var(--color-border-muted);
+  padding-block-end: var(--space-xs);
+  margin-block-end: var(--space-xs);
+}
+
+/* Guardrails. A bar filling toward its cap explains the number beside it. */
+.pg-rail {
+  display: grid;
+  grid-template-columns: 160px 1fr 132px;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-xs);
+}
+
+.pg-rail-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--type-caption-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pg-rail-bar {
+  position: relative;
+  display: block;
+  block-size: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+/* The cap itself, at 70% of the track. A threshold you cannot see is a
+   threshold the bar cannot explain. */
+.pg-rail-bar .cap-mark {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 70%;
+  inline-size: 2px;
+  background: var(--color-border-strong);
+  z-index: 1;
+}
+
+.pg-rail-bar .fill {
+  display: block;
+  block-size: 100%;
+  background: var(--color-bg-emphasis);
+  transition: inline-size var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.pg-rail.is-breached .pg-rail-bar .fill {
+  background: var(--color-feedback-danger-solid);
+}
+
+.pg-rail-v {
+  text-align: end;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The design system sizes a textarea as a single-line input, so rows= is
+   ignored without this — the same fix the RFP instructions field needed. */
+.pg-comment {
+  inline-size: 100%;
+  min-block-size: 60px;
+  block-size: auto;
+  padding: var(--space-sm);
+  resize: vertical;
+  font: inherit;
+}
+
+.pg-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+}
+
+.pg-footer-state {
+  margin-inline-end: auto;
+  font-size: var(--type-caption-size);
+}
+
+.pg-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-feedback-success-fg);
+}
+
+.pg-invalid {
+  color: var(--color-fg-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aw-row,
+  .pg-readout,
+  .pg-rail-bar .fill {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   Chart layer (M4)
+
+   The categorical palette is VALIDATED, not eyeballed. Both sets were run
+   through the dataviz procedure's scripts/validate_palette.js and pass all
+   five checks — lightness band, chroma floor, CVD separation, normal-vision
+   floor, contrast against the surface:
+
+     LIGHT  #2D5BC4 #009BA8 #C85A2B #7B5BC7 #A67C15
+            worst adjacent CVD dE 16.5 (deutan) / 13.0 (tritan)
+            worst adjacent normal-vision dE 19.5   all >= 3:1 contrast
+
+     DARK   #4A78DC #00A88F #D06630 #8E6FD4 #B08A1A
+            worst adjacent CVD dE 11.8 (deutan) / 8.3 (tritan)
+            worst adjacent normal-vision dE 20.6   all >= 3:1 contrast
+
+   Dark is a SEPARATELY CHOSEN set, not a flip of the light one. Lightening the
+   light palette for dark collapsed cobalt against teal to dE 12.7, below the
+   15 normal-vision floor — the validator caught it.
+
+   These are the one sanctioned place in product CSS for raw hex: the design
+   system ships no chart ramp, and a categorical scale cannot be derived from
+   the semantic tokens without failing the separation checks above.
+   ==========================================================================*/
+
+:root {
+  --chart-cat-1: #2d5bc4;
+  --chart-cat-2: #009ba8;
+  --chart-cat-3: #c85a2b;
+  --chart-cat-4: #7b5bc7;
+  --chart-cat-5: #a67c15;
+  --chart-cat-other: var(--color-fg-muted);
+}
+
+[data-mode="dark"] {
+  --chart-cat-1: #4a78dc;
+  --chart-cat-2: #00a88f;
+  --chart-cat-3: #d06630;
+  --chart-cat-4: #8e6fd4;
+  --chart-cat-5: #b08a1a;
+}
+
+/* Identity is never colour-alone: every series is direct-labelled and the
+   swatch only repeats what the label already says. */
+.chart-swatch {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+/* --- horizontal range bars --------------------------------------------- */
+
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.chart-bar-row {
+  display: grid;
+  grid-template-columns: 116px 1fr 104px 120px;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.chart-bar-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--type-body-sm-size);
+}
+
+.chart-bar-track {
+  position: relative;
+  display: block;
+  block-size: 18px;
+  border-radius: var(--radius-element);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+/* The allowed range, drawn behind the bar — a threshold you cannot see is a
+   threshold the bar cannot explain. */
+.chart-bar-band {
+  position: absolute;
+  inset-block: 0;
+  background: var(--color-bg-selected);
+  border-inline: 1px solid var(--color-border-strong);
+}
+
+.chart-bar-fill {
+  position: absolute;
+  inset-block: 3px;
+  inset-inline-start: 0;
+  border-start-end-radius: 2px;
+  border-end-end-radius: 2px;
+  transition: inline-size var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+/* Status tones are RESERVED — they mark out-of-range and are never reused as a
+   sixth category colour. */
+.chart-bar-fill.is-outside {
+  background: var(--color-feedback-danger-solid);
+}
+
+.chart-bar-value {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.chart-bar-range {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.chart-bar-state {
+  font-size: var(--type-caption-size);
+}
+
+.chart-flag.is-over {
+  color: var(--color-feedback-danger-fg);
+}
+
+.chart-flag.is-under {
+  color: var(--color-feedback-warning-fg);
+}
+
+.chart-flag.is-ok {
+  color: var(--color-fg-muted);
+}
+
+/* --- donut -------------------------------------------------------------- */
+
+.chart-donut {
+  position: relative;
+  flex: 0 0 auto;
+  inline-size: 132px;
+  block-size: 132px;
+}
+
+.chart-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+/* The hole is 88px across (132 less a 22px ring each side), so the centre
+   figure has to fit INSIDE it — at body-md, "$60.8M" ran over the ring on both
+   sides and read as a rendering fault. Caption-sized and tabular, it sits in
+   the hole with room to spare at any value this wave reaches. */
+.chart-donut-center .n {
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.chart-donut-center .c {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* --- progress to cap ---------------------------------------------------- */
+
+.chart-cap {
+  position: relative;
+  display: block;
+  block-size: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+/* The cap sits at 80% of the track, leaving room for an overrun to be visible
+   rather than clamping every breach to a full bar. */
+.chart-cap-mark {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 80%;
+  inline-size: 2px;
+  background: var(--color-border-strong);
+  z-index: 1;
+}
+
+.chart-cap-fill {
+  display: block;
+  block-size: 100%;
+  background: var(--chart-cat-1);
+  transition: inline-size var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.chart-cap-fill.is-over {
+  background: var(--color-feedback-danger-solid);
+}
+
+/* --- coverage meter ----------------------------------------------------- */
+
+.chart-meter {
+  display: block;
+  block-size: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+  margin-block-start: var(--space-sm);
+}
+
+.chart-meter-fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--radius-full);
+  background: var(--chart-cat-1);
+  transition: inline-size var(--motion-surface-duration) var(--motion-surface-easing);
+}
+
+/* ============================================================================
+   S8 — Wave insights
+   ==========================================================================*/
+
+.wi-coverage {
+  margin-block-end: var(--space-lg);
+}
+
+.wi-cov-grid {
+  display: flex;
+  gap: var(--space-xl);
+  align-items: flex-start;
+}
+
+.wi-cov-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.wi-cov-main .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Coverage is the largest number on the page because it is the lens every
+   other number is read through. */
+.wi-cov-main .v {
+  font-size: var(--type-heading-1-size);
+  line-height: 1.05;
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.wi-cov-main .s {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+.wi-cov-side {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--space-xl);
+}
+
+.wi-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wi-stat .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.wi-stat .v {
+  font-size: var(--type-heading-2-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.wi-stat .v.is-warn {
+  color: var(--color-feedback-danger-fg);
+}
+
+.wi-stat .s {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+.wi-caveat {
+  margin-block-start: var(--space-md);
+}
+
+/* A breach is a CONTROL, not a label — clicking it lands on the products
+   responsible, which is what makes the rollup actionable. */
+.wi-breach-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-block-end: var(--space-md);
+}
+
+.wi-breach {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-surface);
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition:
+    background-color var(--motion-hover-duration) var(--motion-hover-easing),
+    border-color var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.wi-breach:hover,
+.wi-breach:focus-visible {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
+}
+
+.wi-breach-text {
+  flex: 1 1 auto;
+  font-size: var(--type-body-sm-size);
+}
+
+.wi-two-up {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin-block: var(--space-lg);
+}
+
+.wi-donut-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.wi-legend {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-inline-size: 0;
+}
+
+.wi-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto 44px;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--type-body-sm-size);
+}
+
+/* `.d` and `.p`, deliberately not `.v` — the design system's `.card .v` is a
+   metric-pair value at heading-2 size. Correct for a headline figure, wrong for
+   a legend row, where it rendered larger than the chart it was labelling. */
+.wi-legend-row .d,
+.wi-legend-row .p {
+  font-size: var(--type-body-sm-size);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.wi-legend-row .p {
+  color: var(--color-fg-muted);
+}
+
+.wi-empty {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.wi-increase-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.wi-increase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-surface);
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background-color var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.wi-increase:hover,
+.wi-increase:focus-visible {
+  background: var(--color-bg-hover);
+}
+
+.wi-increase-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.wi-increase-id .n {
+  font-size: var(--type-body-sm-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wi-increase-id .m {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.wi-increase-v {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-feedback-danger-fg);
+}
+
+@media (max-width: 1100px) {
+  .wi-two-up {
+    grid-template-columns: 1fr;
+  }
+
+  .wi-cov-grid {
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-bar-fill,
+  .chart-cap-fill,
+  .chart-meter-fill,
+  .wi-breach,
+  .wi-increase {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   Vendor master (/vendors)
+
+   NOT the vendor portal — that is /vendor, singular, and vendor-facing. This
+   one is internal and shows every vendor side by side, which is precisely what
+   Vendor View must never expose.
+   ==========================================================================*/
+
+.vm-row {
+  cursor: pointer;
+  transition: background-color var(--motion-hover-duration) var(--motion-hover-easing);
+}
+
+.vm-row:hover,
+.vm-row:focus-visible {
+  background: var(--color-bg-hover);
+}
+
+.vm-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.vm-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vm-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.vm-region {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.vm-styles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.vm-style {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-xs);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.vm-style-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.vm-style-name {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vm-style-fob {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-row {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   D14 — the vendor's score panel
+
+   The one thing the system gives a vendor back. It carries BANDS AND
+   DIRECTIONS ONLY: no clean-sheet value, no rival's price, no percentage —
+   nothing that can be solved backwards into the target (Build Doc 8.3).
+   ==========================================================================*/
+
+.score {
+  margin-block-start: var(--space-lg);
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--color-border-muted);
+}
+
+.score-hd {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-block-end: var(--space-sm);
+}
+
+.score-band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-surface-sunken);
+}
+
+.score-band .dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--radius-full);
+  flex: 0 0 auto;
+}
+
+.score-band .n {
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-emphasis-weight);
+}
+
+/* Feedback tones, which keep their meaning across every brand. "Needs work" is
+   warning rather than danger — the bid is valid, it is the price that is high,
+   and a red banner on a submitted bid reads as a rejection. */
+.score-band.is-strong .dot {
+  background: var(--color-feedback-success-solid);
+}
+.score-band.is-strong .n {
+  color: var(--color-feedback-success-fg);
+}
+
+.score-band.is-competitive .dot {
+  background: var(--color-feedback-info-solid);
+}
+
+.score-band.is-needs_work .dot {
+  background: var(--color-feedback-warning-solid);
+}
+.score-band.is-needs_work .n {
+  color: var(--color-feedback-warning-fg);
+}
+
+.score-band.is-off_target .dot {
+  background: var(--color-feedback-danger-solid);
+}
+.score-band.is-off_target .n {
+  color: var(--color-feedback-danger-fg);
+}
+
+.score-note {
+  margin-block: var(--space-sm) 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.score-sub {
+  margin-block-start: var(--space-md);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.score-buckets {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-xs) var(--space-sm);
+  margin-block-start: var(--space-xs);
+}
+
+.score-buckets dt {
+  font-size: var(--type-body-sm-size);
+}
+
+.score-buckets dd {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  text-align: end;
+}
+
+/* Direction is carried by the WORD as well as the colour — a vendor reading
+   this on a printout or with CVD still learns where to cut. */
+.score-buckets .flag.is-above {
+  color: var(--color-feedback-warning-fg);
+}
+
+.score-buckets .flag.is-below {
+  color: var(--color-feedback-success-fg);
+}
+
+.score-buckets .flag.is-in_line {
+  color: var(--color-fg-muted);
+}
+
+/* ============================================================================
+   Arrival context bar
+
+   Shown when a screen was reached from somewhere that applied a filter. It
+   answers two questions the destination could not: why is this list filtered,
+   and how do I get back. Without it a view showing 3 of 82 products reads as
+   missing data.
+   ==========================================================================*/
+
+.ctx-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin-block-end: var(--space-md);
+  border: 1px solid var(--color-border-selected);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-accent-subtle);
+  font-size: var(--type-body-sm-size);
+}
+
+.ctx-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-fg-accent);
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+
+.ctx-back:hover {
+  text-decoration: underline;
+}
+
+.ctx-what {
+  flex: 1 1 auto;
+  color: var(--color-fg-subtle);
+}
+
+/* --- wave progress breakdown ------------------------------------------- */
+
+.wi-cov-main .k {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* The tooltip anchor must not inherit the label's uppercase tracking. */
+.wi-cov-main .k .tip-anchor {
+  display: inline-flex;
+  color: var(--color-fg-muted);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.wi-breakdown {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--space-md);
+  margin-block: var(--space-md) 0;
+}
+
+.wi-breakdown dt {
+  font-size: var(--type-body-sm-size);
+}
+
+.wi-breakdown dd {
+  margin: 0;
+  font-size: var(--type-body-sm-size);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.wi-breakdown .sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  padding-inline-start: var(--space-sm);
+}
+
+.wi-breakdown dd.sub {
+  display: block;
+  padding-inline-start: 0;
+}
+
+/* Filled = in play and decidable; hollow = not yet out to bid. The shape
+   carries the distinction, not the colour alone. */
+.wi-breakdown .dot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-strong);
+  flex: 0 0 auto;
+}
+
+.wi-breakdown .dot.is-on {
+  background: var(--chart-cat-1);
+  border-color: var(--chart-cat-1);
+}
+
+/* --- scroll containers on Wave Insights --------------------------------
+   Two rows today and ~38 vendors at full allocation. A list that grows with
+   the wave needs a ceiling, or the page below it becomes unreachable. */
+
+.wi-scroll {
+  max-block-size: 340px;
+  overflow-y: auto;
+}
+
+/* --- vendor awards drawer ---------------------------------------------- */
+
+.va-row {
+  padding-block: var(--space-md);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.va-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.va-id {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.va-name {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.va-award {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.va-award .pct {
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.va-award .d {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.va-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--space-md);
+  margin-block: var(--space-sm) 0;
+}
+
+.va-facts dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.va-facts dd {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The basis qualifies the number it follows, so it sits with it rather than
+   in a column of its own. */
+.va-basis {
+  margin-inline-start: var(--space-xs);
+  color: var(--color-fg-muted);
+}
+
+.va-ddp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-block-start: var(--space-sm);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-accent);
+  font: inherit;
+  font-size: var(--type-caption-size);
+  cursor: pointer;
+}
+
+.va-ddp {
+  inline-size: 100%;
+  margin-block-start: var(--space-xs);
+  border-collapse: collapse;
+  font-size: var(--type-caption-size);
+}
+
+.va-ddp th,
+.va-ddp td {
+  padding: var(--space-xs);
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.va-ddp th {
+  color: var(--color-fg-muted);
+  font-weight: var(--type-body-weight);
+  text-align: start;
+}
+
+.va-ddp .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A QDDP vendor quotes no DDP by definition. Saying so beats a grid of
+   dashes, which reads as missing data rather than a deliberate incoterm. */
+.va-noddp {
+  margin-block: var(--space-sm) 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* Awarding is visible outside the room, so it confirms in place rather than
+   firing on the first click. */
+.pg-confirm-acts {
+  display: flex;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+/* ============================================================================
+   The vendor's award outcome
+
+   The one thing this portal never told a vendor: did we win. Their share and
+   their volume only — nothing here reveals that a product was split, who else
+   bid, or what anyone else charged.
+   ==========================================================================*/
+
+.vo-won {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.vo-detail {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Under review" is deliberately quiet. It is the honest state — procurement
+   has the bid and has not decided — and it must not read as a result. */
+.vo-pending {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.vo-headline {
+  display: inline-block;
+  margin-inline-start: var(--space-md);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-accent-subtle);
+  color: var(--color-fg-accent);
+  font-size: var(--type-body-sm-size);
+}
+
+/* ============================================================================
+   P2 — bucket comparison in the Playground
+
+   Collapsed by default. The allocation controls and the live savings readout
+   are the argument and must stay above the fold in a 640px drawer; this is the
+   evidence you open when you ask why one vendor is cheaper.
+   ==========================================================================*/
+
+.bd-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-accent);
+  font: inherit;
+  font-size: var(--type-body-sm-size);
+  cursor: pointer;
+}
+
+/* Five vendors of five buckets will not fit 640px. The table scrolls sideways
+   inside its own container rather than the drawer body scrolling. */
+.bd-scroll {
+  overflow-x: auto;
+  margin-block-start: var(--space-sm);
+}
+
+.bd-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-caption-size);
+}
+
+.bd-table th,
+.bd-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-block-end: 1px solid var(--color-border-muted);
+  white-space: nowrap;
+}
+
+.bd-table th {
+  color: var(--color-fg-muted);
+  font-weight: var(--type-body-weight);
+  text-align: start;
+}
+
+.bd-table .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The clean sheet is the reference every other column is read against, so it
+   gets a rule rather than a fill — a fill would make it look like a result. */
+.bd-clean {
+  border-inline-end: 1px solid var(--color-border-strong);
+  color: var(--color-fg-muted);
+}
+
+/* Status tones stay reserved for over/under and are never a category colour. */
+.bd-above {
+  color: var(--color-feedback-warning-fg);
+}
+
+.bd-below {
+  color: var(--color-feedback-success-fg);
+}
+
+.bd-total td {
+  border-block-end: 0;
+  border-block-start: 1px solid var(--color-border-strong);
+  font-weight: var(--type-emphasis-weight);
+}
+
+.bd-note {
+  margin-block: var(--space-sm) 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* --- raise an Ask from a flagged cell ----------------------------------
+   The cell where you NOTICE the problem is the cell you ask about. Raising it
+   anywhere else means re-finding the bucket and the vendor by hand. */
+
+.bd-cell-ask {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.bd-cell-ask:hover,
+.bd-cell-ask:focus-visible {
+  text-decoration-style: solid;
+}
+
+.bd-ask {
+  margin-block-start: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-selected);
+  border-radius: var(--radius-element);
+  background: var(--color-bg-accent-subtle);
+}
+
+.bd-ask-hd {
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--type-emphasis-weight);
+  margin-block-end: var(--space-sm);
+}
+
+.bd-ask-body {
+  inline-size: 100%;
+  min-block-size: 52px;
+  block-size: auto;
+  padding: var(--space-sm);
+  resize: vertical;
+  font: inherit;
+}
+
+.bd-ask-target {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-block-start: var(--space-sm);
+  font-size: var(--type-caption-size);
+}
+
+.bd-ask-pct {
+  flex: 0 0 64px;
+  text-align: end;
+}
+
+.bd-ask-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+/* ============================================================================
+   P3 — Asks, on the vendor's quote form
+
+   Shown FIRST, above the form. Feedback the vendor has not seen is the reason
+   they opened the page in round two; burying it under the sections means they
+   re-submit without addressing it.
+   ==========================================================================*/
+
+.ask-list {
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.ask {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  font-size: var(--type-body-sm-size);
+  font-weight: var(--type-body-weight);
+}
+
+/* The state is a word, not a colour alone — this has to read on a printout. */
+.ask-state {
+  flex: 0 0 76px;
+  font-size: var(--type-caption-size);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-muted);
+}
+
+.ask--addressed .ask-state {
+  color: var(--color-feedback-success-fg);
+}
+
+.ask--reopened .ask-state,
+.ask--open .ask-state {
+  color: var(--color-feedback-warning-fg);
+}
+
+.ask-text {
+  flex: 1 1 auto;
+}
+
+.ask-target {
+  color: var(--color-fg-default);
+}
+
+/* Before/after, recorded automatically when the vendor changed the value. It
+   is the receipt for their own edit, so it reads quietly. */
+.ask-delta {
+  display: block;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ask-reply {
+  display: block;
+  margin-block-start: 2px;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+/* --- shared product gallery (P4) ---------------------------------------
+   One implementation, used by the style detail drawer, the vendor quote
+   sidebar and the Playground. `is-compact` is the sidebar case: the images
+   confirm which product and support a price, so they must not push the numbers
+   below the fold. */
+
+/* The catalogue is shot PORTRAIT on a light ground. A full-width 150px band is
+   4:1, so `object-fit: cover` crops a 2400x3000 photo to a blank middle stripe
+   of backdrop — measured 591x150 with the product entirely outside the frame.
+   Constrain the WIDTH and let the image keep a portrait-ish shape. */
+/* The catalogue is shot PORTRAIT on a light ground. A full-width short band is
+   4:1, so `object-fit: cover` crops a 2400x3000 photo to a blank middle stripe
+   of backdrop — measured 591x150 with the product entirely outside the frame.
+   So the hero is width-constrained and keeps a portrait shape.
+ *
+ * FLEX WRAP, not grid. Two earlier attempts failed and both are worth
+ * recording:
+ *
+ *   A flex ROW overflowed. At 200px the vendor sidebar had no room left, so the
+ *   colourway chips broke 39px past the card edge and the thumbnail strip
+ *   collapsed to zero width.
+ *
+ *   A GRID with a container query collapsed its first track to 0px. Grid tracks
+ *   are laid out by the container, so the hero's own `inline-size` could not
+ *   rescue it, and the thumbnails ended up stacked underneath the hero at the
+ *   same coordinates — invisible rather than merely misplaced.
+ *
+ * Wrap needs neither a query nor a track: the hero takes its 200px, the rest
+ * takes what remains, and when what remains is too little it wraps to the next
+ * line by itself. Same component, two containers, no breakpoint to maintain. */
+
+.detail-gallery.is-compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.detail-gallery.is-compact .detail-hero {
+  /* Fixed, and never wider than the container it sits in. */
+  flex: 0 0 auto;
+  inline-size: min(200px, 100%);
+  aspect-ratio: 3 / 4;
+  block-size: auto;
+  min-block-size: 0;
+}
+
+/* The side column. `flex: 1 1 180px` is the wrap trigger: below 180px there is
+   no room beside a 200px hero, so the whole column drops under it. */
+.detail-gallery.is-compact .gallery-aside {
+  flex: 1 1 180px;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.detail-gallery.is-compact .gallery-colourways {
+  margin-block-start: 0;
+}
+
+.detail-gallery.is-compact .detail-thumbs button {
+  inline-size: 44px;
+  block-size: 44px;
+}
+
+/* Variants. Wraps inside its own line and never exceeds it — `max-inline-size`
+   is the guard, since a long colourway name plus chip padding can otherwise
+   set a wider minimum than the space available. */
+.gallery-colourways {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  max-inline-size: 100%;
+  margin-block-start: var(--space-sm);
+}
+
+.gallery-colourways .chip {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   A1 — Product catalog
+
+   The funnel's mouth: 10,000 products narrowed by revenue and attribute into
+   the few hundred a wave touches, grouped into style sets, sent out as RFPs.
+   Deliberately not Award Summary, which awards what was already sent.
+   ==========================================================================*/
+
+.pc-row.is-on {
+  background: var(--color-bg-selected);
+}
+
+/* Department over sub-department: the pair reads as one category, and two
+   columns for it would waste width the product name needs. */
+.pc-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pc-cat .sub {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* The retail price under the revenue it derives from — revenue is
+   planUnits x retail, so showing the multiplier makes the figure checkable. */
+.pc-sub {
+  display: block;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The selection tray's action menu. `.sel-bar` is fixed to the bottom, so the
+   menu opens UPWARD — a downward menu would render off-screen. */
+.sel-menu-wrap {
+  position: relative;
+}
+
+.sel-menu {
+  position: absolute;
+  inset-block-end: calc(100% + var(--space-xs));
+  inset-inline-end: 0;
+  min-inline-size: 200px;
+  z-index: var(--z-popover);
+}
+
+/* ============================================================================
+   A2/A3 — RFP detail
+
+   Was: ownership inputs at the top, then 15 added vendors with their own
+   scroll, then 23 not-on-RFP vendors with their own scroll, then the products
+   the RFP is actually about. Two nested scroll traps, and no bid price visible
+   without expanding a row.
+
+   Now: a responded roll-up, collapsed ownership, and two tabs whose rows
+   expand in place.
+   ==========================================================================*/
+
+/* A GRID, not a flex row. Flex sized each tile to its own content — measured
+   75 / 88 / 139 / 154px — so four tiles totalling ~456px sat bunched in the
+   left third of an 1172px strip with ~700px of dead space after them, and no
+   two labels started on a shared edge. Equal fractional tracks give the four
+   measures one rhythm; the trailing `auto` holds the Ownership button, which
+   was previously shoved to the far edge by `margin-inline-start: auto`. */
+.rd-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: stretch;
+  padding: var(--space-md) 0;
+  margin-block-end: var(--space-lg);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+}
+
+.rd-sum-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rd-sum-item .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rd-sum-item .v {
+  font-size: var(--type-heading-2-size);
+  line-height: 1.1;
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.rd-sum-item .s {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+/* No `margin-inline-start: auto` — the grid's trailing `auto` track already
+   places it, and the margin is what used to fling it to the far edge while
+   the tiles stayed huddled at the near one. */
+.rd-sum-edit {
+  align-self: center;
+  margin-inline-end: var(--space-lg);
+  margin-inline-start: var(--space-lg);
+}
+
+/* --- expanding rows, shared by both tabs -------------------------------- */
+
+.rd-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.rd-row {
+  border-block-end: 1px solid var(--color-border-muted);
+}
+
+.rd-row:last-child {
+  border-block-end: 0;
+}
+
+/* The whole head is the control — a row you can only open by hitting a small
+   chevron is a row people stop opening. */
+.rd-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  padding: var(--space-sm) 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.rd-head:hover {
+  background: var(--color-bg-hover);
+}
+
+.rd-id {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.rd-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-inline-size: 0;
+}
+
+.rd-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rd-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The lowest bid, on the closed row. Previously the only signal was a count,
+   so no price was visible anywhere without expanding. */
+.rd-stat {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.rd-stat-v {
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.rd-none {
+  color: var(--color-fg-muted);
+}
+
+.rd-stat-k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Completion as a PERCENTAGE with a bar (§10.1), not "3 of 3 submitted" — a
+   bar makes a column of vendors comparable at a glance. */
+.rd-completion {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xs);
+}
+
+.rd-bar {
+  display: block;
+  inline-size: 100%;
+  block-size: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+.rd-bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--chart-cat-1);
+}
+
+.rd-status {
+  flex: 0 0 auto;
+  min-inline-size: 96px;
+  text-align: end;
+}
+
+.rd-body {
+  padding: 0 0 var(--space-md) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.rd-bid {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.rd-bid-vendor {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.rd-bid-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Invited and silent. Quiet, because it is a state rather than a result. */
+.rd-bid.is-pending .rd-bid-vendor,
+.rd-pending {
+  color: var(--color-fg-muted);
+}
+
+.rd-pending {
+  font-size: var(--type-caption-size);
+}
+
+.rd-compare {
+  align-self: flex-start;
+  margin-block-start: var(--space-xs);
+}
+
+.rd-empty,
+.rd-foot {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.rd-foot {
+  margin-block: var(--space-md) 0;
+}
+
+/* --- the add-vendors picker -------------------------------------------- */
+
+.vp-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.vp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  border-block-end: 1px solid var(--color-border-muted);
+  cursor: pointer;
+}
+
+.vp-id {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.vp-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.vp-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* §5.3: a clash is per PRODUCT, so adding takes what they can legally have. */
+.vp-note {
+  flex: 0 0 auto;
+  font-size: var(--type-caption-size);
+  color: var(--color-feedback-warning-fg);
+}
+
+/* A4's per-product comparison page does not exist yet. Saying so beats a
+   button that goes nowhere. */
+.rd-soon {
+  align-self: flex-start;
+  margin-block-start: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* One line. `.rd-stat` is a column flex, so a bare "2" plus "of 2" wrapped —
+   visible in the 17 Sep screenshot as two stacked lines in every vendor row. */
+.rd-count {
+  flex: 0 0 auto;
+  font-size: var(--type-body-sm-size);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Why a vendor has fewer products than the RFP has. §5.3 holds one back when
+   it is already being quoted elsewhere; not saying so is what let a failing
+   save look like a working screen. */
+.rd-held {
+  font-size: var(--type-caption-size);
+  color: var(--color-feedback-warning-fg);
+}
+
+/* ============================================================================
+   A12 — RFP list metrics and detail header tiles
+
+   The list carried products and vendors only, so it could not say whether an
+   RFP was on track. The detail header was three items at heading-2 size in a
+   loose flex row — a prominent strip carrying very little.
+   ==========================================================================*/
+
+/* The row's IDENTITY, not a body link. This anchor carried NO class at all,
+   so it fell through to the UA stylesheet and rendered at rgb(0,0,238) with an
+   underline — measured, not guessed. Per the system's rule only `.lnk` is
+   underlined at rest; a nav item, a crumb, a tab and a record link each wear
+   their own class and clear it. Underline appears on hover, where it confirms
+   the target rather than decorating five rows at once. */
+.rl-name {
+  color: var(--color-fg-default);
+  font-weight: var(--type-emphasis-weight);
+  text-decoration: none;
+}
+
+.rl-name:hover {
+  color: var(--color-fg-accent);
+  text-decoration: underline;
+}
+
+.rl-sub {
+  display: block;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.rl-none {
+  color: var(--color-fg-muted);
+}
+
+.rl-resp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rl-bar {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 120px;
+  block-size: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+.rl-bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--chart-cat-1);
+}
+
+.rl-resp-k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A saving reads as good news, a rise as the thing to look at. Both are
+   feedback tones, which keep their meaning across every brand. */
+.rl-save,
+.rd-save {
+  color: var(--color-feedback-success-fg);
+}
+
+.rl-rise,
+.rd-rise {
+  color: var(--color-feedback-danger-fg);
+}
+
+/* --- detail header tiles ------------------------------------------------ */
+
+/* Padding lives on the TILE, not the strip, so each measure owns its whole
+   track. No divider between them: once the tracks are even the alignment does
+   that job, and four hairlines make a five-item strip look like a table. */
+.rd-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+  padding-inline: var(--space-lg);
+}
+
+
+.rd-tile .k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* body-md, not heading-2. Four tiles at heading size crowd a strip that is
+   meant to be read at a glance, not studied. */
+.rd-tile .v {
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.rd-tile .v .of {
+  color: var(--color-fg-muted);
+  font-weight: var(--type-body-weight);
+}
+
+.rd-tile .s {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+  white-space: nowrap;
+}
+
+.rd-tile-none {
+  color: var(--color-fg-muted);
+}
+
+.rd-tile-date {
+  white-space: nowrap;
+}
+
+.rd-tile-bar {
+  display: block;
+  inline-size: 100%;
+  /* Capped. The tile track is 253px, and a full-width fill at 15/15 read as a
+     decorative rule rather than a meter you compare against. */
+  max-inline-size: 120px;
+  block-size: 4px;
+  margin-block-start: 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+.rd-tile-bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--chart-cat-1);
+}
+
+/* ==========================================================================
+   PRODUCT PAGES — A4 bid comparison, A5 award allocation
+   ==========================================================================
+   Two full routes under one shared header. They replaced a 640px drawer that
+   stacked allocate -> readout -> breakdown -> scenarios -> guardrails
+   vertically, so understanding a split meant scrolling away from the control
+   you were changing, and comparing two vendors meant memorising numbers.
+   ==========================================================================*/
+
+.pd-page {
+  /* Room for the pinned footer on the award page, so the last row is never
+     trapped under it. */
+  padding-block-end: var(--space-2xl);
+}
+
+/*
+ * ONE COLUMN now, and that is what closes the gap for good.
+ *
+ * It was a two-column grid with the art in the trailing track, so whichever
+ * column was taller set the height — and the art column was taller on any
+ * product with more than a couple of colourways (measured 210px against a
+ * 153px text column on an 8-colourway style, leaving a 73px dead band above
+ * the tabs). The thumbnail now sits INSIDE the text flow beside the title, so
+ * there is no second track to out-grow it.
+ */
+.pd-head {
+  display: block;
+  margin-block-end: var(--space-md);
+}
+
+.pd-head-main { min-inline-size: 0; }
+
+.pd-trail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  margin-block-end: var(--space-xs);
+}
+
+.pd-trail a { color: var(--color-fg-muted); text-decoration: none; }
+.pd-trail a:hover { color: var(--color-fg-accent); text-decoration: underline; }
+
+.pd-title {
+  font-size: var(--type-page-title-size);
+  font-weight: var(--type-page-title-weight);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.pd-meta {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+  margin-block-start: var(--space-2xs);
+}
+
+/* The four numbers that frame every decision on both pages. A grid, not a
+   flex row: flex sizes each to its content, which is what left the RFP header
+   tiles bunched at one end with dead space after them. */
+/*
+ * FOUR EQUAL TRACKS in a bordered surface — the same shape as `.rd-summary` on
+ * the RFP detail header, because this was the identical defect.
+ *
+ * It was `repeat(4, minmax(0, max-content))`, which sizes each fact to its own
+ * content: measured 82 / 117 / 98 / 46px crammed into the left 415px of a
+ * 998px strip, leaving 583px of dead space and no two labels on a shared edge.
+ * That is exactly what flex did to the RFP tiles (75/88/139/154 in a 1172px
+ * strip) two rounds earlier.
+ */
+/*
+ * Four facts on ONE band beside the title, sized to content rather than
+ * stretched across the page.
+ *
+ * `1fr` tracks were right when this strip spanned the full width; beside a
+ * title it has no width to divide, so `max-content` with a real gap is what
+ * keeps the four measures tight and evenly spaced. The border and surface stay
+ * — they are what separate supporting data from the title it sits next to.
+ */
+.pd-facts {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: var(--space-sm) 0;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+}
+
+/* Padding on the TILE, not a gap on the strip, so each measure owns its whole
+   track — same reason as `.rd-tile`. A hairline between them reads as columns
+   without a heavier divider. */
+.pd-fact {
+  min-inline-size: 0;
+  padding-inline: var(--space-lg);
+  white-space: nowrap;
+}
+
+.pd-fact + .pd-fact { border-inline-start: 1px solid var(--color-border-muted); }
+
+.pd-fact dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.pd-fact dd {
+  margin: 1px 0 0;
+  /* body-md: these are the numbers that frame the decision, so they stay
+     readable — but they are SUPPORTING the title beside them, not competing
+     with it, which is why the label above is caption-size and muted. */
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.pd-fact dd .u {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-weight: var(--type-body-weight);
+}
+
+/* An IDENTITY thumbnail, not a gallery — it confirms which product you are
+   allocating. 3:4 matches the catalogue's aspect so the crop is predictable on
+   a portrait product photograph. */
+/* `.pd-head-art` is GONE. It held the compact ProductGallery, and its height
+   was a function of the product's colourway and image counts — the whole
+   reason this header kept growing a dead band. The gallery lives in the style
+   drawer now; the header carries `.pd-thumb`, a fixed 88px button. */
+
+/* The header-scoped gallery overrides (a 140px hero, wrapping thumbnails)
+   lived here. Both are gone with the gallery itself — the style drawer shows
+   it at 591px, which is what those overrides were fighting to approximate. */
+
+/* `.pd-tabs` USED to live here — a second tab row in the header, whose "Award
+   allocation" tab labelled the page you were already on. Deleted: the page has
+   one tab row (Compare bids · Allocate · Strategies) and the header is
+   identity only. */
+
+/* --- A4 · the bid matrix ------------------------------------------------ */
+
+/* Its own scroll container. Vendors are columns, so a wave with 8 bidders is
+   genuinely wider than the viewport — the page body must never scroll
+   sideways, but a table may inside its own box. */
+.bc-wrap {
+  /*
+   * ISOLATION IS LOAD-BEARING. It gives the table its own stacking context, so
+   * the sticky row-header inside it is ordered against the table rather than
+   * against the page's pinned header. Without it, two --z-sticky elements were
+   * siblings and DOM order decided — the row labels painted over the header.
+   */
+  isolation: isolate;
+  margin-block-start: var(--space-lg);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+
+.bc-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.bc-table thead th,
+.bc-table tbody td,
+.bc-table tbody th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: right;
+  font-size: var(--table-cell-size, var(--type-body-sm-size));
+  font-weight: var(--type-body-weight);
+  border-block-end: 1px solid var(--color-border-muted);
+  vertical-align: top;
+}
+
+/* The row label column is sticky, because a number in the 7th vendor column
+   is meaningless once "Crafting" has scrolled off the left edge. */
+.bc-rowhead {
+  position: sticky;
+  inset-inline-start: 0;
+  /*
+   * --z-sticky, as the system requires — and the page header still wins,
+   * because `.bc-wrap` below creates its own stacking context.
+   *
+   * The bug this replaces: both this column and the pinned page header sat on
+   * --z-sticky as siblings, so DOM order decided and the table's row labels
+   * painted straight over the header. Dropping this to --z-raised fixed the
+   * symptom but broke the rule that pinned chrome is named, not numbered.
+   * Containing the table instead fixes it at the right level: this z-index is
+   * now scoped to the table, so it cannot compete with page chrome at all.
+   */
+  z-index: var(--z-sticky);
+  text-align: start !important;
+  background: var(--color-bg-surface);
+  min-inline-size: 190px;
+  color: var(--color-fg-default);
+}
+
+/* The corner cell needs NO extra rung: it lives in thead, which already paints
+   above tbody in table stacking order, so --z-sticky on both is correct. */
+
+/*
+ * NOT sticky, and the reason is worth recording: `.bc-table` is
+ * `display: block` with its own `overflow-x: auto` (vendors are columns, so a
+ * wide wave scrolls sideways inside its own box). A sticky `thead` then pins
+ * to THAT box, which scrolls away with the page — measured thTop -326 while
+ * the page header sat at 233. Making the column labels stick would mean
+ * restructuring the table's scroll model, which is not what this round is
+ * for. The vendor names are one scroll-up away and the page header, which is
+ * what was asked for, does stay.
+ */
+.bc-table thead th {
+  background: var(--color-bg-surface-sunken);
+  vertical-align: bottom;
+  border-block-end: 1px solid var(--color-border-default);
+}
+
+.bc-vendor { min-inline-size: 150px; }
+
+.bc-vendor-name {
+  display: block;
+  color: var(--color-fg-default);
+  font-weight: var(--type-emphasis-weight);
+  text-decoration: none;
+}
+.bc-vendor-name:hover { color: var(--color-fg-accent); text-decoration: underline; }
+
+.bc-sub {
+  display: block;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-weight: var(--type-body-weight);
+  white-space: nowrap;
+}
+
+.bc-type {
+  display: flex;
+  gap: var(--space-2xs);
+  justify-content: flex-end;
+  margin-block-start: var(--space-2xs);
+}
+
+/* The reference column sits FIRST, right after the row label, because every
+   other number on the row is read against it. */
+.bc-clean {
+  background: var(--color-bg-surface-sunken);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 110px;
+}
+
+.bc-num { font-variant-numeric: tabular-nums; }
+
+.bc-num.is-above { color: var(--color-feedback-danger-fg); }
+.bc-num.is-below { color: var(--color-feedback-success-fg); }
+
+.bc-flag { margin-inline-start: 4px; font-size: var(--type-caption-size); }
+
+.bc-total th,
+.bc-total td {
+  border-block-start: 1px solid var(--color-border-default);
+  font-weight: var(--type-emphasis-weight);
+}
+
+.bc-chain td,
+.bc-chain th { color: var(--color-fg-muted); }
+
+.bc-best th,
+.bc-best td {
+  border-block-start: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface-sunken);
+}
+
+.bc-best-v {
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-emphasis-weight);
+}
+
+.bc-pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
+.bc-neg { color: var(--color-feedback-danger-fg); font-weight: var(--type-emphasis-weight); }
+
+.bc-warn { color: var(--color-feedback-warning-fg); display: inline-flex; align-items: center; gap: 4px; }
+
+.bc-none { color: var(--color-fg-muted); }
+
+.bc-drill-row td,
+.bc-drill-row th { border-block-end: 0; }
+
+.bc-drill {
+  padding: var(--space-md) var(--space-lg);
+  border-block-start: 1px solid var(--color-border-muted);
+  background: var(--color-bg-surface-sunken);
+}
+
+.bc-drill-h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-sm);
+}
+.bc-drill-h .bc-sub { display: inline; }
+
+/* Line inputs are template-defined and there can be dozens, so they wrap into
+   columns rather than running as one long list. */
+.bc-lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-xs) var(--space-lg);
+  margin: 0;
+}
+
+.bc-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-block: 2px;
+  border-block-end: 1px dotted var(--color-border-muted);
+}
+
+.bc-line dt { color: var(--color-fg-muted); font-size: var(--type-body-sm-size); }
+.bc-line dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--type-body-sm-size);
+}
+
+.bc-note {
+  padding: var(--space-sm) var(--space-lg);
+  margin: 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  border-block-start: 1px solid var(--color-border-muted);
+}
+
+/* The handoff from comparing to committing — the only thing on A4 that leads
+   somewhere that writes. */
+.pd-handoff {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-block-start: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+}
+
+.pd-handoff-sub {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+  margin-block-start: 2px;
+}
+
+@media (max-width: 900px) {
+  .pd-head { grid-template-columns: minmax(0, 1fr); }
+  .pd-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+}
+
+/* --- A5 · award allocation --------------------------------------------- */
+
+.pd-subtabs { margin-block: var(--space-md) var(--space-lg); }
+
+/* Room for the pinned footer, so the last row and the comment box are never
+   trapped underneath it. Same idiom as .has-tray for the selection tray. */
+/*
+ * Clearance for the fixed footer.
+ *
+ * This was `var(--space-4xl)`, a token I INVENTED — the scale ends at 3xl. An
+ * undefined custom property invalidates the declaration, so it computed to
+ * 0px and the comment textarea's bottom sat 117px BELOW the footer's top,
+ * measured. That is the design system's rule 3 ("never invent a token") doing
+ * exactly the job it exists for, and me not listening.
+ *
+ * The footer measures 53px, so 3xl (48) alone is not enough. Stated as a calc
+ * against real tokens rather than a magic number, so a density change carries.
+ */
+.pd-page.has-pinned {
+  padding-block-end: calc(var(--space-3xl) + var(--space-2xl));
+}
+
+/* THE READOUT SITS ABOVE THE CONTROLS. It looks backwards until you use it:
+   these are the numbers you steer toward, so putting them below the inputs
+   costs a scroll per keystroke — which is exactly the defect that made the
+   640px drawer unusable and turned this into a page. */
+.pd-readout {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-md);
+  margin: 0 0 var(--space-lg);
+  padding: var(--space-md) 0;
+  border-block: 1px solid var(--color-border-muted);
+}
+
+.pd-ro { padding-inline: var(--space-lg); min-inline-size: 0; }
+.pd-ro + .pd-ro { border-inline-start: 1px solid var(--color-border-muted); }
+
+.pd-ro dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.pd-ro dd {
+  margin: 2px 0 0;
+  font-size: var(--type-heading-2-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.pd-ro dd.s {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+  font-weight: var(--type-body-weight);
+}
+
+.pd-ro dd.pos { color: var(--color-feedback-success-fg); }
+.pd-ro dd.neg { color: var(--color-feedback-danger-fg); }
+
+.pd-applied {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-md);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-feedback-success-fg);
+}
+
+/* Allocation table and the region panel side by side: the split and where it
+   lands are one thought, so reading one must not hide the other. */
+.pd-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.pd-alloc { min-inline-size: 0; }
+
+.pd-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+}
+
+.pd-table th,
+.pd-table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: start;
+  font-size: var(--table-cell-size, var(--type-body-sm-size));
+  font-weight: var(--type-body-weight);
+  border-block-end: 1px solid var(--color-border-muted);
+  vertical-align: top;
+}
+
+.pd-table thead th {
+  background: var(--color-bg-surface-sunken);
+  border-block-end: 1px solid var(--color-border-default);
+  white-space: nowrap;
+}
+
+.pd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pd-table tbody tr:last-child td { border-block-end: 0; }
+
+/* A row carrying volume is the row you are deciding about. */
+.pd-table tbody tr.is-on { background: var(--color-bg-surface-sunken); }
+
+.pd-vend { display: flex; align-items: center; gap: var(--space-2xs); flex-wrap: wrap; }
+.pd-vend-n { font-weight: var(--type-emphasis-weight); }
+
+.pd-vend-m {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  margin-block-start: 2px;
+}
+
+.pd-vend-warn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-block-start: var(--space-2xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-feedback-warning-fg);
+}
+
+.pd-basis {
+  display: block;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.pd-pct { inline-size: 84px; margin-inline-start: auto; }
+.pd-pct input { text-align: right; font-variant-numeric: tabular-nums; }
+
+.pd-none { color: var(--color-fg-muted); }
+.pd-table .pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
+.pd-table .neg { color: var(--color-feedback-danger-fg); font-weight: var(--type-emphasis-weight); }
+
+.pd-comment { margin-block-start: var(--space-lg); }
+
+/* --- the region panel · INFORMATIONAL, never a guardrail ---------------- */
+
+.pd-region {
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+  padding: var(--space-md);
+}
+
+.pd-region-h { display: flex; flex-direction: column; margin-block-end: var(--space-md); }
+.pd-region-sub { font-size: var(--type-caption-size); color: var(--color-fg-muted); }
+
+.pd-region-rows { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.pd-reg.is-empty { opacity: 0.55; }
+
+.pd-reg-top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  font-size: var(--type-body-sm-size);
+}
+
+.pd-reg-n { color: var(--color-fg-default); }
+.pd-reg-v { font-variant-numeric: tabular-nums; font-weight: var(--type-emphasis-weight); }
+
+/* NEUTRAL fill, always. A feedback tone here would read as a breach, and there
+   is no threshold on this panel to breach — the caps live on the wave. */
+.pd-reg-bar {
+  display: block;
+  block-size: 6px;
+  margin-block-start: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+.pd-reg-bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--chart-cat-1);
+}
+
+.pd-reg-d {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+  margin-block-start: 2px;
+}
+
+.pd-region-note {
+  margin: var(--space-md) 0 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* --- strategies -------------------------------------------------------- */
+
+.pd-strats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-md);
+}
+
+.pd-strat {
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-container);
+  background: var(--color-bg-surface);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* The comparison baseline reads as the reference, not as an option. */
+.pd-strat.is-current { background: var(--color-bg-surface-sunken); }
+.pd-strat.is-applied { border-color: var(--color-fg-accent); }
+.pd-strat.is-off { opacity: 0.7; }
+
+.pd-strat-h {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.pd-strat-n { font-weight: var(--type-emphasis-weight); }
+.pd-strat-r { font-size: var(--type-caption-size); color: var(--color-fg-muted); margin-block-start: 2px; }
+
+.pd-strat-tag { font-size: var(--type-caption-size); color: var(--color-fg-muted); white-space: nowrap; }
+.pd-strat-tag.is-warn { color: var(--color-feedback-warning-fg); }
+
+.pd-strat-nums { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+
+.pd-strat-sav,
+.pd-strat-blend { display: flex; flex-direction: column; }
+
+.pd-strat-sav > span:first-child,
+.pd-strat-blend > span:first-child {
+  font-size: var(--type-heading-2-size);
+  font-weight: var(--type-emphasis-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.pd-strat-sav .pos { color: var(--color-feedback-success-fg); }
+.pd-strat-sav .neg { color: var(--color-feedback-danger-fg); }
+.pd-strat-k { font-size: var(--type-caption-size); color: var(--color-fg-muted); }
+
+.pd-strat-best {
+  align-self: flex-start;
+  font-size: var(--type-caption-size);
+  color: var(--color-feedback-success-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The split itself, so a card is checkable rather than a claim. */
+.pd-strat-split { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+
+.pd-chip {
+  font-size: var(--type-caption-size);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  border: 1px solid var(--color-border-muted);
+  white-space: nowrap;
+}
+
+.pd-strat-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* Each region label. The container was styled and this was not, so the
+   children inherited the flex gap but nothing else — caught by the linter's
+   undefined-class check, not by looking at it. */
+.pd-strat-reg {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pd-strat-off {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0;
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+
+.pd-strats-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* --- the pinned footer · where the commit lives ------------------------- */
+
+/* FIXED, and the confirmation replaces the action row inside it rather than
+   appearing below. In the drawer the confirm bar was the last child of a long
+   scrollable body — measured out of the viewport — so clicking Award looked
+   like nothing happening. The question now appears where the click landed. */
+.pd-footer {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-xl);
+  background: var(--color-bg-surface);
+  border-block-start: 1px solid var(--color-border-default);
+  box-shadow: var(--elevation-overlay);
+  animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing);
+}
+
+/* Clears the 220px nav so the footer belongs to the content, not the shell. */
+.shell:not(.nav-collapsed) .pd-footer { inset-inline-start: 220px; }
+
+.pd-footer-state {
+  margin-inline-end: auto;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  min-inline-size: 0;
+}
+
+.pd-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-feedback-success-fg);
+  font-weight: var(--type-emphasis-weight);
+}
+
+.pd-invalid { color: var(--color-feedback-warning-fg); font-weight: var(--type-emphasis-weight); }
+
+.pd-footer-sav {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-confirm-q {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  color: var(--color-feedback-warning-fg);
+}
+
+.aw-awarded-bar { margin-block-end: var(--space-md); }
+
+@media (max-width: 1100px) {
+  .pd-cols { grid-template-columns: minmax(0, 1fr); }
+  .pd-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pd-ro:nth-child(3) { border-inline-start: 0; }
+}
+
+/* --- A8 · two views, seven filters ------------------------------------- */
+
+/* The view toggle sits ABOVE the filter row, because the filters apply to
+   BOTH views — putting it inside the filter strip would read as an eighth
+   filter rather than a change of angle on the same filtered set. */
+.aw-views { margin-block-end: var(--space-md); }
+
+/* Seven selects plus a search wrap onto two lines at most widths, so the row
+   needs a row-gap it never needed with four. */
+.aw-filters { row-gap: var(--space-sm); }
+
+.aw-vend-link {
+  display: block;
+  color: var(--color-fg-default);
+  font-weight: var(--type-emphasis-weight);
+  text-decoration: none;
+}
+.aw-vend-link:hover { color: var(--color-fg-accent); text-decoration: underline; }
+
+.aw-pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
+
+/* Share of allocated value in the CURRENT filter. Neutral fill: this is a
+   distribution, not a threshold, and a feedback tone would imply a cap that
+   lives on the wave rather than here. */
+.aw-share { display: flex; align-items: center; gap: var(--space-sm); }
+
+.aw-share-bar {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 140px;
+  block-size: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+}
+
+.aw-share-bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--chart-cat-1);
+}
+
+.aw-share-k {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+/* --- A14 · bucket expand, saved strategies ----------------------------- */
+
+/* A bucket row is a button when it has lines behind it. The chevron is the
+   affordance; the whole label is the hit target. */
+.bc-expand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-fg-default);
+  font: inherit;
+  text-align: start;
+}
+
+.bc-expand:hover { color: var(--color-fg-accent); }
+
+/* A bucket with no template lines gets no chevron, but must still align with
+   the ones that do — otherwise the labels sit on two different left edges. */
+.bc-noexpand { padding-inline-start: calc(var(--size-icon-sm, 16px) + var(--space-2xs)); }
+
+.bc-bucket.is-open .bc-rowhead { font-weight: var(--type-emphasis-weight); }
+
+/* The group heading inside an expansion ("Cost lines" / "Inputs behind
+   them"). It carries no values — it labels the rows beneath it. */
+.bc-group th,
+.bc-group td {
+  background: var(--color-bg-surface-sunken);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-block: var(--space-2xs);
+  border-block-end: 0;
+}
+
+.bc-group .bc-rowhead { padding-inline-start: var(--space-xl); }
+
+.bc-line-row th,
+.bc-line-row td {
+  padding-block: 2px;
+  border-block-end: 0;
+  color: var(--color-fg-muted);
+}
+
+.bc-line-row .bc-rowhead {
+  padding-inline-start: var(--space-xl);
+  font-weight: var(--type-body-weight);
+}
+
+.bc-line-label { color: var(--color-fg-default); }
+
+/* The unit rides with the label, not the value: repeating "Meters" in every
+   vendor column would triple the noise for one piece of information. */
+.bc-line-unit {
+  margin-inline-start: var(--space-2xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+}
+
+/* A text answer ("Ponte knit", "Vietnam") can be long, and one long cell must
+   not widen a numeric column for every vendor. */
+.bc-line-text {
+  display: inline-block;
+  max-inline-size: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* The last row before a bucket's expansion ends needs its rule back. */
+.bc-line-row:last-of-type td,
+.bc-line-row:last-of-type th { border-block-end: 1px solid var(--color-border-muted); }
+
+/* --- saved strategies -------------------------------------------------- */
+
+/* `current` is a STATE, so it reads as one — distinct from the neutral
+   qualifier chips used for vendor type. */
+.pd-chip-current {
+  flex: 0 0 auto;
+  font-size: var(--type-caption-size);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--color-feedback-success-bg);
+  color: var(--color-feedback-success-fg);
+  white-space: nowrap;
+}
+
+.pd-strat.is-saved { border-inline-start: 2px solid var(--color-fg-accent); }
+
+.pd-strat-mine {
+  margin-inline-start: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-weight: var(--type-body-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The note is the reason someone saved this split — it is content, not a
+   caption, so it keeps default ink. */
+.pd-strat-note {
+  margin-block-start: 2px;
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-default);
+}
+
+.pd-strat-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-block-start: var(--space-sm);
+  border-block-start: 1px solid var(--color-border-muted);
+}
+
+.pd-strat-formacts { display: flex; gap: var(--space-xs); justify-content: flex-end; }
+
+.pd-strat-warn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0;
+  font-size: var(--type-body-sm-size);
+  color: var(--color-feedback-warning-fg);
+}
+
+/* Delete sits at the trailing edge, away from Apply — the two must not be
+   adjacent when one is destructive. */
+.pd-strat-delbtn { align-self: flex-end; }
+
+.pd-strat-del {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  /* Replaces the padding the negative offset cancels, so the breadcrumb does
+     not sit flush against the chrome once pinned. */
+  padding-block-start: var(--space-xl);
+  border-block-start: 1px solid var(--color-border-muted);
+  font-size: var(--type-body-sm-size);
+}
+
+.pd-strats-err { grid-column: 1 / -1; }
+
+/* The affirmative on an inline delete confirm. A ghost by weight — the pinned
+   footer owns the page's secondary — marked by the danger foreground and by
+   being last, which is the system's rule for a destructive menu item. */
+.pd-del-yes { color: var(--color-feedback-danger-fg); }
+
+/* --- A15 · product page polish ----------------------------------------- */
+
+/*
+ * STICKY: identity + facts + tabs pin together while the tab body scrolls.
+ *
+ * The scroll container is `.shell > .ct` (measured overflow-y: auto — the
+ * document itself does not scroll in this shell), so sticky resolves against
+ * that and needs no JS.
+ *
+ * OPAQUE BACKGROUND IS LOAD-BEARING. A sticky element without one lets content
+ * scroll visibly through it — a defect already on record in this build from
+ * the drawer hero. The negative inline margin + matching padding let the
+ * background bleed to the content edges while the children stay aligned to the
+ * page's own gutter.
+ */
+.pd-sticky {
+  position: sticky;
+  /*
+   * NEGATIVE, by exactly `.ct`'s top padding.
+   *
+   * Sticky resolves against the containing block's PADDING box, and
+   * `.shell > .ct` carries 24px of top padding — so `inset-block-start: 0`
+   * parked the header 24px below the viewport edge with a strip of scrolling
+   * content visible above it. Measured: stickyTop 85 against ctTop 61.
+   *
+   * `--space-xl` IS that 24px (space-24). `--space-lg` is 16 and left an 8px
+   * gap — checked against foundation.css rather than guessed.
+   */
+  inset-block-start: calc(var(--space-xl) * -1);
+  z-index: var(--z-sticky);
+  background: var(--color-bg-canvas);
+  margin-inline: calc(var(--space-xl) * -1);
+  padding-inline: var(--space-xl);
+  padding-block-start: var(--space-xs);
+  /* The tab row draws the only rule; a second border here would double it. */
+  margin-block-end: var(--space-lg);
+}
+
+/* Title, thumbnail and hierarchy on one line. */
+/* Title block and the facts strip share ONE band, because the 88px thumbnail
+   sets the height and a 35px title leaves room beside it. Stacking them made
+   three rows of chrome (18 + 88 + 63) before the tabs even started. */
+.pd-id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-inline-size: 0;
+}
+
+.pd-id .pd-facts {
+  margin: 0;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+.pd-id-text { min-inline-size: 0; }
+
+/*
+ * A FIXED 88px thumbnail — the point of the whole change.
+ *
+ * Identical on all 82 products, where the gallery it replaced ran 187-210px
+ * and grew with the product's colourway count. 3:4 matches the catalogue's
+ * aspect so a portrait product photo crops predictably.
+ */
+.pd-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  inline-size: 66px;
+  block-size: 88px;
+  padding: 0;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-inner);
+  background: var(--color-bg-surface-sunken);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pd-thumb img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pd-thumb:hover { border-color: var(--color-border-strong); }
+
+/* The count is the affordance: it says there is more behind this one image. */
+.pd-thumb-n {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-block: 2px;
+  background: var(--color-bg-emphasis);
+  color: var(--color-fg-on-emphasis);
+  font-size: var(--type-caption-size);
+  line-height: 1;
+}
+
+/* Colourway count as a text button — the chips themselves are in the drawer. */
+.pd-cw-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--color-fg-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Tighter than the old header: this row sits directly under the title block,
+   and the tab rule closes the sticky unit. */
+.pd-facts { margin-block: var(--space-sm) 0; }
+
+.pd-subtabs { margin-block: var(--space-md) 0; }
+
+/* --- footer spacing ---------------------------------------------------- */
+
+/*
+ * The state text read "100% allocatedsaves $4.8M · 17.8%" — no space between
+ * the two parts, because they are separate elements in a flex row whose gap
+ * did not apply as authored. A separator makes the two halves legible rather
+ * than relying on whitespace alone.
+ */
+/* The two halves were rendering as "100% allocatedsaves $4.8M" — adjacent
+   elements with no separation. A middot carries it; the flex gap alone then
+   doubled the space, so the gap goes and the separator owns the rhythm. */
+.pd-footer-state { gap: 0; }
+
+.pd-footer-sav::before {
+  content: "·";
+  /* xs, not sm. The span already begins with a space in the markup, so sm on
+     both sides rendered as a visibly doubled gap. */
+  margin-inline: var(--space-xs);
+  color: var(--color-fg-subtle);
+}
+
+/* Clears the content column's gutter so the state text does not sit flush
+   against the page edge. */
+.pd-footer { padding-inline: var(--space-2xl); }
+
+/* ==========================================================================
+   THE DEMO GATE — one shared password in front of the whole portal
+   ==========================================================================
+   Only reachable when DEMO_PASSWORD is set, which is only when the app is
+   published through a tunnel. Built from the system like any other screen:
+   someone landing here should recognise Procura, not scaffolding.
+   ==========================================================================*/
+
+.gate {
+  min-block-size: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+  background: var(--color-bg-canvas);
+}
+
+.gate-card {
+  inline-size: min(380px, 100%);
+  text-align: center;
+}
+
+/* The brandmark, at the one size this screen needs it. */
+.gate-mark {
+  inline-size: 48px;
+  block-size: 48px;
+  margin: 0 auto var(--space-md);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-element);
+  background: var(--color-bg-accent-subtle);
+  color: var(--color-fg-accent);
+}
+
+.gate-ttl {
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--type-heading-2-size);
+  font-weight: var(--type-emphasis-weight);
+}
+
+.gate-sub {
+  margin: 0 0 var(--space-lg);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+
+.gate-err { margin-block-end: var(--space-md); text-align: start; }
+
+/* The field's own label is start-aligned even though the card is centred —
+   a centred label over a left-aligned input reads as a mistake. */
+.gate .field { text-align: start; }
+
+.gate-go { inline-size: 100%; margin-block-start: var(--space-sm); }
+
+/* Says plainly that the numbers are invented. A business user seeing real
+   product photography next to a $27.2M figure should not have to ask. */
+.gate-note {
+  margin: var(--space-lg) 0 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-subtle);
+  line-height: 1.5;
 }

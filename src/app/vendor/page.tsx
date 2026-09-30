@@ -29,6 +29,8 @@ type Invitation = {
   productCount: number;
   submittedCount: number;
   completion: number;
+  awardedCount: number;
+  decidedCount: number;
   products: {
     id: string;
     styleNumber: string;
@@ -36,6 +38,10 @@ type Invitation = {
     heroImage: string | null;
     state: "SUBMITTED" | "DRAFT" | "BLANK";
     fob: number | null;
+    /** null while procurement has not released a decision. */
+    outcome: "AWARDED" | "NOT_PROCEEDING" | null;
+    awardPct: number | null;
+    awardedUnits: number | null;
   }[];
 };
 
@@ -154,6 +160,14 @@ export default function VendorDashboard() {
                   {inv.submittedCount} of {inv.productCount} submitted
                 </span>
               </div>
+
+              {inv.decidedCount > 0 ? (
+                <span className="vo-headline">
+                  {inv.awardedCount > 0
+                    ? `Awarded to you: ${inv.awardedCount} of ${inv.productCount}`
+                    : "No products awarded to you on this RFP"}
+                </span>
+              ) : null}
             </div>
 
             {inv.rfp.instructions ? (
@@ -166,12 +180,26 @@ export default function VendorDashboard() {
             ) : null}
 
             <div className="data-grid-surface">
+              {/* Declared widths put the grid into FIXED layout. Without them
+                  each RFP's table auto-sizes to its own content, so "State"
+                  and "Your FOB" landed at different x-positions from one card
+                  to the next. */}
               <table className="data-grid">
+                <colgroup>
+                  <col style={{ width: "40%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "22%" }} />
+                  <col style={{ width: "11%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Product</th>
                     <th>State</th>
                     <th className="num">Your FOB</th>
+                    {/* The answer to "did we win" — the one thing this portal
+                        never told a vendor before. */}
+                    <th>Outcome</th>
                     <th className="act">Quote</th>
                   </tr>
                 </thead>
@@ -191,6 +219,25 @@ export default function VendorDashboard() {
                         )}
                       </td>
                       <td className="num">{unitCost(p.fob)}</td>
+                      <td>
+                        {p.outcome === "AWARDED" ? (
+                          <span className="vo-won">
+                            <Badge tone="success">Awarded</Badge>
+                            {/* Their share and their volume — nothing about
+                                anyone else, so this cannot reveal a split. */}
+                            <span className="vo-detail">
+                              {p.awardPct}% ·{" "}
+                              {units(p.awardedUnits)} units
+                            </span>
+                          </span>
+                        ) : p.outcome === "NOT_PROCEEDING" ? (
+                          <Badge>Not proceeding</Badge>
+                        ) : (
+                          <span className="vo-pending">
+                            {p.state === "SUBMITTED" ? "Under review" : "—"}
+                          </span>
+                        )}
+                      </td>
                       <td className="act">
                         <Link
                           className="btn btn--ghost btn--sm"

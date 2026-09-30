@@ -44,6 +44,9 @@ export async function GET(
           include: {
             vendor: true,
             styles: { select: { styleId: true } },
+            // Per-product state, so a vendor row can say which products are
+            // still pending and open the ones that are in.
+            quotes: { select: { styleId: true, status: true, fob: true } },
           },
         },
       },
@@ -112,6 +115,11 @@ export async function GET(
         isTemp: inv.vendor.isTemp,
         status: inv.status,
         styleIds: inv.styles.map((s) => s.styleId),
+        quotes: inv.quotes.map((q) => ({
+          styleId: q.styleId,
+          status: q.status,
+          fob: num(q.fob),
+        })),
       })),
 
       candidates: vendors.map((v) => ({
