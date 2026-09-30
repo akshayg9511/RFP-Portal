@@ -8,8 +8,8 @@ import { money, units } from "@/lib/format";
 import { SaveAsSetDialog } from "./SaveAsSetDialog";
 import { SelectionTray } from "../style-sets/SelectionTray";
 import { FacetSelect } from "@/components/FacetSelect";
-import { Checkbox } from "@/ds/components";
-import { isExpandable, type Grain } from "@/domain/grain";
+import { Badge, Checkbox } from "@/ds/components";
+import { GRAINS, isExpandable, type Grain } from "@/domain/grain";
 import {
   useVariationGroups,
   VariationRows,
@@ -55,6 +55,14 @@ type Row = {
 
 type Facet = { value: string; count: number };
 
+/** Same wording as Variation setup — one vocabulary for one concept. */
+const GRAIN_LABEL: Record<Grain, string> = {
+  STYLE: "Style",
+  COLOUR: "Colour",
+  SIZE: "Size",
+  SKU: "Colour × size",
+};
+
 type Catalog = {
   facets: {
     division: Facet[];
@@ -89,6 +97,7 @@ export default function ProductCatalogPage() {
   // SKU-grain products would push a very long page; and it matches how the
   // RFP Products tab already behaves.
   const [openRow, setOpenRow] = React.useState<string | null>(null);
+  const [grain, setGrain] = React.useState("");
   const [saveOpen, setSaveOpen] = React.useState(false);
 
   // Filters go to the SERVER: at catalogue scale the client cannot hold every
@@ -109,7 +118,11 @@ export default function ProductCatalogPage() {
   const selection = useSelection();
 
   const rows = React.useMemo(() => {
-    const list = [...(data?.styles ?? [])];
+    // Grain is filtered client-side. The catalog API has no grain param, and
+    // adding one would change a response shape /style-sets/[id] also reads.
+    const list = (data?.styles ?? []).filter(
+      (r) => !grain || r.variationLevel === grain,
+    );
     list.sort((a, b) => {
       if (sort === "styleNumber") return a.styleNumber.localeCompare(b.styleNumber);
       if (sort === "units") return (b.planUnits ?? 0) - (a.planUnits ?? 0);
@@ -117,10 +130,19 @@ export default function ProductCatalogPage() {
       return b.revenue - a.revenue;
     });
     return list;
-  }, [data, sort]);
+  }, [data, sort, grain]);
 
   const filtered =
-    Boolean(query.trim() || division || department || subDepartment || material || minRevenue || inSet);
+    Boolean(
+      query.trim() ||
+        division ||
+        department ||
+        subDepartment ||
+        material ||
+        minRevenue ||
+        inSet ||
+        grain,
+    );
 
   function clearFilters() {
     setQuery("");
@@ -130,6 +152,7 @@ export default function ProductCatalogPage() {
     setMaterial("");
     setMinRevenue(0);
     setInSet("");
+    setGrain("");
   }
 
   const allVisibleSelected =
@@ -225,6 +248,20 @@ export default function ProductCatalogPage() {
 
         <select
           className="control sm"
+          aria-label="Filter by bid grain"
+          value={grain}
+          onChange={(e) => setGrain(e.target.value)}
+        >
+          <option value="">All grains</option>
+          {GRAINS.map((g) => (
+            <option key={g} value={g}>
+              {GRAIN_LABEL[g]} level
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="control sm"
           aria-label="Sort by"
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
@@ -249,14 +286,18 @@ export default function ProductCatalogPage() {
 
       <div className="data-grid-surface">
         <table className="data-grid aw-grid">
+          {/* Grain sits after Category and BEFORE the numeric run, so the
+              right-aligned figures stay contiguous — splitting them is the
+              A13 defect that made the RFP list read as skewed. */}
           <colgroup>
             <col style={{ width: "4%" }} />
-            <col style={{ width: "30%" }} />
-            <col style={{ width: "16%" }} />
+            <col style={{ width: "27%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
             <col style={{ width: "12%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "13%" }} />
             <col style={{ width: "12%" }} />
+            <col style={{ width: "9%" }} />
           </colgroup>
           <thead>
             <tr>
@@ -264,10 +305,10 @@ export default function ProductCatalogPage() {
                 {/* Selects only what is VISIBLE — with a filter applied that is
                     the point, and with 10,000 products selecting all of them
                     would never be meant. */}
-                <input
-                  type="checkbox"
+                <Checkbox
                   aria-label="Select all shown products"
                   checked={allVisibleSelected}
+                  mixed={selection.count > 0 && !allVisibleSelected}
                   onChange={() => {
                     if (allVisibleSelected) {
                       for (const r of rows) {
@@ -281,6 +322,7 @@ export default function ProductCatalogPage() {
               </th>
               <th>Product</th>
               <th>Category</th>
+              <th>Bid grain</th>
               <th className="num">Plan units</th>
               <th className="num">Revenue</th>
               <th className="num">Annual spend</th>
@@ -291,7 +333,7 @@ export default function ProductCatalogPage() {
             {loading
               ? Array.from({ length: 10 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <div className="sk" style={{ blockSize: 30 }} />
                     </td>
                   </tr>
@@ -300,7 +342,7 @@ export default function ProductCatalogPage() {
 
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="empty compact">
                     <span className="glyph">
                       <Icon name="search" size="lg" />
@@ -446,6 +488,16 @@ function ProductRow({
                     ) : null}
                   </span>
                 </td>
+                <td>
+                  {/* The grain is set on Variation setup; here it is a
+                      read-only fact, so it wears a badge rather than a
+                      control. `info` only when there is something to
+                      expand — a style-grain badge competing for attention
+                      with 62 others that DO expand is noise. */}
+                  <Badge tone={isExpandable(r.variationLevel) ? "info" : undefined}>
+                    {GRAIN_LABEL[r.variationLevel]}
+                  </Badge>
+                </td>
                 <td className="num">{units(r.planUnits)}</td>
                 <td className="num">
                   {/* planUnits x retailPrice. Revenue2026 is in the schema and
@@ -475,7 +527,7 @@ function ProductRow({
           loading={loading}
           selectedIds={chosen}
           onToggle={selection.toggleVariation}
-          columns={7}
+          columns={8}
         />
       ) : null}
     </>
