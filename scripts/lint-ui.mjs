@@ -160,11 +160,25 @@ const STATES = {
   ],
   "/products": [
     {
+      // The variation rows are a different surface from the product rows —
+      // recessed background, indented checkbox, a range in the cost cell.
+      name: "catalog — product expanded to variations",
+      open: async (page) => {
+        await page.waitForSelector("tbody tr.pc-row", { timeout: 8000 });
+        await page.locator(".pc-chev:not(.pc-chev--none)").first().click();
+        await page.waitForSelector(".pc-var-label", { timeout: 8000 });
+        await page.waitForTimeout(400);
+      },
+    },
+    {
       name: "selection tray + save-as-set dialog",
       open: async (page) => {
-        const boxes = page.locator("tbody tr.pc-row input[type=checkbox]");
-        await boxes.nth(0).check();
-        await boxes.nth(1).check();
+        // Phase 1b migrated this column from a raw input to the DS
+        // Checkbox, which is a button[role=checkbox] — there is no `input`
+        // to check any more.
+        const boxes = page.locator('tbody tr.pc-row [role="checkbox"]');
+        await boxes.nth(0).click();
+        await boxes.nth(1).click();
         await page.waitForSelector(".sel-bar", { timeout: 5000 });
         await page.locator('.sel-bar button:has-text("With")').click();
         await page.locator('.sel-menu [role=menuitem]:has-text("style set")').click();

@@ -21,12 +21,15 @@ import { money } from "@/lib/format";
  */
 export function SelectionTray({
   count,
+  skuCount = 0,
   annualSpend,
   templateCount,
   onClear,
   onSaveAsSet,
 }: {
   count: number;
+  /** Selected variations. 0 when everything is a whole-product pick. */
+  skuCount?: number;
   annualSpend: number;
   templateCount: number;
   onClear: () => void;
@@ -78,7 +81,12 @@ export function SelectionTray({
   return (
     <div className="sel-bar fixed">
       <span className="cnt">
-        {count} {count === 1 ? "product" : "products"} · {money(annualSpend)} annual
+        {count} {count === 1 ? "product" : "products"}
+        {/* SKUs only when variations were actually picked — on a style-grained
+            selection the figure would just restate the product count. */}
+        {skuCount > 0 ? ` · ${skuCount} SKU${skuCount === 1 ? "" : "s"}` : ""}
+        {" · "}
+        {money(annualSpend)} annual
         {templateCount > 1 ? (
           <>
             {" · "}

@@ -4991,3 +4991,60 @@ body > .drawer-frame .drawer {
   color: var(--color-fg-on-emphasis);
   align-self: center;
 }
+
+/* --- Catalog variation rows (phase 1b) --- */
+
+/* The chevron sits INSIDE the product cell, not in a column of its own: the
+   row already belongs to the checkbox, and a whole-row button cannot contain
+   an interactive checkbox. */
+.pc-chev {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--size-control-sm);
+  block-size: var(--size-control-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-inner);
+  background: none;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+
+.pc-chev:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-fg-default);
+}
+
+/* A style-grained product has nothing to expand. The slot is held so every
+   product name starts on the same left edge. */
+.pc-chev--none {
+  cursor: default;
+}
+
+/* Variation rows are siblings in the SAME table, so they inherit the
+   colgroup and their figures stay under the right columns. */
+.pc-var-row > td {
+  background: var(--color-bg-muted);
+  padding-block: var(--space-xs);
+}
+
+.pc-var-row .pc-var-box {
+  display: inline-flex;
+  padding-inline-start: var(--space-lg);
+}
+
+.pc-var-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  padding-inline-start: calc(var(--size-control-sm) + var(--space-sm));
+  font-size: var(--type-body-sm-size);
+}
+
+.pc-var-meta,
+.pc-var-none {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}

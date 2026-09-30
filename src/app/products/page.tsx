@@ -8,6 +8,12 @@ import { money, units } from "@/lib/format";
 import { SaveAsSetDialog } from "./SaveAsSetDialog";
 import { SelectionTray } from "../style-sets/SelectionTray";
 import { FacetSelect } from "@/components/FacetSelect";
+import { Checkbox } from "@/ds/components";
+import { isExpandable, type Grain } from "@/domain/grain";
+import {
+  useVariationGroups,
+  VariationRows,
+} from "@/components/VariationRows";
 
 /**
  * The Product catalog — the funnel's mouth.
@@ -41,6 +47,8 @@ type Row = {
   revenue: number;
   annualSpend: number;
   skuCount: number;
+  variationLevel: Grain;
+  colourwayCount: number;
   bidCount: number;
   setCount: number;
 };
@@ -77,6 +85,10 @@ export default function ProductCatalogPage() {
   const [minRevenue, setMinRevenue] = React.useState(0);
   const [inSet, setInSet] = React.useState("");
   const [sort, setSort] = React.useState<SortKey>("revenue");
+  // ONE row open at a time. The catalog has no pagination, so several open
+  // SKU-grain products would push a very long page; and it matches how the
+  // RFP Products tab already behaves.
+  const [openRow, setOpenRow] = React.useState<string | null>(null);
   const [saveOpen, setSaveOpen] = React.useState(false);
 
   // Filters go to the SERVER: at catalogue scale the client cannot hold every
@@ -305,20 +317,106 @@ export default function ProductCatalogPage() {
             ) : null}
 
             {rows.map((r) => (
-              <tr
+              <ProductRow
                 key={r.id}
+                row={r}
+                open={openRow === r.id}
+                onOpen={() => setOpenRow(openRow === r.id ? null : r.id)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <SaveAsSetDialog
+        open={saveOpen}
+        onClose={() => setSaveOpen(false)}
+        styleIds={[...selection.selected.keys()]}
+        onSaved={() => {
+          setSaveOpen(false);
+          selection.clear();
+        }}
+      />
+
+      {/* The same tray the style-set browser uses — the selection lives above
+          the route, so one built here follows into an RFP or into a set. */}
+      <SelectionTray
+        count={selection.count}
+        skuCount={selection.skuCount}
+        annualSpend={selection.annualSpend}
+        templateCount={selection.templateCount}
+        onClear={selection.clear}
+        onSaveAsSet={() => setSaveOpen(true)}
+      />
+    </>
+  );
+}
+
+/**
+ * One product row, plus its variation rows when expanded.
+ *
+ * Split out because the hook that lazy-loads variations cannot be called
+ * inside a `.map()` in the parent — hooks need a component boundary.
+ */
+function ProductRow({
+  row: r,
+  open,
+  onOpen,
+}: {
+  row: Row;
+  open: boolean;
+  onOpen: () => void;
+}) {
+  const selection = useSelection();
+  const expandable = isExpandable(r.variationLevel);
+  const { groups, loading } = useVariationGroups(r.id, open && expandable);
+  const chosen = selection.variationsOf(r.id);
+  const partial = selection.isPartial(r.id);
+
+  return (
+    <>
+              <tr
                 className={selection.isSelected(r.id) ? "pc-row is-on" : "pc-row"}
               >
                 <td>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     aria-label={`Select ${r.name}`}
-                    checked={selection.isSelected(r.id)}
-                    onChange={() => selection.toggle(toSelected(r))}
+                    checked={selection.isSelected(r.id) && !partial}
+                    mixed={partial}
+                    onChange={() => {
+                      // On a variation-grained product the parent box is a
+                      // shortcut for "all of them", so it needs the id list —
+                      // which only exists once the row has been expanded.
+                      if (expandable && groups) {
+                        selection.selectAllVariations(
+                          toSelected(r),
+                          groups.flatMap((g) => g.variationIds),
+                        );
+                      } else {
+                        selection.toggle(toSelected(r));
+                      }
+                    }}
                   />
                 </td>
                 <td>
                   <div className="aw-product">
+                    {expandable ? (
+                      <button
+                        className="pc-chev"
+                        onClick={onOpen}
+                        aria-expanded={open}
+                        aria-label={`${open ? "Hide" : "Show"} variations of ${r.name}`}
+                      >
+                        <Icon
+                          name={open ? "chevron_up" : "chevron_down"}
+                          size="sm"
+                        />
+                      </button>
+                    ) : (
+                      /* A style-grained product has nothing to expand. An
+                         empty slot keeps the names on one left edge. */
+                      <span className="pc-chev pc-chev--none" />
+                    )}
                     {r.heroImage ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img className="aw-thumb" src={r.heroImage} alt="" loading="lazy" />
@@ -333,6 +431,9 @@ export default function ProductCatalogPage() {
                       <span className="aw-product-meta">
                         {r.skuCount} SKUs
                         {r.material ? ` · ${r.material}` : ""}
+                        {chosen.length
+                          ? ` · ${chosen.length} selected`
+                          : ""}
                       </span>
                     </span>
                   </div>
@@ -366,30 +467,17 @@ export default function ProductCatalogPage() {
                   </span>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
 
-      <SaveAsSetDialog
-        open={saveOpen}
-        onClose={() => setSaveOpen(false)}
-        styleIds={[...selection.selected.keys()]}
-        onSaved={() => {
-          setSaveOpen(false);
-          selection.clear();
-        }}
-      />
-
-      {/* The same tray the style-set browser uses — the selection lives above
-          the route, so one built here follows into an RFP or into a set. */}
-      <SelectionTray
-        count={selection.count}
-        annualSpend={selection.annualSpend}
-        templateCount={selection.templateCount}
-        onClear={selection.clear}
-        onSaveAsSet={() => setSaveOpen(true)}
-      />
+      {open && expandable ? (
+        <VariationRows
+          style={toSelected(r)}
+          groups={groups}
+          loading={loading}
+          selectedIds={chosen}
+          onToggle={selection.toggleVariation}
+          columns={7}
+        />
+      ) : null}
     </>
   );
 }
