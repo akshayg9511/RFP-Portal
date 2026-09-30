@@ -1,6 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { htsCode, int, list, money, str } from "../../src/lib/parse";
 import { readSheet, SOURCES, step } from "./lib";
+import { capSkuRows } from "./cap";
+import { grainFor } from "./grain";
 
 /**
  * Styles, colourways, variations, images and clean sheets.
@@ -54,7 +56,35 @@ export async function seedStyles(
       else byStyle.set(key, [row]);
     }
 
-    for (const [styleNumber, skuRows] of byStyle) {
+    for (const [styleNumber, allSkuRows] of byStyle) {
+      // DEMO CAP — 4-5 variations per product, not the real 40. See cap.ts
+      // for why sizeSortOrder and image count are the keys rather than plan
+      // units. Applied here so every downstream write (colourways, images,
+      // variations) sees the same reduced set.
+      // The grain must be resolved BEFORE the cap, because the cap squeezes
+      // whichever axis is not carrying the bid groups.
+      const allSizes = new Set(
+        allSkuRows.map((r) => str(r["Size"])).filter((x): x is string => !!x),
+      );
+      const variationLevel = grainFor(
+        styleNumber,
+        allSizes.size > 1 ? "SIZE" : "STYLE",
+        str(allSkuRows[0]?.["Division"]),
+      );
+
+      const skuRows = capSkuRows(
+        allSkuRows,
+        {
+          size: (r) => str(r["Size"]),
+          sizeSortOrder: (r) => int(r["Size Sort Order"]),
+          colour: (r) => str(r["Color"]),
+          imageCount: (r) =>
+            (str(r["Thumbnail Link"]) ? 1 : 0) +
+            list(r["Additional Image Links"]).length,
+        },
+        variationLevel,
+      );
+
       // Costs are not comparable across scenarios — prefer Default, else take
       // whatever the rows carry.
       const defaults = skuRows.filter(
@@ -85,11 +115,6 @@ export async function seedStyles(
       // Bedding's Size Model disagrees with the real SKU set on 36% of styles,
       // so sizes come from the rows. Bottoms matches, but the rows are correct
       // for both, so there is no reason to branch.
-      const sizes = new Set(
-        skuRows.map((r) => str(r["Size"])).filter((s): s is string => !!s),
-      );
-      const variationLevel = sizes.size > 1 ? "SIZE" : "STYLE";
-
       const style = await db.style.create({
         data: {
           styleNumber,

@@ -45,7 +45,15 @@ async function main() {
     imageGroups.length === styles,
     `${imageGroups.length}/${styles} styles, ${images} images`,
   );
-  check("median images per style >= 8", medianImages >= 8, `median ${medianImages}`);
+  // Was >= 8 before the phase-1f variation cap. Trimming colourways trims
+  // their images with them, so the median fell from 9 to 5 BY DESIGN — the
+  // cap keeps the richest colourways precisely so the carousel still has
+  // material. 4 is the floor at which a gallery still reads as a gallery.
+  check(
+    "median images per style >= 4 (post-cap)",
+    medianImages >= 4,
+    `median ${medianImages}`,
+  );
 
   // 3 — colourways and variations
   const colourways = await db.colourway.count();
@@ -167,6 +175,70 @@ async function main() {
   // Styles left open for the live demo.
   const unbid = styles - bidGroups.length;
   check("styles left unbid for the live demo", unbid > 60, `${unbid} styles`);
+
+  // --- VARIATION GRAIN (phase 1f) ---
+
+  const varGroups = await db.variation.groupBy({
+    by: ["styleId"],
+    _count: { _all: true },
+    _sum: { volumeShare: true, planUnits: true },
+  });
+
+  // The demo cap. A product with 40 varGroups makes an expanded catalog row
+  // unreadable, which is the whole reason cap.ts exists.
+  const overCap = varGroups.filter((v) => v._count._all > 5);
+  check(
+    "no product exceeds 5 varGroups (demo cap)",
+    overCap.length === 0,
+    `max ${Math.max(...varGroups.map((v) => v._count._all))} per style`,
+  );
+
+  check(
+    "every style has at least one variation",
+    varGroups.length === styles,
+    `${varGroups.length} of ${styles} styles`,
+  );
+
+  // volumeShare MUST still sum to 1 after the cap trimmed rows — a share
+  // that sums to 0.6 silently understates every derived size allocation.
+  const badShare = varGroups.filter(
+    (v) => Math.abs(Number(v._sum.volumeShare ?? 0) - 1) > 0.001,
+  );
+  check(
+    "volumeShare sums to 1.0 per style after the cap",
+    badShare.length === 0,
+    `${varGroups.length - badShare.length} of ${varGroups.length} styles`,
+  );
+
+  // Variation plan units must reconcile to the style's, or wave coverage
+  // divides a variation numerator by a style denominator and reads wrong.
+  const styleUnits = new Map(
+    (
+      await db.style.findMany({ select: { id: true, planUnits: true } })
+    ).map((s) => [s.id, s.planUnits ?? 0]),
+  );
+  const badUnits = varGroups.filter(
+    (v) =>
+      Math.abs(Number(v._sum.planUnits ?? 0) - (styleUnits.get(v.styleId) ?? 0)) >
+      5,
+  );
+  check(
+    "variation plan units reconcile to the style total",
+    badUnits.length === 0,
+    `${varGroups.length - badUnits.length} of ${varGroups.length} styles`,
+  );
+
+  // All four grains must be present, or the demo cannot show the range.
+  const grains = await db.style.groupBy({
+    by: ["variationLevel"],
+    _count: { _all: true },
+  });
+  const present = new Set(grains.map((g) => g.variationLevel));
+  check(
+    "all four grains present for the demo",
+    ["STYLE", "COLOUR", "SIZE", "SKU"].every((g) => present.has(g)),
+    grains.map((g) => `${g.variationLevel} ${g._count._all}`).join(" · "),
+  );
 
   console.log(
     `\n${failures === 0 ? "PASS" : "FAIL"} — ${failures} failing check${failures === 1 ? "" : "s"}\n`,
