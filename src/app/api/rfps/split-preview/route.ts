@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { badRequest, handle, num } from "@/lib/api";
+import { grainGroups, type Grain } from "@/domain/grain";
 
 /**
  * @openapi
@@ -41,6 +42,22 @@ export async function POST(request: Request) {
           subDepartment: true,
           planUnits: true,
           baselineFob: true,
+          variationLevel: true,
+          variations: {
+            orderBy: [
+              { sizeSortOrder: "asc" },
+              { size: "asc" },
+              { colour: "asc" },
+            ],
+            select: {
+              id: true,
+              size: true,
+              sizeSortOrder: true,
+              colour: true,
+              planUnits: true,
+              baselineFob: true,
+            },
+          },
           _count: { select: { cleanSheets: true } },
         },
       }),
@@ -111,6 +128,36 @@ export async function POST(request: Request) {
           // Readiness — displayed, not enforced, in the prototype.
           hasBaseline: num(s.baselineFob) !== null,
           hasCleanSheet: s._count.cleanSheets > 0,
+          variationLevel: s.variationLevel,
+          /**
+           * The bid groups this product would go out on, so the creation
+           * screen can show and deselect them. A STYLE-grain product gets an
+           * empty list — there is nothing finer to choose.
+           */
+          variations:
+            (s.variationLevel as Grain) === "STYLE"
+              ? []
+              : grainGroups(
+                  s.variationLevel as Grain,
+                  s.variations.map((v) => ({
+                    id: v.id,
+                    size: v.size,
+                    sizeSortOrder: v.sizeSortOrder,
+                    colour: v.colour,
+                  })),
+                ).map((g) => ({
+                  id: g.variationIds[0],
+                  label: g.label,
+                  variationIds: g.variationIds,
+                  planUnits: g.variationIds.reduce((total, vid) => {
+                    const v = s.variations.find((x) => x.id === vid);
+                    return total + (v?.planUnits ?? 0);
+                  }, 0),
+                  baselineFob: num(
+                    s.variations.find((x) => x.id === g.variationIds[0])
+                      ?.baselineFob ?? null,
+                  ),
+                })),
         })),
       })),
       unresolved: unresolved.map((s) => ({

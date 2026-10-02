@@ -32,6 +32,57 @@ export default function NewRfpPage() {
   const [names, setNames] = React.useState<Record<string, string>>({});
   const [instructions, setInstructions] = React.useState<Record<string, string>>({});
   const [creating, setCreating] = React.useState(false);
+  /**
+   * Variations DESELECTED on this screen, by styleId.
+   *
+   * Exclusions rather than inclusions: a product arrives fully included,
+   * which is what the catalog selection already decided. Aravind was
+   * explicit that re-picking everything here is cumbersome — this screen is
+   * for review and the occasional "not that size".
+   */
+  const [dropped, setDropped] = React.useState<Record<string, string[]>>({});
+
+  /**
+   * The exclusions that APPLY, derived rather than stored.
+   *
+   * The catalog's narrowing and this screen's unticks are two different
+   * facts, so merging them during render beats seeding state from an effect:
+   * no cascading render, and the screen can never disagree with the payload
+   * about what is going out. `dropped` holds only what was unticked HERE.
+   *
+   * Without this the screen showed "5 of 5 sizes" for a product narrowed to
+   * 3 in the catalog, while the payload still honoured the 3 — the two
+   * disagreed, which is the bug a browser caught and no API test would.
+   */
+  const effectiveDropped = React.useMemo(() => {
+    const merged: Record<string, string[]> = {};
+    for (const group of preview?.groups ?? []) {
+      for (const style of group.styles) {
+        const all = (style.variations ?? []).map((v) => v.id);
+        if (!all.length) continue;
+        const picked = selection.selected.get(style.id)?.variationIds ?? [];
+        // Nothing picked in the catalog means the whole product.
+        const fromCatalog = picked.length ? all.filter((id) => !picked.includes(id)) : [];
+        const fromHere = dropped[style.id] ?? [];
+        const out = [...new Set([...fromCatalog, ...fromHere])];
+        if (out.length) merged[style.id] = out;
+      }
+    }
+    return merged;
+  }, [preview, dropped, selection.selected]);
+
+  function toggleVariation(styleId: string, variationId: string) {
+    setDropped((prev) => {
+      const current = prev[styleId] ?? [];
+      const next = current.includes(variationId)
+        ? current.filter((id) => id !== variationId)
+        : [...current, variationId];
+      const copy = { ...prev };
+      if (next.length) copy[styleId] = next;
+      else delete copy[styleId];
+      return copy;
+    });
+  }
 
   const styleIds = React.useMemo(
     () => [...selection.selected.keys()],
@@ -100,9 +151,17 @@ export default function NewRfpPage() {
             variationsByStyle: Object.fromEntries(
               g.styles
                 .map((s) => {
-                  const picked = selection.selected.get(s.id)?.variationIds ?? [];
-                  return [s.id, picked] as const;
+                  // Start from whatever the catalog picked; if it picked
+                  // nothing the product is going out whole, so the group's
+                  // own variation list is the starting set.
+                  // ONE source for "what is going out", shared with the
+                  // table above, so the screen and the payload cannot drift.
+                  const all = (s.variations ?? []).map((v) => v.id);
+                  const out = effectiveDropped[s.id] ?? [];
+                  return [s.id, all.filter((id) => !out.includes(id))] as const;
                 })
+                // An empty list means "the whole product", so only send a
+                // style that genuinely has a narrowed set.
                 .filter(([, picked]) => picked.length > 0),
             ),
           })),
@@ -245,6 +304,8 @@ export default function NewRfpPage() {
               // The first is open so the screen is not a wall of closed rows;
               // the rest stay shut so the page reads at a glance.
               defaultOpen={i === 0}
+            dropped={effectiveDropped}
+            onToggleVariation={toggleVariation}
             />
           ))}
 

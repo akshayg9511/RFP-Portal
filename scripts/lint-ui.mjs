@@ -142,6 +142,25 @@ const STATES = {
       },
     },
   ],
+  "/style-sets": [
+    {
+      // The card's ghost dropdown is a floating surface a resting-state run
+      // never opens.
+      name: "style set card — variation dropdown",
+      open: async (page) => {
+        const link = page.locator(".set-grid a").first();
+        if (await link.count()) {
+          await link.click();
+          await page.waitForSelector(".style-card", { timeout: 10000 });
+          const sw = page.locator(".sc-switch .vsw-btn").first();
+          if (await sw.count()) {
+            await sw.click();
+            await page.waitForTimeout(400);
+          }
+        }
+      },
+    },
+  ],
   "/settings": [
     {
       // The bulk tray is where the one-way grain ladder is enforced, so it
@@ -229,6 +248,31 @@ const lintSource = readFileSync("public/ds/lint.js", "utf8");
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+
+/**
+ * Pass the demo gate, when there is one.
+ *
+ * `src/middleware.ts` redirects every page to /login while DEMO_PASSWORD is
+ * set, so without this the harness lints the LOGIN screen and reports every
+ * interaction state as unreachable — which is exactly what happened the
+ * first time the gate was switched back on for the public URL. Silently
+ * passing because the gate was off is worse than failing, so this is not
+ * optional plumbing.
+ */
+if (process.env.DEMO_PASSWORD) {
+  const response = await page.request.post(`${BASE}/api/login`, {
+    data: { password: process.env.DEMO_PASSWORD },
+    headers: { "content-type": "application/json" },
+  });
+  if (!response.ok()) {
+    console.error(
+      `\nCould not pass the demo gate (${response.status()}). ` +
+        `Check DEMO_PASSWORD matches the server's.\n`,
+    );
+    process.exit(1);
+  }
+  console.log("✓ gate — authenticated");
+}
 
 /**
  * THE TOKEN CHECK — the gap that let five invented tokens ship.

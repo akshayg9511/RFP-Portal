@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Badge, Icon } from "@/ds/components";
+import { Badge, Checkbox, Icon } from "@/ds/components";
 import { money, unitCost, units } from "@/lib/format";
 
 export type SplitGroup = {
@@ -20,6 +20,15 @@ export type SplitGroup = {
     baselineFob: number | null;
     hasBaseline: boolean;
     hasCleanSheet: boolean;
+    variationLevel?: string;
+    /** The bid groups this product would go out on. Empty at STYLE grain. */
+    variations?: {
+      id: string;
+      label: string;
+      variationIds: string[];
+      planUnits: number;
+      baselineFob: number | null;
+    }[];
   }[];
 };
 
@@ -38,6 +47,8 @@ export function RfpGroup({
   instructions,
   onInstructionsChange,
   defaultOpen,
+  dropped,
+  onToggleVariation,
 }: {
   group: SplitGroup;
   name: string;
@@ -45,8 +56,18 @@ export function RfpGroup({
   instructions: string;
   onInstructionsChange: (value: string) => void;
   defaultOpen?: boolean;
+  /**
+   * Variations the user has DESELECTED, by styleId. Tracking exclusions
+   * rather than inclusions means a product arrives fully included by
+   * default, which is what the catalog selection already decided — Aravind
+   * was explicit that nobody should have to re-pick.
+   */
+  dropped: Record<string, string[]>;
+  onToggleVariation: (styleId: string, variationId: string) => void;
 }) {
   const [open, setOpen] = React.useState(defaultOpen ?? false);
+  // One product expanded at a time, as on the catalog.
+  const [openStyle, setOpenStyle] = React.useState<string | null>(null);
 
   const notReady = group.styles.filter((s) => !s.hasBaseline).length;
   const noCleanSheet = group.styles.filter(
@@ -143,26 +164,91 @@ export function RfpGroup({
                 </tr>
               </thead>
               <tbody>
-                {group.styles.map((style) => (
-                  <tr key={style.id}>
-                    <td>
-                      <span className="id">{style.styleNumber}</span> ·{" "}
-                      {style.name}
-                    </td>
-                    <td>{style.subDepartment}</td>
-                    <td className="num">{units(style.planUnits)}</td>
-                    <td className="num">{unitCost(style.baselineFob)}</td>
-                    <td>
-                      {!style.hasBaseline ? (
-                        <Badge tone="danger">No baseline</Badge>
-                      ) : !style.hasCleanSheet ? (
-                        <Badge tone="warning">No clean sheet</Badge>
-                      ) : (
-                        <Badge tone="success">Ready</Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {group.styles.map((style) => {
+                  const groups = style.variations ?? [];
+                  const expandable = groups.length > 1;
+                  const isOpen = openStyle === style.id;
+                  // Absent from the map = every variation is going out, which
+                  // is what the catalog selection means when it picked none.
+                  const excluded = dropped[style.id] ?? [];
+                  const going = groups.length - excluded.length;
+
+                  return (
+                    <React.Fragment key={style.id}>
+                      <tr>
+                        <td>
+                          {expandable ? (
+                            <button
+                              className="pc-chev"
+                              onClick={() =>
+                                setOpenStyle(isOpen ? null : style.id)
+                              }
+                              aria-expanded={isOpen}
+                              aria-label={`${isOpen ? "Hide" : "Show"} variations of ${style.name}`}
+                            >
+                              <Icon
+                                name={isOpen ? "chevron_up" : "chevron_down"}
+                                size="sm"
+                              />
+                            </button>
+                          ) : (
+                            <span className="pc-chev pc-chev--none" />
+                          )}
+                          <span className="id">{style.styleNumber}</span> ·{" "}
+                          {style.name}
+                          {expandable ? (
+                            <span className="rg-var-count">
+                              {going} of {groups.length}{" "}
+                              {axisWord(style.variationLevel)}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td>{style.subDepartment}</td>
+                        <td className="num">{units(style.planUnits)}</td>
+                        <td className="num">{unitCost(style.baselineFob)}</td>
+                        <td>
+                          {!style.hasBaseline ? (
+                            <Badge tone="danger">No baseline</Badge>
+                          ) : !style.hasCleanSheet ? (
+                            <Badge tone="warning">No clean sheet</Badge>
+                          ) : (
+                            <Badge tone="success">Ready</Badge>
+                          )}
+                        </td>
+                      </tr>
+
+                      {isOpen
+                        ? groups.map((v) => {
+                            const out = excluded.includes(v.id);
+                            return (
+                              <tr className="pc-var-row" key={v.id}>
+                                <td>
+                                  <span className="pc-var-box">
+                                    <Checkbox
+                                      checked={!out}
+                                      onChange={() =>
+                                        onToggleVariation(style.id, v.id)
+                                      }
+                                      aria-label={`Include ${v.label} of ${style.name}`}
+                                    />
+                                  </span>
+                                  <span className="pc-var-label">
+                                    {v.label}
+                                  </span>
+                                </td>
+                                <td />
+                                <td className="num">{units(v.planUnits)}</td>
+                                <td className="num">
+                                  {unitCost(v.baselineFob)}
+                                </td>
+                                <td />
+                              </tr>
+                            );
+                          })
+                        : null}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -170,4 +256,12 @@ export function RfpGroup({
       </div>
     </div>
   );
+}
+
+/** "sizes" / "colours", so the count reads as English. */
+function axisWord(variationLevel?: string): string {
+  if (variationLevel === "SIZE") return "sizes";
+  if (variationLevel === "COLOUR") return "colours";
+  if (variationLevel === "SKU") return "SKUs";
+  return "variations";
 }

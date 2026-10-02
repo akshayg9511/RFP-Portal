@@ -5129,3 +5129,13 @@ body > .drawer-frame .drawer {
 .sc-switch {
   padding: 0 var(--space-md) var(--space-sm);
 }
+
+/* --- Create RFP variation rows (phase 1.5d) --- */
+
+/* "3 of 5 sizes" beside the style name, so the narrowing is visible without
+   expanding the row. */
+.rg-var-count {
+  margin-inline-start: var(--space-sm);
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
