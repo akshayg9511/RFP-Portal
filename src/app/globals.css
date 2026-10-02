@@ -5208,31 +5208,78 @@ body > .drawer-frame .drawer {
   font-size: var(--type-body-sm-size);
 }
 
-/* --- Nomination at variation level (phase 1.6c) --- */
+/* The 1.6c nomination CSS (.rd-bid-group, .rd-var-row, .rd-var-pick,
+   .rd-var-note) was DELETED in 1.7 when the wrapped chip row became flat
+   variant rows. Dead CSS whose comments assert a shipped fix is how
+   .vendor-scroll and .vl-scroll ended up lying about the codebase. */
 
-.rd-bid-group {
-  display: flex;
-  flex-direction: column;
+/* --- Nomination: flat variant rows (phase 1.7) --- */
+
+/* One group per product. The heading LABELS and groups; it is not a control,
+   because making it expandable would reinstate the third level this layout
+   exists to remove. */
+.rd-vgroup {
+  padding-block: var(--space-sm) var(--space-md);
 }
 
-/* Indented to the product's label, so the variations read as belonging to
-   the row above rather than as siblings of it. */
-.rd-var-row {
+.rd-vgroup + .rd-vgroup {
+  border-block-start: 1px solid var(--color-border-muted);
+}
+
+.rd-vgroup-h {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs) var(--space-md);
-  padding-inline-start: var(--space-xl);
+  align-items: baseline;
+  gap: var(--space-xs);
   padding-block-end: var(--space-xs);
 }
 
-.rd-var-pick {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
+.rd-vgroup-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--type-body-sm-size);
-  cursor: pointer;
-}
-
-.rd-var-note {
   color: var(--color-fg-muted);
 }
+
+.rd-vgroup-count {
+  flex: 0 0 auto;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A full row per variant, so the checkbox, label and value each get a column
+   — a wrapped chip row had nowhere for a price or a per-variant action, which
+   Phase 4's round promotion will need. */
+.rd-vrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-block-size: var(--size-control-sm);
+  padding-inline-start: var(--space-lg);
+}
+
+.rd-vrow-label {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--type-body-sm-size);
+}
+
+/* Right-aligned so every value in the group shares one edge — the thing the
+   old wrapped row could not do. */
+.rd-vrow-value {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-inline-size: 110px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* .rd-vrow-gap was deleted: the style-grain checkbox moved onto its ROW,
+   where every other checkbox in the panel sits, so no spacer is needed. */

@@ -59,6 +59,7 @@ export async function GET(
                     size: true,
                     sizeSortOrder: true,
                     colour: true,
+                    baselineFob: true,
                   },
                 },
               },
@@ -164,6 +165,14 @@ export async function GET(
                 ).map((g) => ({
                   id: g.variationIds[0],
                   label: g.label,
+                  // The variant's OWN baseline. Without it the nomination
+                  // panel repeated the style figure on every row, so five
+                  // sizes all read $21.98 — which looks like a bug and
+                  // hides the very cost spread variation level exists for.
+                  baselineFob: num(
+                    first.style.variations.find((v) => v.id === g.variationIds[0])
+                      ?.baselineFob ?? null,
+                  ),
                 })),
           /** Which of them are ON the RFP. EMPTY = the whole product. */
           onRfp: rows

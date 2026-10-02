@@ -455,6 +455,36 @@ export async function seedBids(
       `$${(total / 1e6).toFixed(1)}M placed · China ${((china / total) * 100).toFixed(1)}%`,
   );
 
+  // A DRAFT RFP with no invitations, so the nomination UI has something to
+  // demo on. Every seeded RFP is ISSUED because they carry bids, which left
+  // the Vendors tab's draft branch — checkboxes, variation picking, the
+  // whole nomination flow — unreachable without hand-editing the database.
+  const draftStyles = chosen.filter((s) => s.division === "Home").slice(0, 6);
+  if (draftStyles.length) {
+    const draftTemplate = templates.percale;
+    if (draftTemplate) {
+      await db.rfp.create({
+        data: {
+          waveId: wave.id,
+          templateId: draftTemplate.id,
+          name: "Home Bedding — Wave 3 (draft)",
+          status: "DRAFT",
+          dueDate: new Date("2026-12-01"),
+          instructions:
+            "All lead times must assume Q1 shipping. Quote in USD only. " +
+            "Where a size run applies, quote each size.",
+          sourcingPartner: "Tony Alvarez",
+          gm: "Jackie Chen",
+          styles: {
+            create: draftStyles.map((s) => ({
+              styleId: styleIds.get(s.styleNumber)!,
+            })),
+          },
+        },
+      });
+    }
+  }
+
   return { wave, chinaShare: china / total, allocated: toAllocate.length };
 }
 

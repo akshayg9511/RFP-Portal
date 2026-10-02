@@ -26,7 +26,7 @@ export type Style = {
   planUnits: number | null;
   baselineFob: number | null;
   /** EVERY variation the product has — the set to nominate FROM. */
-  variations?: { id: string; label: string }[];
+  variations?: { id: string; label: string; baselineFob?: number | null }[];
   /** Which of them are ON this RFP. EMPTY = the whole product. */
   onRfp?: { id: string; label: string }[];
 };

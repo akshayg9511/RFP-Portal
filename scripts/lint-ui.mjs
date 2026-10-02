@@ -104,6 +104,20 @@ const STATES = {
       },
     },
     {
+      // The flat variant rows (1.7). Switching tabs alone never opens a
+      // vendor, so the rows the nomination actually uses went unlinted.
+      name: "rfp detail · vendors tab, vendor expanded to variants",
+      open: async (page) => {
+        await page.locator("[role=tab]").nth(1).click();
+        await page.waitForTimeout(900);
+        const head = page.locator(".rd-head").first();
+        if (await head.count()) {
+          await head.click();
+          await page.waitForTimeout(900);
+        }
+      },
+    },
+    {
       name: "rfp detail · new-vendor dialog",
       open: async (page) => {
         // The state that would have caught the scrim specimen — the dim has
@@ -146,18 +160,21 @@ const STATES = {
     {
       // The card's ghost dropdown is a floating surface a resting-state run
       // never opens.
-      name: "style set card — variation dropdown",
+      // Was "style set card — variation dropdown". That dropdown was REMOVED
+      // in 1.6b, and this state kept passing because its `if (count)` guard
+      // silently skipped — a state that checks nothing and reports success,
+      // the same failure mode as the un-authenticated harness. Retargeted at
+      // the membership chips, which is what the card still carries.
+      name: "style set card — variation membership chips",
       open: async (page) => {
         const link = page.locator(".set-grid a").first();
-        if (await link.count()) {
-          await link.click();
-          await page.waitForSelector(".style-card", { timeout: 10000 });
-          const sw = page.locator(".sc-switch .vsw-btn").first();
-          if (await sw.count()) {
-            await sw.click();
-            await page.waitForTimeout(400);
-          }
+        if (!(await link.count())) {
+          throw new Error("no style set to open — the fixture changed");
         }
+        await link.click();
+        await page.waitForSelector(".style-card", { timeout: 10000 });
+        await page.waitForSelector(".sc-var", { timeout: 10000 });
+        await page.waitForTimeout(400);
       },
     },
   ],

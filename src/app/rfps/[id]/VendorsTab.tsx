@@ -277,8 +277,19 @@ export function VendorsTab({
 
               {isOpen ? (
                 <div className="rd-body">
-                  {/* Issued: only what this vendor was given. Draft: every
-                      product, because the list is the picker. */}
+                  {/* FLAT variant rows, product as a GROUP HEADING.
+                      
+                      The previous shape nested vendor -> product ->
+                      variations, with the bids at the deepest level and the
+                      variations crammed into a wrapped row of checkboxes.
+                      Three levels is what Aravind's review warned against,
+                      and a wrapped chip row leaves nowhere for a price, a
+                      status or a per-variant action to sit.
+                      
+                      Measured before choosing: the heaviest vendor on this
+                      RFP holds 19 variant rows across 2 products, a typical
+                      one 6-9. Short enough to render flat, so the third
+                      level is unnecessary. */}
                   {(issued
                     ? styles.filter((s) => subset.has(s.id))
                     : styles
@@ -288,110 +299,141 @@ export function VendorsTab({
                     );
                     const inSubset = subset.has(style.id);
                     const groups = style.variations ?? [];
-                    const expandable = groups.length > 1;
-                    // Which of this product's variations this vendor holds.
+                    // A STYLE-grain product has nothing finer. It renders as
+                    // ONE row reading "Whole product" rather than a heading
+                    // with a single child restating the product.
+                    const atStyleLevel = groups.length < 2;
                     const held = groups.filter((v) =>
                       subset.has(`${style.id}|${v.id}`),
                     );
-                    // No variation keys at all means the whole product, which
-                    // is what a style-grained product means.
                     const wholeProduct = inSubset && held.length === 0;
 
+                    // On an issued RFP show only the variants this vendor was
+                    // actually given; on a draft the list IS the picker, so
+                    // every variant is offered.
+                    const rows = atStyleLevel
+                      ? []
+                      : issued
+                        ? wholeProduct
+                          ? groups
+                          : held
+                        : groups;
+
+                    if (issued && !inSubset) return null;
+
                     return (
-                      <div className="rd-bid-group" key={style.id}>
-                      <div className="rd-bid">
-                        {!issued ? (
-                          <Checkbox
-                            checked={inSubset}
-                            mixed={
-                              // Partial only when variations are EXPLICIT and
-                              // some are missing. A whole-product hold is
-                              // fully selected, not partial — it has no keys
-                              // precisely because all of them are in.
-                              expandable &&
-                              !wholeProduct &&
-                              held.length > 0 &&
-                              held.length < groups.length
-                            }
-                            onChange={() => onToggleStyle(vendorId, style.id)}
-                            aria-label={`${style.name} for ${info!.name}`}
-                          />
-                        ) : null}
-                        <span className="rd-bid-vendor">
+                      <div className="rd-vgroup" key={style.id}>
+                        <div className="rd-vgroup-h">
+                          {/* The product heading. Not a control: it labels
+                              and groups, and making it clickable would be
+                              the third level again. */}
                           <span className="id">{style.styleNumber}</span>
-                          <span className="rd-bid-meta">
-                            {style.name}
-                            {expandable && inSubset ? (
-                              <span className="rd-var-note">
-                                {wholeProduct
-                                  ? ` · all ${groups.length}`
-                                  : ` · ${held.length} of ${groups.length}`}
-                              </span>
-                            ) : null}
-                          </span>
-                        </span>
-
-                        {inSubset && quote?.status === "SUBMITTED" ? (
-                          <button
-                            className="btn btn--ghost btn--sm"
-                            onClick={() =>
-                              onOpenBid(inv!.id, style.id, info!.name)
-                            }
-                          >
-                            {unitCost(quote.fob)}
-                            <Icon name="arrow_right" size="sm" />
-                          </button>
-                        ) : inSubset && issued ? (
-                          <span className="rd-pending">Not submitted</span>
-                        ) : null}
-                      </div>
-
-                      {/* Which variations this vendor is asked for. Shown
-                          only while the product is in their subset and only
-                          on a DRAFT — on an issued RFP the nomination is
-                          settled, so the row above states it instead. */}
-                      {expandable && inSubset && !issued ? (
-                        <div className="rd-var-row">
-                          {groups.map((v) => (
-                            <label className="rd-var-pick" key={v.id}>
-                              <Checkbox
-                                checked={wholeProduct || held.some((h) => h.id === v.id)}
-                                onChange={() => {
-                                  // A whole-product hold has no keys behind
-                                  // it, so unticking one box means writing
-                                  // the OTHERS explicitly — in a single
-                                  // update, or each call reads the same
-                                  // stale state and only the last survives.
-                                  if (wholeProduct) {
-                                    onSetVariations(
-                                      vendorId,
-                                      style.id,
-                                      groups
-                                        .filter((g) => g.id !== v.id)
-                                        .map((g) => g.id),
-                                    );
-                                  } else {
-                                    onToggleStyle(vendorId, style.id, v.id);
-                                  }
-                                }}
-                                aria-label={`${v.label} of ${style.name} for ${info!.name}`}
-                              />
-                              <span>{v.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {/* Issued: name what they actually hold. */}
-                      {expandable && issued && held.length ? (
-                        <div className="rd-var-row">
-                          {held.map((v) => (
-                            <span className="sc-var" key={v.id}>
-                              {v.label}
+                          <span className="rd-vgroup-name">{style.name}</span>
+                          {!atStyleLevel ? (
+                            <span className="rd-vgroup-count">
+                              {inSubset
+                                ? wholeProduct
+                                  ? `all ${groups.length}`
+                                  : `${held.length} of ${groups.length}`
+                                : `${groups.length} variants`}
                             </span>
-                          ))}
+                          ) : null}
                         </div>
-                      ) : null}
+
+                        {/* A style-grain product: one row, no variants. */}
+                        {atStyleLevel ? (
+                          <div className="rd-vrow">
+                            {/* The checkbox belongs on the ROW, not the
+                                heading — every other checkbox in the panel
+                                is on a row, and putting this one on the
+                                heading left it in its own column. */}
+                            {!issued ? (
+                              <Checkbox
+                                checked={inSubset}
+                                onChange={() =>
+                                  onToggleStyle(vendorId, style.id)
+                                }
+                                aria-label={`${style.name} for ${info!.name}`}
+                              />
+                            ) : null}
+                            <span className="rd-vrow-label">Whole product</span>
+                            <span className="rd-vrow-value">
+                              {inSubset && quote?.status === "SUBMITTED" ? (
+                                <button
+                                  className="btn btn--ghost btn--sm"
+                                  onClick={() =>
+                                    onOpenBid(inv!.id, style.id, info!.name)
+                                  }
+                                >
+                                  {unitCost(quote.fob)}
+                                  <Icon name="arrow_right" size="sm" />
+                                </button>
+                              ) : inSubset && issued ? (
+                                <span className="rd-pending">Not submitted</span>
+                              ) : (
+                                <span className="rd-none">
+                                  {unitCost(style.baselineFob)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ) : (
+                          rows.map((v) => {
+                            const on =
+                              wholeProduct || held.some((h) => h.id === v.id);
+                            return (
+                              <div className="rd-vrow" key={v.id}>
+                                {!issued ? (
+                                  <Checkbox
+                                    checked={on}
+                                    onChange={() => {
+                                      // A whole-product hold carries NO
+                                      // variation keys, so unticking one
+                                      // means writing the others explicitly
+                                      // — in ONE update, or each call reads
+                                      // the same stale state and only the
+                                      // last survives.
+                                      if (wholeProduct) {
+                                        onSetVariations(
+                                          vendorId,
+                                          style.id,
+                                          groups
+                                            .filter((g) => g.id !== v.id)
+                                            .map((g) => g.id),
+                                        );
+                                      } else {
+                                        onToggleStyle(vendorId, style.id, v.id);
+                                      }
+                                    }}
+                                    aria-label={`${v.label} of ${style.name} for ${info!.name}`}
+                                  />
+                                ) : null}
+                                <span className="rd-vrow-label">{v.label}</span>
+                                <span className="rd-vrow-value">
+                                  {issued && quote?.status === "SUBMITTED" ? (
+                                    <button
+                                      className="btn btn--ghost btn--sm"
+                                      onClick={() =>
+                                        onOpenBid(inv!.id, style.id, info!.name)
+                                      }
+                                    >
+                                      {unitCost(quote.fob)}
+                                      <Icon name="arrow_right" size="sm" />
+                                    </button>
+                                  ) : issued ? (
+                                    <span className="rd-pending">
+                                      Not submitted
+                                    </span>
+                                  ) : (
+                                    <span className="rd-none">
+                                      {unitCost(v.baselineFob ?? style.baselineFob)}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     );
                   })}
