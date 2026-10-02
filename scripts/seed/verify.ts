@@ -68,7 +68,7 @@ async function main() {
   // 4 — clean sheet sums to baseline
   const sheets = await db.cleanSheet.groupBy({
     by: ["styleId"],
-    where: { kind: "CLEAN_SHEET" },
+    where: { kind: "CLEAN_SHEET", variationId: null },
     _sum: { amount: true },
   });
   check(
@@ -122,7 +122,13 @@ async function main() {
       quotes: { select: { fob: true } },
       // kind matters: the same table holds BASELINE and CLEAN_SHEET, and
       // summing both reads the target as double the baseline.
-      cleanSheets: { where: { kind: "CLEAN_SHEET" }, select: { amount: true } },
+      // variationId: null is the STYLE-LEVEL target. Without that filter
+      // this sums the style's rows PLUS every variation's, inflating the
+      // target so no bid lands in any band.
+      cleanSheets: {
+        where: { kind: "CLEAN_SHEET", variationId: null },
+        select: { amount: true },
+      },
     },
   });
   const bands = { strong: 0, competitive: 0, needsWork: 0, offTarget: 0 };
@@ -226,6 +232,59 @@ async function main() {
     "variation plan units reconcile to the style total",
     badUnits.length === 0,
     `${varGroups.length - badUnits.length} of ${varGroups.length} styles`,
+  );
+
+  // --- PER-VARIATION COST (phase 1.5a) ---
+
+  // Every variation needs its own bucket set, or the drawer's dropdown shows
+  // an empty cost breakdown for some sizes.
+  const varCost = await db.cleanSheet.groupBy({
+    by: ["variationId"],
+    where: { variationId: { not: null }, kind: "BASELINE" },
+    _count: { _all: true },
+    _sum: { amount: true },
+  });
+  const varTotal = await db.variation.count();
+  check(
+    "every variation has its own cost buckets",
+    varCost.length === varTotal,
+    `${varCost.length} of ${varTotal} variations`,
+  );
+
+  // THE invariant that makes the figures trustworthy: a variation's buckets
+  // must sum to ITS baseline FOB, exactly as the style-level ones sum to the
+  // style's. If this drifts, the drawer shows a total nobody pays.
+  const varFobs = new Map(
+    (
+      await db.variation.findMany({ select: { id: true, baselineFob: true } })
+    ).map((v) => [v.id, Number(v.baselineFob ?? 0)]),
+  );
+  const badSum = varCost.filter((row) => {
+    const expected = varFobs.get(row.variationId ?? "") ?? 0;
+    const actual = Number(row._sum.amount ?? 0);
+    // A cent of tolerance: the scale factor is a float.
+    return expected > 0 && Math.abs(actual - expected) > 0.01;
+  });
+  check(
+    "per-variation buckets sum to that variation's baseline FOB",
+    badSum.length === 0,
+    `${varCost.length - badSum.length} of ${varCost.length} variations`,
+  );
+
+  // The point of the whole exercise: if every size carried the same cost the
+  // dropdown would be decoration.
+  const spread = await db.$queryRawUnsafe<{ n: bigint }[]>(
+    `SELECT COUNT(*) AS n FROM (
+       SELECT styleId FROM CleanSheet
+       WHERE variationId IS NOT NULL AND kind = 'BASELINE'
+         AND bucket = 'BASE_MATERIALS'
+       GROUP BY styleId HAVING COUNT(DISTINCT amount) > 1
+     ) x`,
+  );
+  check(
+    "cost genuinely varies between a style's variations",
+    Number(spread[0]?.n ?? 0) > 20,
+    `${Number(spread[0]?.n ?? 0)} styles with differing per-size materials`,
   );
 
   // All four grains must be present, or the demo cannot show the range.

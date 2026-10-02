@@ -93,7 +93,10 @@ export async function GET(
     if (quote?.status === "SUBMITTED" && quote.fob) {
       const [cleanSheet, rivals, styleCost] = await Promise.all([
         db.cleanSheet.findMany({
-          where: { styleId, kind: "CLEAN_SHEET" },
+          // Style-level target only — see the note in styles/[id]/bids.
+          // Unfiltered, the vendor score panel compares a bid against the
+          // sum of every size's target.
+          where: { styleId, kind: "CLEAN_SHEET", variationId: null },
           select: { bucket: true, amount: true },
         }),
         db.quote.findMany({

@@ -76,6 +76,9 @@ export function GET(request: Request) {
           select: { url: true },
         },
         currentSuppliers: {
+          // Style-level rows only, or the catalog lists each supplier once
+          // per variation.
+          where: { variationId: null },
           include: { vendor: { select: { name: true, cooRegion: true } } },
         },
         _count: {

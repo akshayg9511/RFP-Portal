@@ -1,6 +1,8 @@
 "use client";
 
+import * as React from "react";
 import { Checkbox } from "@/ds/components";
+import { VariationSwitcher } from "@/components/VariationSwitcher";
 import { unitCost, units } from "@/lib/format";
 
 export type StyleSummary = {
@@ -39,11 +41,34 @@ export function StyleCard({
    * shown greyed rather than simply absent — "which sizes did we leave out"
    * is a question the set page should answer.
    */
-  variations?: { id: string; label: string }[];
+  variations?: {
+    id: string;
+    label: string;
+    planUnits?: number;
+    baselineFob?: number | null;
+  }[];
   selected: boolean;
   onToggle: () => void;
   onOpen: () => void;
 }) {
+  // Only variations the SET admits are switchable — the card shows what the
+  // set holds, and the struck-through chips below already say what was left
+  // out.
+  const included = style.memberVariationIds ?? [];
+  const switchable = included.length
+    ? (variations ?? []).filter((v) => included.includes(v.id))
+    : (variations ?? []);
+
+  const [variationId, setVariationId] = React.useState<string | null>(null);
+  const shown =
+    switchable.find((v) => v.id === variationId) ?? switchable[0] ?? null;
+  const showing = switchable.length > 1 && shown !== null;
+
+  const shownUnits = showing ? (shown.planUnits ?? style.planUnits) : style.planUnits;
+  const shownFob = showing
+    ? (shown.baselineFob ?? style.baselineFob)
+    : style.baselineFob;
+
   return (
     <div className={selected ? "card raised style-card on" : "card raised style-card"}>
       <div
@@ -85,11 +110,24 @@ export function StyleCard({
           <span className="num">{style.styleNumber}</span>
           <span className="nm">{style.name}</span>
           <div className="meta">
-            <span>{units(style.planUnits)} units</span>
-            <span>{unitCost(style.baselineFob)}</span>
+            <span>{units(shownUnits)} units</span>
+            <span>{unitCost(shownFob)}</span>
           </div>
         </div>
       </button>
+
+      {/* Ghost dropdown, per the UX review. Switching re-renders THIS card's
+          figures — it is a lens on the card, not a navigation. Absent at
+          STYLE grain, where a one-item dropdown reads as broken. */}
+      {switchable.length > 1 ? (
+        <div className="sc-switch">
+          <VariationSwitcher
+            variations={switchable.map((v) => ({ id: v.id, label: v.label }))}
+            value={shown?.id ?? null}
+            onChange={setVariationId}
+          />
+        </div>
+      ) : null}
 
       {variations?.length ? (
         <VariationChips

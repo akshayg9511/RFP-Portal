@@ -47,6 +47,8 @@ export async function GET(
                     size: true,
                     sizeSortOrder: true,
                     colour: true,
+                    planUnits: true,
+                    baselineFob: true,
                   },
                 },
               },
@@ -94,7 +96,12 @@ export async function GET(
        * show excluded ones greyed. Returned here rather than fetched per
        * card: the set has a handful of products, and one round trip beats N.
        */
-      variations: grainGroups(
+      // A STYLE-grain product has nothing to list — grainGroups returns one
+      // "All variations" group for it, which renders as a meaningless chip.
+      variations:
+        (m.style.variationLevel as Grain) === "STYLE"
+          ? []
+          : grainGroups(
         m.style.variationLevel as Grain,
         m.style.variations.map((v) => ({
           id: v.id,
@@ -102,13 +109,24 @@ export async function GET(
           sizeSortOrder: v.sizeSortOrder,
           colour: v.colour,
         })),
-      ).map((g) => ({
-        // The group's first variation stands for it, matching how
-        // memberVariationIds is stored.
-        id: g.variationIds[0],
-        label: g.label,
-        variationIds: g.variationIds,
-      })),
+            ).map((g) => ({
+              // The group's first variation stands for it, matching how
+              // memberVariationIds is stored.
+              id: g.variationIds[0],
+              label: g.label,
+              variationIds: g.variationIds,
+              // Figures for the card to show when this variation is picked.
+              // Summed across the group's members, because a SIZE group can
+              // hold several colour SKUs.
+              planUnits: g.variationIds.reduce((total, vid) => {
+                const v = m.style.variations.find((x) => x.id === vid);
+                return total + (v?.planUnits ?? 0);
+              }, 0),
+              baselineFob: num(
+                m.style.variations.find((x) => x.id === g.variationIds[0])
+                  ?.baselineFob ?? null,
+              ),
+            })),
       };
     });
 

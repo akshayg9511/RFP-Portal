@@ -5080,3 +5080,52 @@ body > .drawer-frame .drawer {
   text-decoration: line-through;
   cursor: help;
 }
+
+/* --- Variation switcher (phase 1.5) --- */
+
+.vsw {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Ghost, per the UX review: the control should read as information plus an
+   interaction, not as the screen's runner-up action. */
+.vsw-btn {
+  gap: var(--space-xs);
+}
+
+/* The axis name ("Size") is quieter than the value it introduces, the same
+   relationship the DS Token uses for its qualifier. */
+.vsw-axis {
+  color: var(--color-fg-muted);
+}
+
+.vsw-menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-start: 0;
+  z-index: var(--z-popover);
+  min-inline-size: 180px;
+}
+
+/* --- Drawer variation switch (phase 1.5c) --- */
+
+.sd-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+
+.sd-switch-note {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* --- Style set card variation switch (phase 1.5b) --- */
+
+/* Outside the card's open button, so the dropdown does not open the drawer. */
+.sc-switch {
+  padding: 0 var(--space-md) var(--space-sm);
+}

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Badge } from "@/ds/components";
 import { SideDrawer } from "@/components/SideDrawer";
 import { useApi } from "@/lib/useApi";
+import { VariationSwitcher } from "@/components/VariationSwitcher";
 import { ProductGallery } from "@/components/ProductGallery";
 import { label, money, percent, unitCost, units } from "@/lib/format";
 
@@ -36,6 +37,18 @@ type StyleDetailData = {
   }[];
   baseline: { buckets: Record<string, number>; fob: number };
   cleanSheet: { buckets: Record<string, number>; fob: number };
+  /** Per-variation cost, one entry per bid group at the product's grain. */
+  variationCost?: {
+    id: string;
+    label: string;
+    variationIds: string[];
+    skuCount: number;
+    planUnits: number;
+    baselineFob: number | null;
+    baseline: Record<string, number>;
+    cleanSheet: Record<string, number>;
+    suppliers: Record<string, number | null>;
+  }[];
   readiness: { hasBaseline: boolean; hasCleanSheet: boolean; hasImages: boolean };
 };
 
@@ -53,6 +66,42 @@ export function StyleDetail({
   const { data, loading, error } = useApi<StyleDetailData>(
     styleId ? `/api/styles/${styleId}` : null,
   );
+
+  // Which variation the panels are showing. NULL means "default", resolved
+  // to the first group below — there is deliberately no "choose one first"
+  // gate, and keying the drawer on styleId already discards this when the
+  // style changes, so no reset effect is needed.
+  const [variationId, setVariationId] = React.useState<string | null>(null);
+
+  const groups = data?.variationCost ?? [];
+  const current =
+    groups.find((g) => g.id === variationId) ?? groups[0] ?? null;
+
+  // At STYLE grain there is nothing to switch, so every panel reads the
+  // style-level figures exactly as before.
+  const showingVariation = groups.length > 1 && current !== null;
+
+  // What the panels actually render. One place decides, so a panel cannot
+  // drift out of step with the dropdown.
+  const buckets = showingVariation
+    ? { baseline: current.baseline, cleanSheet: current.cleanSheet }
+    : { baseline: data?.baseline.buckets ?? {}, cleanSheet: data?.cleanSheet.buckets ?? {} };
+  const shownFob = showingVariation
+    ? (current.baselineFob ?? data?.baselineFob ?? null)
+    : (data?.baselineFob ?? null);
+  const shownUnits = showingVariation ? current.planUnits : (data?.planUnits ?? null);
+
+  // Totals are SUMMED from the rows above rather than read from a separate
+  // field, so the Total FOB line can never disagree with the buckets it
+  // sits under.
+  const sum = (set: Record<string, number>) =>
+    Object.values(set).reduce((total, amount) => total + amount, 0);
+  const shownBaselineTotal = showingVariation
+    ? sum(buckets.baseline)
+    : (data?.baselineFob ?? 0);
+  const shownCleanTotal = showingVariation
+    ? sum(buckets.cleanSheet)
+    : (data?.cleanSheet.fob ?? 0);
 
 
   return (
@@ -85,6 +134,20 @@ export function StyleDetail({
           {/* Keyed on the style: a new style must reset the gallery, or the
               second one opens on the first's fourth photo. React discarding the
               state is cheaper and safer than an effect that resets it. */}
+          {groups.length > 1 ? (
+            <div className="sd-switch">
+              <VariationSwitcher
+                variations={groups.map((g) => ({ id: g.id, label: g.label }))}
+                value={current?.id ?? null}
+                onChange={setVariationId}
+                axisLabel={axisLabel(data.variationLevel)}
+              />
+              <span className="sd-switch-note">
+                Every figure below is for this {axisLabel(data.variationLevel)?.toLowerCase() ?? "variation"}.
+              </span>
+            </div>
+          ) : null}
+
           <ProductGallery
             key={styleId}
             images={data.images}
@@ -101,7 +164,10 @@ export function StyleDetail({
               {data.sizes.length ? (
                 <Row k="Sizes" v={data.sizes.join(" · ")} />
               ) : null}
-              <Row k="Plan units" v={`${units(data.planUnits)} / yr`} />
+              <Row k="Plan units" v={`${units(shownUnits)} / yr`} />
+              {showingVariation ? (
+                <Row k="Baseline FOB" v={unitCost(shownFob)} />
+              ) : null}
               <Row k="Retail" v={unitCost(data.retailPrice)} />
               <Row k="HTS code" v={data.htsCode ?? "—"} />
             </dl>
@@ -130,7 +196,13 @@ export function StyleDetail({
                         </Badge>
                       </td>
                       <td>{s.countryIso ?? "—"}</td>
-                      <td className="num">{unitCost(s.currentFob)}</td>
+                      <td className="num">
+                        {unitCost(
+                          showingVariation
+                            ? (current.suppliers[s.vendorId] ?? s.currentFob)
+                            : s.currentFob,
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -156,11 +228,11 @@ export function StyleDetail({
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(data.cleanSheet.buckets).map(([bucket, clean]) => {
+                {Object.entries(buckets.cleanSheet).map(([bucket, clean]) => {
                   // The REAL baseline for this bucket. Scaling the clean sheet
                   // to recover it forced every row to the same gap and hid the
                   // per-bucket should-cost targets entirely.
-                  const baseline = data.baseline.buckets[bucket] ?? 0;
+                  const baseline = buckets.baseline[bucket] ?? 0;
                   return (
                     <tr key={bucket}>
                       <td>{label(bucket)}</td>
@@ -177,17 +249,17 @@ export function StyleDetail({
                     <strong>Total FOB</strong>
                   </td>
                   <td className="num">
-                    <strong>{unitCost(data.baselineFob)}</strong>
+                    <strong>{unitCost(shownBaselineTotal)}</strong>
                   </td>
                   <td className="num">
-                    <strong>{unitCost(data.cleanSheet.fob)}</strong>
+                    <strong>{unitCost(shownCleanTotal)}</strong>
                   </td>
                   <td className="num">
                     <strong>
                       {percent(
-                        data.baselineFob
-                          ? (data.baselineFob - data.cleanSheet.fob) /
-                              data.baselineFob
+                        shownBaselineTotal
+                          ? (shownBaselineTotal - shownCleanTotal) /
+                              shownBaselineTotal
                           : 0,
                       )}
                     </strong>
@@ -269,4 +341,12 @@ function GallerySkeleton() {
       </div>
     </div>
   );
+}
+
+/** Names the axis the dropdown switches along, so it explains itself. */
+function axisLabel(variationLevel: string): string | undefined {
+  if (variationLevel === "SIZE") return "Size";
+  if (variationLevel === "COLOUR") return "Colour";
+  if (variationLevel === "SKU") return "Colour × size";
+  return undefined;
 }

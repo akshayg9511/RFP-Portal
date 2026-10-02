@@ -21,7 +21,8 @@ export function GET(
     const { vendorId } = await params;
 
     const links = await db.currentSupplier.findMany({
-      where: { vendorId },
+      // One row per style, not one per variation.
+      where: { vendorId, variationId: null },
       include: {
         style: {
           select: {

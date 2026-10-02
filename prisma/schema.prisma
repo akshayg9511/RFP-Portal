@@ -118,8 +118,10 @@ model Variation {
   logisticsOcean Decimal? @db.Decimal(12, 4)
   logisticsAir   Decimal? @db.Decimal(12, 4)
 
-  setMembers StyleSetMember[]
-  rfpStyles  RfpStyle[]
+  setMembers       StyleSetMember[]
+  rfpStyles        RfpStyle[]
+  cleanSheets      CleanSheet[]
+  currentSuppliers CurrentSupplier[]
 
   @@index([styleId])
   @@index([sku])
@@ -205,6 +207,22 @@ model CleanSheet {
   styleId String
   style   Style  @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
+  /// Which variation this cost split belongs to. NULL = the style-level
+  /// figure, which is every pre-1.5 row.
+  ///
+  /// Cost genuinely differs by size — Variation.baselineFob spans
+  /// $53.90-$100.01 on U-BEDD-33 — so a dropdown over the cost breakdown is
+  /// only honest if the buckets move with it.
+  variationId String?
+  variation   Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
+
+  /// COALESCE(variationId, '@STYLE'). See variationKeyOf(): MySQL treats
+  /// every NULL as distinct in a unique index, so without the sentinel one
+  /// style could hold unlimited duplicate rows per bucket.
+  variationKey String @default("@STYLE")
+
+  /// Dead since F2 — populated on 0 of 766 rows and read nowhere. Superseded
+  /// by variationId, which points at the real row rather than a loose label.
   size String?
 
   // BASELINE — what the style costs today, split by bucket.
@@ -217,7 +235,9 @@ model CleanSheet {
   lineItem String?
   amount   Decimal @db.Decimal(12, 4)
 
+  @@unique([styleId, variationKey, kind, bucket])
   @@index([styleId, kind, bucket])
+  @@index([variationId])
 }
 
 // ---------------------------------------------------------------- vendor
@@ -261,8 +281,17 @@ model CurrentSupplier {
 
   currentFob Decimal? @db.Decimal(12, 4)
 
-  @@unique([styleId, vendorId])
+  /// Which variation this supplier price is for. NULL = the style-level
+  /// figure, which is every pre-1.5 row.
+  variationId String?
+  variation   Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
+
+  /// COALESCE(variationId, '@STYLE') — the same NULL-uniqueness defence.
+  variationKey String @default("@STYLE")
+
+  @@unique([styleId, variationKey, vendorId])
   @@index([vendorId])
+  @@index([variationId])
 }
 
 // ---------------------------------------------------------------- template

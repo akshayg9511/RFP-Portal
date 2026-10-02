@@ -54,7 +54,10 @@ export function GET(
               images: { orderBy: { position: "asc" }, select: { url: true } },
             },
           },
-          currentSuppliers: { select: { vendorId: true } },
+          currentSuppliers: {
+            where: { variationId: null },
+            select: { vendorId: true },
+          },
           quotes: {
             where: { status: "SUBMITTED" },
             select: {
@@ -130,7 +133,10 @@ export function GET(
        * takes the same data and reduces it to bands (Build Doc 8.2).
        */
       db.cleanSheet.findMany({
-        where: { styleId: id, kind: "CLEAN_SHEET" },
+        // variationId: null is the STYLE-LEVEL target. Without it this
+        // returns the style's rows PLUS every variation's, so every bucket
+        // is multiplied by the variation count.
+        where: { styleId: id, kind: "CLEAN_SHEET", variationId: null },
         select: { bucket: true, amount: true },
       }),
     ]);

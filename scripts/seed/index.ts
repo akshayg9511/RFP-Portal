@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { seedVariationCost } from "./variationCost";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { rng, step } from "./lib";
 import { readPlanUnits, seedConfig, seedLogistics, seedTariff } from "./lookups";
@@ -99,6 +100,14 @@ async function main() {
     }
   }
   step(`${supplierLinks} current-supplier links`);
+
+  // Per-variation cost, derived from each variation's own real baselineFob.
+  // Runs after both style-level sources exist, because it scales them.
+  const varCost = await seedVariationCost(db);
+  step(
+    `per-variation cost: ${varCost.cleanSheetRows} clean-sheet rows · ` +
+      `${varCost.supplierRows} supplier rows across ${varCost.styles} styles`,
+  );
 
   // Style sets — the selection scaffolding, and what splits into RFPs.
   const bySubDept = new Map<string, string[]>();
