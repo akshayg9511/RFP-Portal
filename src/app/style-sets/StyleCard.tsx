@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Checkbox } from "@/ds/components";
-import { VariationSwitcher } from "@/components/VariationSwitcher";
 import { unitCost, units } from "@/lib/format";
 
 export type StyleSummary = {
@@ -51,23 +50,11 @@ export function StyleCard({
   onToggle: () => void;
   onOpen: () => void;
 }) {
-  // Only variations the SET admits are switchable — the card shows what the
-  // set holds, and the struck-through chips below already say what was left
-  // out.
-  const included = style.memberVariationIds ?? [];
-  const switchable = included.length
-    ? (variations ?? []).filter((v) => included.includes(v.id))
-    : (variations ?? []);
-
-  const [variationId, setVariationId] = React.useState<string | null>(null);
-  const shown =
-    switchable.find((v) => v.id === variationId) ?? switchable[0] ?? null;
-  const showing = switchable.length > 1 && shown !== null;
-
-  const shownUnits = showing ? (shown.planUnits ?? style.planUnits) : style.planUnits;
-  const shownFob = showing
-    ? (shown.baselineFob ?? style.baselineFob)
-    : style.baselineFob;
+  // The card shows the PRODUCT. Variation figures are deliberately not
+  // switchable here: the set page's job is selecting products, and variation
+  // editing happens in the review modal at RFP time. The chips below still
+  // say which variations the set left out, which is the one variation fact
+  // worth seeing at a glance.
 
   return (
     <div className={selected ? "card raised style-card on" : "card raised style-card"}>
@@ -110,24 +97,11 @@ export function StyleCard({
           <span className="num">{style.styleNumber}</span>
           <span className="nm">{style.name}</span>
           <div className="meta">
-            <span>{units(shownUnits)} units</span>
-            <span>{unitCost(shownFob)}</span>
+            <span>{units(style.planUnits)} units</span>
+            <span>{unitCost(style.baselineFob)}</span>
           </div>
         </div>
       </button>
-
-      {/* Ghost dropdown, per the UX review. Switching re-renders THIS card's
-          figures — it is a lens on the card, not a navigation. Absent at
-          STYLE grain, where a one-item dropdown reads as broken. */}
-      {switchable.length > 1 ? (
-        <div className="sc-switch">
-          <VariationSwitcher
-            variations={switchable.map((v) => ({ id: v.id, label: v.label }))}
-            value={shown?.id ?? null}
-            onChange={setVariationId}
-          />
-        </div>
-      ) : null}
 
       {variations?.length ? (
         <VariationChips

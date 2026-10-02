@@ -5123,13 +5123,6 @@ body > .drawer-frame .drawer {
   color: var(--color-fg-muted);
 }
 
-/* --- Style set card variation switch (phase 1.5b) --- */
-
-/* Outside the card's open button, so the dropdown does not open the drawer. */
-.sc-switch {
-  padding: 0 var(--space-md) var(--space-sm);
-}
-
 /* --- Create RFP variation rows (phase 1.5d) --- */
 
 /* "3 of 5 sizes" beside the style name, so the narrowing is visible without
@@ -5147,4 +5140,70 @@ body > .drawer-frame .drawer {
   flex-wrap: wrap;
   gap: var(--space-xs);
   margin-block-end: var(--space-sm);
+}
+
+/* --- Review variation level modal (phase 1.6a) --- */
+
+.rv-lede {
+  margin-block: 0 var(--space-lg);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+  color: var(--color-fg-muted);
+}
+
+.rv-product {
+  padding-block: var(--space-md);
+  border-block-start: 1px solid var(--color-border-muted);
+}
+
+.rv-product:first-of-type {
+  border-block-start: 0;
+  padding-block-start: 0;
+}
+
+.rv-product-h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  margin-block-end: var(--space-sm);
+}
+
+.rv-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--type-emphasis-weight);
+}
+
+.rv-count,
+.rv-var-meta,
+.rv-whole {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+.rv-whole {
+  margin-block: 0;
+}
+
+/* A wrapping row rather than a column: with the 4-5 variation cap a product
+   fits on one or two lines, and a tall column per product would push the
+   commit out of a modal's reach. */
+.rv-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-lg);
+}
+
+.rv-var {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+}
+
+.rv-var-label {
+  font-size: var(--type-body-sm-size);
 }

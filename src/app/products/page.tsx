@@ -7,6 +7,7 @@ import { useSelection } from "@/lib/selection";
 import { money, units } from "@/lib/format";
 import { SaveAsSetDialog } from "./SaveAsSetDialog";
 import { SelectionTray } from "../style-sets/SelectionTray";
+import { ReviewVariationsModal } from "../style-sets/ReviewVariationsModal";
 import { FacetSelect } from "@/components/FacetSelect";
 import { Badge, Checkbox } from "@/ds/components";
 import { GRAINS, isExpandable, type Grain } from "@/domain/grain";
@@ -116,6 +117,7 @@ export default function ProductCatalogPage() {
     `/api/styles?${params.toString()}`,
   );
   const selection = useSelection();
+  const [reviewOpen, setReviewOpen] = React.useState(false);
 
   const rows = React.useMemo(() => {
     // Grain is filtered client-side. The catalog API has no grain param, and
@@ -386,12 +388,18 @@ export default function ProductCatalogPage() {
 
       {/* The same tray the style-set browser uses — the selection lives above
           the route, so one built here follows into an RFP or into a set. */}
+      <ReviewVariationsModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+      />
+
       <SelectionTray
         count={selection.count}
         skuCount={selection.skuCount}
         annualSpend={selection.annualSpend}
         templateCount={selection.templateCount}
         onClear={selection.clear}
+        onReviewVariations={() => setReviewOpen(true)}
         onSaveAsSet={() => setSaveOpen(true)}
       />
     </>

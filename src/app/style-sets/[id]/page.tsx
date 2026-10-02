@@ -10,6 +10,7 @@ import { money } from "@/lib/format";
 import { StyleCard, type StyleSummary } from "../StyleCard";
 import { StyleDetail } from "../StyleDetail";
 import { SelectionTray } from "../SelectionTray";
+import { ReviewVariationsModal } from "../ReviewVariationsModal";
 
 type SetDetail = {
   id: string;
@@ -44,6 +45,7 @@ export default function StyleSetPage() {
     `/api/styles?styleSetId=${id}`,
   );
   const selection = useSelection();
+  const [reviewOpen, setReviewOpen] = React.useState(false);
 
   const [query, setQuery] = React.useState("");
   const [openStyle, setOpenStyle] = React.useState<string | null>(null);
@@ -208,11 +210,17 @@ export default function StyleSetPage() {
         }
       />
 
+      <ReviewVariationsModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+      />
+
       <SelectionTray
         count={selection.count}
         annualSpend={selection.annualSpend}
         templateCount={selection.templateCount}
         onClear={selection.clear}
+        onReviewVariations={() => setReviewOpen(true)}
       />
     </>
   );

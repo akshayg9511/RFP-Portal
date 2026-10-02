@@ -26,6 +26,7 @@ export function SelectionTray({
   templateCount,
   onClear,
   onSaveAsSet,
+  onReviewVariations,
 }: {
   count: number;
   /** Selected variations. 0 when everything is a whole-product pick. */
@@ -39,6 +40,8 @@ export function SelectionTray({
    * nobody means to take.
    */
   onSaveAsSet?: () => void;
+  /** Opens the review modal. Absent on screens with no variation context. */
+  onReviewVariations?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -122,6 +125,19 @@ export function SelectionTray({
               >
                 Create RFP
               </MenuItem>
+              {/* The path for "all of it except King". Create RFP above
+                  sends every variation; this one opens the review. */}
+              {onReviewVariations ? (
+                <MenuItem
+                  icon={<Icon name="list" size="sm" />}
+                  onClick={() => {
+                    setOpen(false);
+                    onReviewVariations();
+                  }}
+                >
+                  Review variation level
+                </MenuItem>
+              ) : null}
               {onSaveAsSet ? (
                 <MenuItem
                   icon={<Icon name="bedding" size="sm" />}

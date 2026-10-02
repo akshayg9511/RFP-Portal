@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import * as React from "react";
+
 import { Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { StyleSetCard, type StyleSetSummary } from "./StyleSetCard";
 import { SelectionTray } from "./SelectionTray";
+import { ReviewVariationsModal } from "./ReviewVariationsModal";
 import { useSelection } from "@/lib/selection";
 
 /**
@@ -17,6 +19,7 @@ import { useSelection } from "@/lib/selection";
 export default function StyleSetsPage() {
   const sets = useApi<StyleSetSummary[]>("/api/style-sets");
   const selection = useSelection();
+  const [reviewOpen, setReviewOpen] = React.useState(false);
 
   return (
     <>
@@ -66,11 +69,17 @@ export default function StyleSetsPage() {
         ))}
       </div>
 
+      <ReviewVariationsModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+      />
+
       <SelectionTray
         count={selection.count}
         annualSpend={selection.annualSpend}
         templateCount={selection.templateCount}
         onClear={selection.clear}
+        onReviewVariations={() => setReviewOpen(true)}
       />
     </>
   );
