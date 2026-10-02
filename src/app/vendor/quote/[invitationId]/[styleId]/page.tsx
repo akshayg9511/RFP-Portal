@@ -64,6 +64,16 @@ type QuoteForm = {
     images: string[];
     colourways: Colourway[];
     sizes: string[];
+    /**
+     * The variations THIS vendor must price, with anything already saved.
+     * Empty when the product is bid whole.
+     */
+    pricedVariations?: {
+      id: string;
+      label: string;
+      consumption: number | null;
+      fob: number | null;
+    }[];
   };
   quote: {
     status: string;
@@ -163,6 +173,40 @@ export default function QuotePage() {
   const [busy, setBusy] = React.useState(false);
   const [saved, setSaved] = React.useState<string | null>(null);
 
+  /**
+   * Per-size price edits, layered over what was saved — the same
+   * edits-over-saved shape the values blob uses above, and for the same
+   * reason: a refetch must refresh the saved half without discarding what
+   * the vendor has typed.
+   */
+  const [priceEdits, setPriceEdits] = React.useState<
+    Record<string, { consumption?: string; fob?: string }>
+  >({});
+
+  const priced = React.useMemo(
+    () => data?.style.pricedVariations ?? [],
+    [data],
+  );
+
+  function priceOf(variationId: string, field: "consumption" | "fob"): string {
+    const edited = priceEdits[variationId]?.[field];
+    if (edited !== undefined) return edited;
+    const row = priced.find((v) => v.id === variationId);
+    const value = row?.[field];
+    return value === null || value === undefined ? "" : String(value);
+  }
+
+  function setPrice(
+    variationId: string,
+    field: "consumption" | "fob",
+    value: string,
+  ) {
+    setPriceEdits((prev) => ({
+      ...prev,
+      [variationId]: { ...prev[variationId], [field]: value },
+    }));
+  }
+
   const values = React.useMemo<QuoteValues>(() => {
     const stored = (data?.quote?.values as QuoteValues) ?? {};
     const q = data?.quote;
@@ -232,6 +276,17 @@ export default function QuotePage() {
           bucketTotals: computed.buckets,
           fob: computed.fob,
           status,
+          // The complete set every save, so a row for a variation the buyer
+          // has since removed cannot linger.
+          prices: Object.fromEntries(
+            priced.map((v) => [
+              v.id,
+              {
+                consumption: numOrNull(priceOf(v.id, "consumption")),
+                fob: numOrNull(priceOf(v.id, "fob")),
+              },
+            ]),
+          ),
         }),
       });
       const body = await response.json();
@@ -381,6 +436,74 @@ export default function QuotePage() {
 
       <div className="quote-layout">
         <div>
+          {/* PER-SIZE PRICE — first, because it is what the buyer asked for
+              and the breakdown below explains it.
+
+              Rows, not one form per size: the worst-case vendor here holds 9
+              variation groups, and a page each would be 9 navigations to
+              submit one bid. The real Lauren Home template is one sheet with
+              a column per size, which is this. */}
+          {priced.length ? (
+            <div
+              className="card"
+              style={{ marginBlockEnd: "var(--space-lg)" }}
+            >
+              <div className="card-h">
+                <div className="ttl">Price per variation</div>
+              </div>
+              <div className="card-b">
+                <p className="quote-side-note" style={{ marginBlockStart: 0 }}>
+                  The cost breakdown below is shared across these — only
+                  consumption and FOB change by variation.
+                </p>
+                <div className="data-grid-surface">
+                  <table className="data-grid">
+                    <thead>
+                      <tr>
+                        <th>Variation</th>
+                        <th className="num">Consumption</th>
+                        <th className="num">FOB</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {priced.map((v) => (
+                        <tr key={v.id}>
+                          <td>{v.label}</td>
+                          <td className="num">
+                            <input
+                              className="control sm num"
+                              type="number"
+                              min={0}
+                              step="0.0001"
+                              value={priceOf(v.id, "consumption")}
+                              onChange={(e) =>
+                                setPrice(v.id, "consumption", e.target.value)
+                              }
+                              aria-label={`Consumption for ${v.label}`}
+                            />
+                          </td>
+                          <td className="num">
+                            <input
+                              className="control sm num"
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={priceOf(v.id, "fob")}
+                              onChange={(e) =>
+                                setPrice(v.id, "fob", e.target.value)
+                              }
+                              aria-label={`FOB for ${v.label}`}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {def.sections.map((section) => (
             <div className="card" key={section.key} style={{ marginBlockEnd: "var(--space-lg)" }}>
               <div className="card-h">
@@ -556,8 +679,11 @@ export default function QuotePage() {
               {data.style.planUnits ? (
                 <p className="quote-side-note">
                   {units(data.style.planUnits)} units a year
-                  {data.style.variationLevel === "SIZE" && data.style.sizes.length
-                    ? ` · quoted at style level across ${data.style.sizes.length} sizes`
+                  {/* Was "quoted at style level across N sizes". That became
+                      false the moment a vendor could be nominated per size,
+                      so it now reports what is actually being asked for. */}
+                  {priced.length
+                    ? ` · priced per ${priced.length === 1 ? "variation" : `${priced.length} variations`}`
                     : ""}
                 </p>
               ) : null}
@@ -603,4 +729,12 @@ export default function QuotePage() {
       </div>
     </>
   );
+}
+
+/** "" and a non-number both mean "not quoted", not zero. */
+function numOrNull(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
 }

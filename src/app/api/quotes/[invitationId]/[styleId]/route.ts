@@ -67,6 +67,20 @@ export async function GET(
 
     const quote = await db.quote.findFirst({
       where: { invitationId, styleId, round: invitation.currentRound },
+      include: { prices: true },
+    });
+
+    // Which variations of THIS product this vendor was nominated for.
+    // Per decision F6 the form shows only these — a size the buyer did not
+    // ask for is absent, not greyed, so the vendor never learns it existed.
+    const nominated = await db.invitationStyle.findMany({
+      where: { invitationId, styleId, variationId: { not: null } },
+      include: {
+        variation: {
+          select: { id: true, size: true, colour: true, sizeSortOrder: true },
+        },
+      },
+      orderBy: { variation: { sizeSortOrder: "asc" } },
     });
 
     // Every product in this invitation, so the form can offer product
@@ -187,6 +201,26 @@ export async function GET(
         images: c.images.map((i) => i.url),
       })),
         sizes: [...new Set(style.variations.map((v) => v.size).filter(Boolean))],
+        /**
+         * The variations THIS vendor must price, with any price already
+         * saved. Per decision F6 a variation the buyer did not ask for is
+         * absent entirely — the vendor never learns it was considered.
+         */
+        pricedVariations: nominated.map((n) => ({
+          id: n.variationId!,
+          label:
+            [n.variation!.colour, n.variation!.size]
+              .filter(Boolean)
+              .join(" / ") || "—",
+          consumption: num(
+            quote?.prices.find((p) => p.variationId === n.variationId)
+              ?.consumption ?? null,
+          ),
+          fob: num(
+            quote?.prices.find((p) => p.variationId === n.variationId)?.fob ??
+              null,
+          ),
+        })),
       },
       quote: quote
         ? {
@@ -204,7 +238,11 @@ export async function GET(
             notes: quote.notes,
           }
         : null,
-      products: siblings.map((s) => ({
+      // DISTINCT products. Since nomination went per variation, a vendor
+      // narrowed to 3 sizes has 3 invitationStyle rows for one product —
+      // mapping them directly listed the product three times and gave React
+      // duplicate keys.
+      products: dedupeByStyle(siblings).map((s) => ({
         id: s.style.id,
         styleNumber: s.style.styleNumber,
         name: s.style.name,
@@ -238,6 +276,14 @@ export async function PUT(
     notes?: string | null;
     cannotBid?: boolean;
     cannotBidReason?: string | null;
+    /**
+     * Per-variation price, keyed by variation id. Only consumption and FOB
+     * differ by size (F5); the rest of the breakdown is shared above.
+     */
+    prices?: Record<
+      string,
+      { consumption?: number | null; fob?: number | null }
+    >;
   };
 
   try {
@@ -292,6 +338,29 @@ export async function PUT(
         ...(status === "SUBMITTED" ? { submittedAt: new Date() } : {}),
       },
     });
+
+    /**
+     * PER-VARIATION PRICES.
+     *
+     * Decision F5: the cost breakdown above is shared across the product's
+     * sizes — labour rate, SAM and trim do not change by size — and only
+     * consumption and FOB are quoted per size. Replace-all rather than
+     * upsert-each: the form sends the complete set every save, and a stale
+     * row for a variation the buyer has since removed would price something
+     * the vendor was never asked for.
+     */
+    if (body.prices) {
+      await db.quotePrice.deleteMany({ where: { quoteId: quote.id } });
+      const rows = Object.entries(body.prices)
+        .filter(([, price]) => price.fob != null || price.consumption != null)
+        .map(([variationId, price]) => ({
+          quoteId: quote.id,
+          variationId,
+          consumption: price.consumption ?? null,
+          fob: price.fob ?? null,
+        }));
+      if (rows.length) await db.quotePrice.createMany({ data: rows });
+    }
 
     /**
      * AUTO-ADDRESS — the mechanic that makes an Ask not a comment box.
@@ -355,10 +424,31 @@ export async function PUT(
 
     // The invitation follows its quotes: anything entered moves it off
     // NOT_STARTED, and it reads SUBMITTED once every product is in.
-    const [total, submitted] = await Promise.all([
-      db.invitationStyle.count({ where: { invitationId } }),
-      db.quote.count({ where: { invitationId, status: "SUBMITTED" } }),
+    // DISTINCT products against submitted QUOTES — one quote per product,
+    // so both sides must be product-counts.
+    //
+    // Two defects fixed here. (1) `invitationStyle.count` counts ROWS, and
+    // since nomination went per variation a vendor on 3 sizes has 3 rows for
+    // one product: `total` tripled and the invitation could never read
+    // SUBMITTED. (2) `submitted` had NO round filter — harmless while round
+    // is always 1, but the moment a round 2 exists a round-1 submission
+    // satisfies round-2 completion and the invitation flips to SUBMITTED
+    // having received nothing. Flagged as trap 4 in the plan; fixed while
+    // the first defect had this code open.
+    const [rows, submitted] = await Promise.all([
+      db.invitationStyle.findMany({
+        where: { invitationId },
+        select: { styleId: true },
+      }),
+      db.quote.count({
+        where: {
+          invitationId,
+          status: "SUBMITTED",
+          round: invitation.currentRound,
+        },
+      }),
     ]);
+    const total = new Set(rows.map((r) => r.styleId)).size;
     await db.invitation.update({
       where: { id: invitationId },
       data: {
@@ -399,4 +489,16 @@ export async function PUT(
       { status: 500 },
     );
   }
+}
+
+/** First row per styleId wins, preserving query order. */
+function dedupeByStyle<T extends { styleId: string }>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const row of rows) {
+    if (seen.has(row.styleId)) continue;
+    seen.add(row.styleId);
+    out.push(row);
+  }
+  return out;
 }

@@ -34,6 +34,9 @@ export async function GET(
         },
         styles: {
           include: {
+            variation: {
+              select: { id: true, size: true, colour: true, sizeSortOrder: true },
+            },
             style: {
               select: {
                 id: true,
@@ -99,7 +102,10 @@ export async function GET(
       const drafted = new Set(
         inv.quotes.filter((q) => q.status === "DRAFT").map((q) => q.styleId),
       );
-      const total = inv.styles.length;
+      // DISTINCT products, not invitationStyle ROWS. A vendor narrowed to 3
+      // sizes has 3 rows for one product, so this tripled their product
+      // count and the dashboard's progress could never complete.
+      const total = new Set(inv.styles.map((is) => is.styleId)).size;
 
       return {
         id: inv.id,
@@ -124,12 +130,32 @@ export async function GET(
           .length,
         decidedCount: inv.styles.filter((is) => decidedStyleIds.has(is.styleId))
           .length,
-        products: inv.styles.map((is) => {
+        // ONE entry per product, carrying the variations THIS vendor was
+        // asked for. Mapping rows directly would list a product once per
+        // size — and per decision F6 the vendor sees only their own
+        // variations, never the ones they were not asked to quote.
+        products: groupByStyle(inv.styles).map((rows) => {
+          const is = rows[0];
           const won = awardByStyle.get(is.styleId);
           const decided = decidedStyleIds.has(is.styleId);
 
           return {
             id: is.style.id,
+            /** The variations this vendor must price. EMPTY = whole product. */
+            variations: rows
+              .filter((r) => r.variation !== null)
+              .sort(
+                (a, b) =>
+                  (a.variation!.sizeSortOrder ?? 0) -
+                  (b.variation!.sizeSortOrder ?? 0),
+              )
+              .map((r) => ({
+                id: r.variation!.id,
+                label:
+                  [r.variation!.colour, r.variation!.size]
+                    .filter(Boolean)
+                    .join(" / ") || "—",
+              })),
             styleNumber: is.style.styleNumber,
             name: is.style.name,
             heroImage: is.style.images[0]?.url ?? null,
@@ -155,4 +181,15 @@ export async function GET(
       };
     });
   });
+}
+
+/** Group invitation-style rows by product, preserving order. */
+function groupByStyle<T extends { styleId: string }>(rows: T[]): T[][] {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const bucket = grouped.get(row.styleId);
+    if (bucket) bucket.push(row);
+    else grouped.set(row.styleId, [row]);
+  }
+  return [...grouped.values()];
 }
