@@ -5139,3 +5139,12 @@ body > .drawer-frame .drawer {
   font-size: var(--type-caption-size);
   color: var(--color-fg-muted);
 }
+
+/* --- RFP detail variation strip (phase 1.5e) --- */
+
+.rd-var-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-block-end: var(--space-sm);
+}

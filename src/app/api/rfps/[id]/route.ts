@@ -28,6 +28,11 @@ export async function GET(
         wave: { select: { name: true, dueDate: true } },
         styles: {
           include: {
+            // Which variation this row put out to bid. NULL = the whole
+            // product.
+            variation: {
+              select: { id: true, size: true, colour: true, sizeSortOrder: true },
+            },
             style: {
               include: {
                 images: {
@@ -35,7 +40,13 @@ export async function GET(
                   take: 1,
                   select: { url: true },
                 },
-                currentSuppliers: { select: { vendorId: true } },
+                // Style-level rows only, or each supplier appears once per
+                // variation — the same defect fixed across five read sites
+                // in 1.5a.
+                currentSuppliers: {
+                  where: { variationId: null },
+                  select: { vendorId: true },
+                },
               },
             },
           },
@@ -84,6 +95,14 @@ export async function GET(
 
     const invited = new Set(rfp.invitations.map((i) => i.vendorId));
 
+    // One bucket per product, holding every RfpStyle row for it.
+    const groupedStyles = new Map<string, typeof rfp.styles>();
+    for (const row of rfp.styles) {
+      const bucket = groupedStyles.get(row.styleId);
+      if (bucket) bucket.push(row);
+      else groupedStyles.set(row.styleId, [row]);
+    }
+
     return ok({
       id: rfp.id,
       name: rfp.name,
@@ -95,15 +114,37 @@ export async function GET(
       templateName: rfp.template.name,
       waveName: rfp.wave.name,
 
-      styles: rfp.styles.map((rs) => ({
-        id: rs.style.id,
-        styleNumber: rs.style.styleNumber,
-        name: rs.style.name,
-        subDepartment: rs.style.subDepartment,
-        heroImage: rs.style.images[0]?.url ?? null,
-        planUnits: rs.style.planUnits,
-        baselineFob: num(rs.style.baselineFob),
-      })),
+      // ONE entry per product, carrying the variations that went out.
+      // Mapping rfp.styles directly would list a product once per size —
+      // the row-vs-product defect already fixed in style sets and RFP
+      // counts.
+      styles: [...groupedStyles.values()].map((rows) => {
+        const first = rows[0];
+        return {
+          id: first.style.id,
+          styleNumber: first.style.styleNumber,
+          name: first.style.name,
+          subDepartment: first.style.subDepartment,
+          heroImage: first.style.images[0]?.url ?? null,
+          planUnits: first.style.planUnits,
+          baselineFob: num(first.style.baselineFob),
+          /**
+           * The variations out to bid. EMPTY = the whole product, which is
+           * what a style-grained product means.
+           */
+          variations: rows
+            .filter((r) => r.variation !== null)
+            .map((r) => ({
+              id: r.variation!.id,
+              label:
+                [r.variation!.colour, r.variation!.size]
+                  .filter(Boolean)
+                  .join(" / ") || "—",
+              sizeSortOrder: r.variation!.sizeSortOrder,
+            }))
+            .sort((a, b) => (a.sizeSortOrder ?? 0) - (b.sizeSortOrder ?? 0)),
+        };
+      }),
 
       invitations: rfp.invitations.map((inv) => ({
         id: inv.id,

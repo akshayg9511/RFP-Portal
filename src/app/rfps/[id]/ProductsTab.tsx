@@ -25,6 +25,8 @@ export type Style = {
   heroImage: string | null;
   planUnits: number | null;
   baselineFob: number | null;
+  /** The variations out to bid. EMPTY = the whole product. */
+  variations?: { id: string; label: string }[];
 };
 
 export type Invitation = {
@@ -159,6 +161,9 @@ export function ProductsTab({
                   <span className="rd-meta">
                     {style.subDepartment} · {units(style.planUnits)} units/yr ·
                     baseline {unitCost(style.baselineFob)}
+                    {style.variations?.length
+                      ? ` · ${style.variations.length} out to bid`
+                      : ""}
                   </span>
                 </span>
 
@@ -183,6 +188,19 @@ export function ProductsTab({
 
               {isOpen ? (
                 <div className="rd-body">
+                  {/* WHICH variations went out. Shown here because the
+                      Products tab answers "what is in this RFP" — the bids
+                      themselves are the Vendors tab's job. */}
+                  {style.variations?.length ? (
+                    <div className="rd-var-strip">
+                      {style.variations.map((v) => (
+                        <span className="sc-var" key={v.id}>
+                          {v.label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
                   {bids.length === 0 && pending.length === 0 ? (
                     <p className="rd-empty">No vendor has this product yet.</p>
                   ) : null}
