@@ -25,8 +25,10 @@ export type Style = {
   heroImage: string | null;
   planUnits: number | null;
   baselineFob: number | null;
-  /** The variations out to bid. EMPTY = the whole product. */
+  /** EVERY variation the product has — the set to nominate FROM. */
   variations?: { id: string; label: string }[];
+  /** Which of them are ON this RFP. EMPTY = the whole product. */
+  onRfp?: { id: string; label: string }[];
 };
 
 export type Invitation = {
@@ -161,8 +163,8 @@ export function ProductsTab({
                   <span className="rd-meta">
                     {style.subDepartment} · {units(style.planUnits)} units/yr ·
                     baseline {unitCost(style.baselineFob)}
-                    {style.variations?.length
-                      ? ` · ${style.variations.length} out to bid`
+                    {style.onRfp?.length
+                      ? ` · ${style.onRfp.length} out to bid`
                       : ""}
                   </span>
                 </span>
@@ -191,9 +193,9 @@ export function ProductsTab({
                   {/* WHICH variations went out. Shown here because the
                       Products tab answers "what is in this RFP" — the bids
                       themselves are the Vendors tab's job. */}
-                  {style.variations?.length ? (
+                  {style.onRfp?.length ? (
                     <div className="rd-var-strip">
-                      {style.variations.map((v) => (
+                      {style.onRfp.map((v) => (
                         <span className="sc-var" key={v.id}>
                           {v.label}
                         </span>

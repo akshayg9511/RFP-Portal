@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { grainGroups, type Grain } from "@/domain/grain";
 import { notFound, num, ok } from "@/lib/api";
 
 /**
@@ -47,6 +48,19 @@ export async function GET(
                   where: { variationId: null },
                   select: { vendorId: true },
                 },
+                variations: {
+                  orderBy: [
+                    { sizeSortOrder: "asc" },
+                    { size: "asc" },
+                    { colour: "asc" },
+                  ],
+                  select: {
+                    id: true,
+                    size: true,
+                    sizeSortOrder: true,
+                    colour: true,
+                  },
+                },
               },
             },
           },
@@ -54,7 +68,7 @@ export async function GET(
         invitations: {
           include: {
             vendor: true,
-            styles: { select: { styleId: true } },
+            styles: { select: { styleId: true, variationId: true } },
             // Per-product state, so a vendor row can say which products are
             // still pending and open the ones that are in.
             quotes: { select: { styleId: true, status: true, fob: true } },
@@ -129,10 +143,30 @@ export async function GET(
           planUnits: first.style.planUnits,
           baselineFob: num(first.style.baselineFob),
           /**
-           * The variations out to bid. EMPTY = the whole product, which is
-           * what a style-grained product means.
+           * EVERY variation the product has, at its grain — the set a buyer
+           * chooses FROM when nominating.
+           *
+           * 1.5e returned only the variations already on the RFP, which is
+           * right for "what went out" but useless for nomination: you cannot
+           * pick a size that is not in the list.
            */
-          variations: rows
+          variations:
+            (first.style.variationLevel as Grain) === "STYLE"
+              ? []
+              : grainGroups(
+                  first.style.variationLevel as Grain,
+                  first.style.variations.map((v) => ({
+                    id: v.id,
+                    size: v.size,
+                    sizeSortOrder: v.sizeSortOrder,
+                    colour: v.colour,
+                  })),
+                ).map((g) => ({
+                  id: g.variationIds[0],
+                  label: g.label,
+                })),
+          /** Which of them are ON the RFP. EMPTY = the whole product. */
+          onRfp: rows
             .filter((r) => r.variation !== null)
             .map((r) => ({
               id: r.variation!.id,
@@ -155,7 +189,19 @@ export async function GET(
         isNewToQuince: inv.vendor.isNewToQuince,
         isTemp: inv.vendor.isTemp,
         status: inv.status,
-        styleIds: inv.styles.map((s) => s.styleId),
+        // DISTINCT products this vendor holds. A vendor narrowed to 3 of 5
+        // sizes has 3 rows for one product, so mapping rows directly would
+        // list it three times — the row-vs-product defect already fixed in
+        // style sets, RFP counts and the RFP detail styles list.
+        styleIds: [...new Set(inv.styles.map((s) => s.styleId))],
+        /**
+         * The nominated variations as `styleId|variationId` keys, which is
+         * exactly the shape the nomination Set uses on the client — so the
+         * edits-over-saved merge needs no translation step.
+         */
+        variationKeys: inv.styles
+          .filter((s) => s.variationId !== null)
+          .map((s) => `${s.styleId}|${s.variationId}`),
         quotes: inv.quotes.map((q) => ({
           styleId: q.styleId,
           status: q.status,

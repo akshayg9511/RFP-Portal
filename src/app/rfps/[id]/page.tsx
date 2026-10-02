@@ -50,6 +50,8 @@ type RfpDetail = {
     isTemp: boolean;
     status: string;
     styleIds: string[];
+    /** Nominated variations as `styleId|variationId`. */
+    variationKeys?: string[];
     quotes: { styleId: string; status: string; fob: number | null }[];
   }[];
   candidates: {
@@ -186,7 +188,14 @@ export default function RfpDetailPage() {
   const picked = React.useMemo(() => {
     const merged = new Map<string, Set<string>>();
     for (const i of data?.invitations ?? []) {
-      if (!removed.has(i.vendorId)) merged.set(i.vendorId, new Set(i.styleIds));
+      if (!removed.has(i.vendorId)) {
+        // Saved state is products PLUS their nominated variations, in the
+        // same composite-key form the edits use.
+        merged.set(
+          i.vendorId,
+          new Set([...i.styleIds, ...(i.variationKeys ?? [])]),
+        );
+      }
     }
     // Edits win: an edited subset replaces the saved one wholesale.
     for (const [vendorId, styleIds] of added) merged.set(vendorId, styleIds);
@@ -227,12 +236,77 @@ export default function RfpDetailPage() {
     );
   }
 
-  function toggleStyleFor(vendorId: string, styleId: string) {
+  /**
+   * Toggle a product, or ONE of its variations, for a vendor.
+   *
+   * The nomination subset holds entries keyed `styleId` for a whole product
+   * and `styleId|variationId` for a single variation. Encoding the variation
+   * into the existing Set keeps the edits-over-saved merge in `picked`
+   * working untouched — that pattern exists because a `reload()` used to
+   * destroy unsaved picks, and widening the Map's value type would have
+   * meant rewriting it.
+   */
+  /**
+   * Materialise a whole-product hold into explicit variation keys, minus one.
+   *
+   * Needed because a product held WHOLE carries no variation keys — every
+   * box renders checked from an implied set. Unticking one cannot be done by
+   * calling the toggle N times: each call reads the same stale `picked`, so
+   * React keeps only the last and "all 5" collapses to "1 of 5". One call
+   * that writes the whole set is the only correct shape.
+   */
+  function setVariationsFor(
+    vendorId: string,
+    styleId: string,
+    variationIds: string[],
+  ) {
+    const current = new Set(picked.get(vendorId) ?? []);
+    for (const key of [...current]) {
+      if (key.startsWith(`${styleId}|`)) current.delete(key);
+    }
+    if (variationIds.length) {
+      current.add(styleId);
+      for (const id of variationIds) current.add(`${styleId}|${id}`);
+    } else {
+      // No variations left means the product is out entirely.
+      current.delete(styleId);
+    }
+    setAdded((prev) => new Map(prev).set(vendorId, current));
+  }
+
+  function toggleStyleFor(
+    vendorId: string,
+    styleId: string,
+    variationId?: string,
+  ) {
     // Start from the MERGED subset, so editing a saved vendor's products does
     // not silently reset the rest of their subset to empty.
     const current = new Set(picked.get(vendorId) ?? []);
-    if (current.has(styleId)) current.delete(styleId);
-    else current.add(styleId);
+    const key = variationId ? `${styleId}|${variationId}` : styleId;
+
+    if (variationId) {
+      if (current.has(key)) current.delete(key);
+      else {
+        current.add(key);
+        // A variation implies the product. Without this, a vendor could hold
+        // a size whose product is not in their subset, which the server
+        // would reject as out of scope.
+        current.add(styleId);
+      }
+      // The product leaves when its last variation does — a product with no
+      // variations means "the whole product", the opposite of the user's act.
+      const anyLeft = [...current].some((k) => k.startsWith(`${styleId}|`));
+      if (!anyLeft) current.delete(styleId);
+    } else if (current.has(key)) {
+      current.delete(key);
+      // Dropping the product drops its variations with it.
+      for (const k of [...current]) {
+        if (k.startsWith(`${styleId}|`)) current.delete(k);
+      }
+    } else {
+      current.add(key);
+    }
+
     setAdded((prev) => new Map(prev).set(vendorId, current));
   }
 
@@ -244,9 +318,9 @@ export default function RfpDetailPage() {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          invitations: [...picked.entries()].map(([vendorId, styleIds]) => ({
+          invitations: [...picked.entries()].map(([vendorId, keys]) => ({
             vendorId,
-            styleIds: [...styleIds],
+            ...splitNominationKeys(keys),
           })),
         }),
       });
@@ -274,9 +348,9 @@ export default function RfpDetailPage() {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          invitations: [...picked.entries()].map(([vendorId, styleIds]) => ({
+          invitations: [...picked.entries()].map(([vendorId, keys]) => ({
             vendorId,
-            styleIds: [...styleIds],
+            ...splitNominationKeys(keys),
           })),
         }),
       });
@@ -597,6 +671,7 @@ export default function RfpDetailPage() {
                   issued={issued}
                   onRemove={toggleVendor}
                   onToggleStyle={toggleStyleFor}
+                  onSetVariations={setVariationsFor}
                   onAddVendors={() => setPickerOpen(true)}
                   onOpenBid={(invitationId, styleId, vendorName) =>
                     setOpenQuote({ invitationId, styleId, vendorName })
@@ -647,4 +722,29 @@ export default function RfpDetailPage() {
       />
     </>
   );
+}
+
+/**
+ * Split the nomination Set back into the wire shape.
+ *
+ * Entries are `styleId` for a whole product and `styleId|variationId` for a
+ * single variation. The server takes `styleIds` plus an optional
+ * `variationsByStyle`, so a style-grained RFP sends exactly what it always
+ * did and nothing downstream changes.
+ */
+function splitNominationKeys(keys: Set<string>): {
+  styleIds: string[];
+  variationsByStyle: Record<string, string[]>;
+} {
+  const styleIds = new Set<string>();
+  const variationsByStyle: Record<string, string[]> = {};
+
+  for (const key of keys) {
+    const [styleId, variationId] = key.split("|");
+    styleIds.add(styleId);
+    if (!variationId) continue;
+    (variationsByStyle[styleId] ??= []).push(variationId);
+  }
+
+  return { styleIds: [...styleIds], variationsByStyle };
 }

@@ -5207,3 +5207,32 @@ body > .drawer-frame .drawer {
 .rv-var-label {
   font-size: var(--type-body-sm-size);
 }
+
+/* --- Nomination at variation level (phase 1.6c) --- */
+
+.rd-bid-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Indented to the product's label, so the variations read as belonging to
+   the row above rather than as siblings of it. */
+.rd-var-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  padding-inline-start: var(--space-xl);
+  padding-block-end: var(--space-xs);
+}
+
+.rd-var-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--type-body-sm-size);
+  cursor: pointer;
+}
+
+.rd-var-note {
+  color: var(--color-fg-muted);
+}

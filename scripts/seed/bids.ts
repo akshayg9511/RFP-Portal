@@ -1,4 +1,5 @@
 import type { PrismaClient, Template } from "@prisma/client";
+import { WHOLE_STYLE_KEY } from "../../src/domain/grain";
 import { computeCost } from "../../src/domain/cost";
 import { between, pick, round, step, type rng } from "./lib";
 import { buildLineItems, floorOverhead, type TemplateSpec } from "./lineItems";
@@ -288,11 +289,22 @@ export async function seedBids(
         update: {},
       });
 
+      // Seeded nomination is WHOLE-PRODUCT: variationKey '@STYLE', the same
+      // thing every pre-1.6 row means. Per-variation nomination is a buyer
+      // action, so the seed should not pre-empt it.
       await db.invitationStyle.upsert({
         where: {
-          invitationId_styleId: { invitationId: invitation.id, styleId },
+          invitationId_styleId_variationKey: {
+            invitationId: invitation.id,
+            styleId,
+            variationKey: WHOLE_STYLE_KEY,
+          },
         },
-        create: { invitationId: invitation.id, styleId },
+        create: {
+          invitationId: invitation.id,
+          styleId,
+          variationKey: WHOLE_STYLE_KEY,
+        },
         update: {},
       });
 

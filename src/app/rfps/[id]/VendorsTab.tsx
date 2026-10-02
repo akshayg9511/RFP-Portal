@@ -38,6 +38,7 @@ export function VendorsTab({
   issued,
   onRemove,
   onToggleStyle,
+  onSetVariations,
   onAddVendors,
   onOpenBid,
 }: {
@@ -48,7 +49,17 @@ export function VendorsTab({
   picked: Map<string, Set<string>>;
   issued: boolean;
   onRemove: (vendorId: string) => void;
-  onToggleStyle: (vendorId: string, styleId: string) => void;
+  onToggleStyle: (
+    vendorId: string,
+    styleId: string,
+    variationId?: string,
+  ) => void;
+  /** Writes a product's whole variation set in ONE update. */
+  onSetVariations: (
+    vendorId: string,
+    styleId: string,
+    variationIds: string[],
+  ) => void;
   onAddVendors: () => void;
   /** See the note in ProductsTab — A4 replaces this with a full page. */
   onOpenBid: (invitationId: string, styleId: string, vendorName: string) => void;
@@ -276,19 +287,48 @@ export function VendorsTab({
                       (q) => q.styleId === style.id,
                     );
                     const inSubset = subset.has(style.id);
+                    const groups = style.variations ?? [];
+                    const expandable = groups.length > 1;
+                    // Which of this product's variations this vendor holds.
+                    const held = groups.filter((v) =>
+                      subset.has(`${style.id}|${v.id}`),
+                    );
+                    // No variation keys at all means the whole product, which
+                    // is what a style-grained product means.
+                    const wholeProduct = inSubset && held.length === 0;
 
                     return (
-                      <div className="rd-bid" key={style.id}>
+                      <div className="rd-bid-group" key={style.id}>
+                      <div className="rd-bid">
                         {!issued ? (
                           <Checkbox
                             checked={inSubset}
+                            mixed={
+                              // Partial only when variations are EXPLICIT and
+                              // some are missing. A whole-product hold is
+                              // fully selected, not partial — it has no keys
+                              // precisely because all of them are in.
+                              expandable &&
+                              !wholeProduct &&
+                              held.length > 0 &&
+                              held.length < groups.length
+                            }
                             onChange={() => onToggleStyle(vendorId, style.id)}
                             aria-label={`${style.name} for ${info!.name}`}
                           />
                         ) : null}
                         <span className="rd-bid-vendor">
                           <span className="id">{style.styleNumber}</span>
-                          <span className="rd-bid-meta">{style.name}</span>
+                          <span className="rd-bid-meta">
+                            {style.name}
+                            {expandable && inSubset ? (
+                              <span className="rd-var-note">
+                                {wholeProduct
+                                  ? ` · all ${groups.length}`
+                                  : ` · ${held.length} of ${groups.length}`}
+                              </span>
+                            ) : null}
+                          </span>
                         </span>
 
                         {inSubset && quote?.status === "SUBMITTED" ? (
@@ -304,6 +344,54 @@ export function VendorsTab({
                         ) : inSubset && issued ? (
                           <span className="rd-pending">Not submitted</span>
                         ) : null}
+                      </div>
+
+                      {/* Which variations this vendor is asked for. Shown
+                          only while the product is in their subset and only
+                          on a DRAFT — on an issued RFP the nomination is
+                          settled, so the row above states it instead. */}
+                      {expandable && inSubset && !issued ? (
+                        <div className="rd-var-row">
+                          {groups.map((v) => (
+                            <label className="rd-var-pick" key={v.id}>
+                              <Checkbox
+                                checked={wholeProduct || held.some((h) => h.id === v.id)}
+                                onChange={() => {
+                                  // A whole-product hold has no keys behind
+                                  // it, so unticking one box means writing
+                                  // the OTHERS explicitly — in a single
+                                  // update, or each call reads the same
+                                  // stale state and only the last survives.
+                                  if (wholeProduct) {
+                                    onSetVariations(
+                                      vendorId,
+                                      style.id,
+                                      groups
+                                        .filter((g) => g.id !== v.id)
+                                        .map((g) => g.id),
+                                    );
+                                  } else {
+                                    onToggleStyle(vendorId, style.id, v.id);
+                                  }
+                                }}
+                                aria-label={`${v.label} of ${style.name} for ${info!.name}`}
+                              />
+                              <span>{v.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {/* Issued: name what they actually hold. */}
+                      {expandable && issued && held.length ? (
+                        <div className="rd-var-row">
+                          {held.map((v) => (
+                            <span className="sc-var" key={v.id}>
+                              {v.label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                       </div>
                     );
                   })}

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { badRequest, ok } from "@/lib/api";
+import { variationKeyOf, WHOLE_STYLE_KEY } from "@/domain/grain";
 
 /**
  * @openapi
@@ -20,7 +21,16 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = (await request.json()) as {
-    invitations?: { vendorId: string; styleIds: string[] }[];
+    invitations?: {
+      vendorId: string;
+      styleIds: string[];
+      /**
+       * Which variations this vendor was asked for, by styleId. A style
+       * absent from the map goes out WHOLE — the same thing a bare styleId
+       * has always meant, so a style-grained RFP is unaffected.
+       */
+      variationsByStyle?: Record<string, string[]>;
+    }[];
   };
   const wanted = body.invitations ?? [];
 
@@ -88,7 +98,11 @@ export async function PUT(
       rfpName: string;
     }[] = [];
 
-    const allowed: { vendorId: string; styleIds: string[] }[] = [];
+    const allowed: {
+      vendorId: string;
+      styleIds: string[];
+      variationsByStyle?: Record<string, string[]>;
+    }[] = [];
     const fullyBlocked: { vendorName: string; rfpName: string }[] = [];
 
     for (const inv of wanted) {
@@ -109,7 +123,21 @@ export async function PUT(
 
       // A vendor with nothing legal left cannot be invited at all — an
       // invitation carrying no products is not a nomination.
-      if (keep.length) allowed.push({ vendorId: inv.vendorId, styleIds: keep });
+      if (keep.length) {
+        // Carry the variation narrowing through, scoped to the styles that
+        // survived the clash check — a held-back style must not smuggle its
+        // variations past the filter.
+        const variationsByStyle: Record<string, string[]> = {};
+        for (const styleId of keep) {
+          const picked = inv.variationsByStyle?.[styleId];
+          if (picked?.length) variationsByStyle[styleId] = picked;
+        }
+        allowed.push({
+          vendorId: inv.vendorId,
+          styleIds: keep,
+          variationsByStyle,
+        });
+      }
       else {
         const first = heldBack.find((h) => h.vendorId === inv.vendorId);
         if (first) {
@@ -145,11 +173,29 @@ export async function PUT(
       await db.invitationStyle.deleteMany({
         where: { invitationId: invitation.id },
       });
+      // One row per product, or one per NOMINATED VARIATION where the buyer
+      // narrowed it. A product absent from variationsByStyle goes out whole,
+      // with variationKey '@STYLE' — which is what every pre-1.6 row means.
       await db.invitationStyle.createMany({
-        data: inv.styleIds.map((styleId) => ({
-          invitationId: invitation.id,
-          styleId,
-        })),
+        data: inv.styleIds.flatMap((styleId) => {
+          const variationIds = inv.variationsByStyle?.[styleId] ?? [];
+          if (!variationIds.length) {
+            return [
+              {
+                invitationId: invitation.id,
+                styleId,
+                variationId: null as string | null,
+                variationKey: WHOLE_STYLE_KEY,
+              },
+            ];
+          }
+          return variationIds.map((variationId) => ({
+            invitationId: invitation.id,
+            styleId,
+            variationId: variationId as string | null,
+            variationKey: variationKeyOf(variationId),
+          }));
+        }),
       });
     }
 
