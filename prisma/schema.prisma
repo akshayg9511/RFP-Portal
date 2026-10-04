@@ -91,6 +91,7 @@ model Style {
   rfpStyles        RfpStyle[]
   invitationStyles InvitationStyle[]
   quotes           Quote[]
+  productBids      ProductBid[]
   awards           Award[]
   strategies       AwardStrategy[]
 
@@ -123,7 +124,7 @@ model Variation {
   cleanSheets      CleanSheet[]
   currentSuppliers CurrentSupplier[]
   invitationStyles InvitationStyle[]
-  quotePrices      QuotePrice[]
+  quotes           Quote[]
 
   @@index([styleId])
   @@index([sku])
@@ -392,6 +393,7 @@ model Invitation {
   styles InvitationStyle[]
   quotes Quote[]
   asks   Ask[]
+  bids   ProductBid[]
 
   @@unique([rfpId, vendorId])
   @@index([vendorId])
@@ -434,6 +436,23 @@ model Quote {
   style        Style      @relation(fields: [styleId], references: [id], onDelete: Cascade)
   vendor       Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
+  /// Which variation this quote prices. NULL = the whole product, which is
+  /// what a style-grained product means.
+  ///
+  /// H8.5: every variant carries the FULL template at line-item level — 41
+  /// fields on the Percale template — so each one needs its own complete
+  /// row, not a thin price record. That is why QuotePrice (1.6d) was dropped.
+  variationId String?
+  variation   Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
+
+  /// COALESCE(variationId, '@STYLE'). MySQL treats every NULL as DISTINCT in
+  /// a unique index, so without the sentinel one vendor could hold unlimited
+  /// style-level quotes for one product. See variationKeyOf().
+  variationKey String @default("@STYLE")
+
+  /// Retained at 1 and no longer read. Rounds were replaced by the status
+  /// ladder (domain/bidStatus.ts); negotiation repeats via IN_NEGOTIATION.
+  /// Kept only so the column need not be dropped from a demo database.
   round  Int    @default(1)
   status String @default("DRAFT") // DRAFT | SUBMITTED
 
@@ -472,11 +491,10 @@ model Quote {
   notes              String? @db.Text
 
   submittedAt DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  prices      QuotePrice[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  @@unique([invitationId, styleId, round])
+  @@unique([invitationId, styleId, variationKey])
   @@index([styleId])
   @@index([vendorId])
 }
@@ -484,35 +502,75 @@ model Quote {
 // ---------------------------------------------------------------- asks
 
 // Asks replace chat. Anchored, typed, stateful, resolvable.
-/// ONE QUOTED PRICE PER VARIATION, against one quote.
+/// THE BID — one per vendor x product, carrying the status ladder.
 ///
-/// Decision F5: a quote carries ~35 line-item inputs, 5 bucket totals, an
-/// FOB and 6 DDP columns. Filling all of that per size is five times the
-/// typing for one garment whose labour rate, SAM and trim do not change by
-/// size — and it is not how the real Lauren Home template works either:
-/// that sheet has ONE cost breakdown and one column per size.
+/// Status is per PRODUCT, not per variation (H9): Quince negotiates over a
+/// product, so all of its variants advance together. `InvitationStyle` is
+/// per-variation (1.6c), so repeating a status across those rows would let
+/// them disagree. It lives one level up instead.
 ///
-/// So the breakdown stays on Quote, and only what genuinely differs by size
-/// lives here. A style-grained product has no rows at all and reads its
-/// price straight off Quote.fob, exactly as before.
-model QuotePrice {
-  id      String @id @default(cuid())
-  quoteId String
-  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+/// This is also what replaced rounds. Negotiation repeats via the
+/// IN_NEGOTIATION status, so there is no round counter anywhere.
+model ProductBid {
+  id           String     @id @default(cuid())
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  styleId      String
+  style        Style      @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
-  variationId String
-  variation   Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  /// See domain/bidStatus.ts for the ladder, both label sets and the legal
+  /// transitions. Stored as a string rather than a Prisma enum to match the
+  /// rest of this schema, where every status is a documented String.
+  status String @default("INVITED")
 
-  /// Fabric consumption for THIS size — the input that actually scales.
-  consumption Decimal? @db.Decimal(12, 4)
-  /// The quoted FOB for this size. Quoted by the vendor, never derived.
-  fob         Decimal? @db.Decimal(12, 4)
+  /// The note Quince attaches to its last transition, shown to the vendor.
+  /// Also posted into the comment thread, so there is one chronology.
+  statusNote String? @db.Text
+
+  statusChangedAt DateTime @default(now())
+  statusChangedBy String?
+
+  /// Set when the vendor withdraws. Withdrawal is REVERSIBLE (H7), so this
+  /// is cleared on reinstatement rather than being a terminal flag.
+  withdrawnAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([quoteId, variationId])
-  @@index([variationId])
+  comments BidComment[]
+
+  @@unique([invitationId, styleId])
+  @@index([styleId])
+  @@index([status])
+}
+
+/// The negotiation thread for one vendor x product.
+///
+/// Replaces Asks, which was cut from MVP on 29 Sep. Asks failed because it
+/// was one `body` plus one `reply`; this is a real thread.
+///
+/// Every Quince status change posts here with `statusChange` set, so the
+/// conversation and the decisions read as ONE chronology rather than two
+/// rails the reader has to interleave.
+model BidComment {
+  id           String     @id @default(cuid())
+  productBidId String
+  productBid   ProductBid @relation(fields: [productBidId], references: [id], onDelete: Cascade)
+
+  /// QUINCE | VENDOR. There is no user identity yet (T6, Okta at V1), so
+  /// this is the axis. It becomes a real FK when auth lands.
+  authorSide String
+  authorName String?
+
+  body String @db.Text
+
+  /// Set when this comment IS a status change, so the thread reads as
+  /// history rather than needing a separate audit rail.
+  statusChange String?
+
+  createdAt DateTime @default(now())
+
+  @@index([productBidId, createdAt])
 }
 
 model Ask {

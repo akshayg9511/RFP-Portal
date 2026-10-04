@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { variationKeyOf } from "@/domain/grain";
 import { badRequest, notFound, num, ok } from "@/lib/api";
 import { vendorSignals, type VendorSignals } from "@/domain/scoring";
 import { termsFromValues } from "@/domain/terms";
@@ -65,10 +66,23 @@ export async function GET(
     });
     if (!style) return notFound(`Style ${styleId}`);
 
-    const quote = await db.quote.findFirst({
-      where: { invitationId, styleId, round: invitation.currentRound },
-      include: { prices: true },
+    /**
+     * EVERY quote for this vendor x product — one per variation (H8.5).
+     *
+     * Each variant carries the full template at line-item level, so each
+     * gets its own complete row rather than a thin price record. A
+     * style-grained product has exactly one row with variationKey '@STYLE',
+     * which is the degenerate case of the same shape.
+     */
+    const variantQuotes = await db.quote.findMany({
+      where: { invitationId, styleId },
     });
+
+    /** The row the form opens on: the style-level one, else the first. */
+    const quote =
+      variantQuotes.find((q) => q.variationId === null) ??
+      variantQuotes[0] ??
+      null;
 
     // Which variations of THIS product this vendor was nominated for.
     // Per decision F6 the form shows only these — a size the buyer did not
@@ -206,21 +220,30 @@ export async function GET(
          * saved. Per decision F6 a variation the buyer did not ask for is
          * absent entirely — the vendor never learns it was considered.
          */
-        pricedVariations: nominated.map((n) => ({
-          id: n.variationId!,
-          label:
-            [n.variation!.colour, n.variation!.size]
-              .filter(Boolean)
-              .join(" / ") || "—",
-          consumption: num(
-            quote?.prices.find((p) => p.variationId === n.variationId)
-              ?.consumption ?? null,
-          ),
-          fob: num(
-            quote?.prices.find((p) => p.variationId === n.variationId)?.fob ??
-              null,
-          ),
-        })),
+        /**
+         * The variations THIS vendor must price, each with its own full
+         * quote where one exists. Per decision F6 a variation the buyer did
+         * not ask for is absent entirely — the vendor never learns it was
+         * considered.
+         */
+        pricedVariations: nominated.map((n) => {
+          const own = variantQuotes.find(
+            (q) => q.variationId === n.variationId,
+          );
+          return {
+            id: n.variationId!,
+            label:
+              [n.variation!.colour, n.variation!.size]
+                .filter(Boolean)
+                .join(" / ") || "—",
+            status: own?.status ?? null,
+            fob: num(own?.fob ?? null),
+            // The whole breakdown, so the form can render the full template
+            // per variant and Apply-to-all has something to copy.
+            values: (own?.values ?? {}) as Record<string, unknown>,
+            bucketTotals: (own?.bucketTotals ?? {}) as Record<string, number>,
+          };
+        }),
       },
       quote: quote
         ? {
@@ -280,10 +303,19 @@ export async function PUT(
      * Per-variation price, keyed by variation id. Only consumption and FOB
      * differ by size (F5); the rest of the breakdown is shared above.
      */
-    prices?: Record<
-      string,
-      { consumption?: number | null; fob?: number | null }
-    >;
+    /**
+     * The variation this save is FOR. Omitted means the whole product,
+     * which is what a style-grained product means.
+     */
+    variationId?: string | null;
+    /**
+     * APPLY TO ALL — copy this payload to every unsubmitted variation.
+     *
+     * The full template is 41 fields per variant, so a 5-size product is
+     * 205 inputs; nobody types that twice. Submitted variants are never
+     * overwritten.
+     */
+    applyToAll?: boolean;
   };
 
   try {
@@ -305,19 +337,23 @@ export async function PUT(
 
     const status = body.status ?? "DRAFT";
 
+    const variationId = body.variationId ?? null;
+    const variationKey = variationKeyOf(variationId);
+
     const quote = await db.quote.upsert({
       where: {
-        invitationId_styleId_round: {
+        invitationId_styleId_variationKey: {
           invitationId,
           styleId,
-          round: invitation.currentRound,
+          variationKey,
         },
       },
       create: {
         invitationId,
         styleId,
         vendorId: invitation.vendorId,
-        round: invitation.currentRound,
+        variationId,
+        variationKey,
         status,
         values: (body.values ?? {}) as never,
         bucketTotals: (body.bucketTotals ?? {}) as never,
@@ -340,26 +376,78 @@ export async function PUT(
     });
 
     /**
-     * PER-VARIATION PRICES.
+     * APPLY TO ALL — copy this payload to every UNSUBMITTED variation.
      *
-     * Decision F5: the cost breakdown above is shared across the product's
-     * sizes — labour rate, SAM and trim do not change by size — and only
-     * consumption and FOB are quoted per size. Replace-all rather than
-     * upsert-each: the form sends the complete set every save, and a stale
-     * row for a variation the buyer has since removed would price something
-     * the vendor was never asked for.
+     * The full template is 41 fields per variant (H8.5), so a 5-size product
+     * is 205 inputs. Copy is therefore load-bearing, not a convenience.
+     *
+     * Two rules that matter:
+     *  - a SUBMITTED variant is never overwritten. The vendor has committed
+     *    to it, and silently rewriting a submitted price is the worst thing
+     *    this could do;
+     *  - the copy lands as DRAFT regardless of what the source was saved as,
+     *    so the vendor still reviews and submits each one deliberately.
      */
-    if (body.prices) {
-      await db.quotePrice.deleteMany({ where: { quoteId: quote.id } });
-      const rows = Object.entries(body.prices)
-        .filter(([, price]) => price.fob != null || price.consumption != null)
-        .map(([variationId, price]) => ({
-          quoteId: quote.id,
-          variationId,
-          consumption: price.consumption ?? null,
-          fob: price.fob ?? null,
-        }));
-      if (rows.length) await db.quotePrice.createMany({ data: rows });
+    if (body.applyToAll) {
+      const nominatedVariations = await db.invitationStyle.findMany({
+        where: { invitationId, styleId, variationId: { not: null } },
+        select: { variationId: true },
+      });
+
+      const existing = await db.quote.findMany({
+        where: { invitationId, styleId },
+        select: { variationId: true, status: true },
+      });
+      const submitted = new Set(
+        existing
+          .filter((q) => q.status === "SUBMITTED")
+          .map((q) => q.variationId),
+      );
+
+      for (const row of nominatedVariations) {
+        const target = row.variationId!;
+        if (target === variationId) continue;
+        if (submitted.has(target)) continue;
+
+        await db.quote.upsert({
+          where: {
+            invitationId_styleId_variationKey: {
+              invitationId,
+              styleId,
+              variationKey: variationKeyOf(target),
+            },
+          },
+          create: {
+            invitationId,
+            styleId,
+            vendorId: invitation.vendorId,
+            variationId: target,
+            variationKey: variationKeyOf(target),
+            status: "DRAFT",
+            values: (body.values ?? {}) as never,
+            bucketTotals: (body.bucketTotals ?? {}) as never,
+            fob: body.fob ?? null,
+            dutyType: body.dutyType ?? null,
+            ...termsFromValues(
+              (body.values ?? {}) as Record<string, unknown>,
+              body,
+            ),
+          },
+          update: {
+            status: "DRAFT",
+            values: (body.values ?? {}) as never,
+            bucketTotals: (body.bucketTotals ?? {}) as never,
+            fob: body.fob ?? null,
+            ...(body.dutyType !== undefined
+              ? { dutyType: body.dutyType }
+              : {}),
+            ...termsFromValues(
+              (body.values ?? {}) as Record<string, unknown>,
+              body,
+            ),
+          },
+        });
+      }
     }
 
     /**
@@ -440,22 +528,26 @@ export async function PUT(
         where: { invitationId },
         select: { styleId: true },
       }),
-      db.quote.count({
-        where: {
-          invitationId,
-          status: "SUBMITTED",
-          round: invitation.currentRound,
-        },
+      // DISTINCT PRODUCTS with a submitted quote.
+      //
+      // `count` would be wrong twice over now: a quote exists per VARIATION
+      // (H8.5), so a vendor who submitted 3 sizes of one product would count
+      // as 3; and the round filter is meaningless since rounds were replaced
+      // by the status ladder. Both sides must be product-counts.
+      db.quote.findMany({
+        where: { invitationId, status: "SUBMITTED" },
+        select: { styleId: true },
       }),
     ]);
     const total = new Set(rows.map((r) => r.styleId)).size;
+    const submittedProducts = new Set(submitted.map((q) => q.styleId)).size;
     await db.invitation.update({
       where: { id: invitationId },
       data: {
         status:
-          submitted >= total
+          submittedProducts >= total
             ? "SUBMITTED"
-            : submitted > 0 || status === "DRAFT"
+            : submittedProducts > 0 || status === "DRAFT"
               ? "IN_PROGRESS"
               : "NOT_STARTED",
       },
