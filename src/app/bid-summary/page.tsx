@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Checkbox, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
@@ -10,6 +9,7 @@ import { FacetSelect, facetsOf } from "@/components/FacetSelect";
 import type { BidGroup, BidSummary, FlatRow } from "./types";
 import { BidDrawer } from "./BidDrawer";
 import { BulkBar } from "./BulkBar";
+import { AwardOverlay } from "./AwardOverlay";
 
 /**
  * BID SUMMARY — Phase 3, 5 Oct.
@@ -90,9 +90,14 @@ function BidSummaryInner() {
     freight: get("freight"),
   };
   function setParam(key: string, value: string) {
+    setParams({ [key]: value });
+  }
+  function setParams(patch: Record<string, string>) {
     const next = new URLSearchParams(params.toString());
-    if (value) next.set(key, value);
-    else next.delete(key);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
     const qs = next.toString();
     router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }
@@ -234,6 +239,33 @@ function BidSummaryInner() {
   const order = visible;
   const idx = openRow ? order.findIndex((r) => r.rowKey === openRow.rowKey) : -1;
   const openBid = (r: FlatRow | null) => setParam("bid", r ? r.rowKey : "");
+
+  /**
+   * THE ALLOCATE OVERLAY — also in the URL (`?alloc=&av=`), so browser Back
+   * closes it and a link opens straight onto it. The open bid (`?bid=`) is
+   * KEPT while it is up and the drawer simply yields (T11: one modal surface
+   * at a time), so closing the overlay lands back on the bid you came from.
+   */
+  const allocStyle = params.get("alloc");
+  const allocVar = params.get("av");
+  const allocGroup = allocStyle ? flat.find((r) => r.group.styleId === allocStyle)?.group ?? null : null;
+  const openAllocate = (g: BidGroup) => setParams({ alloc: g.styleId, av: g.variationId ?? "" });
+  const closeAllocate = React.useCallback(() => setParams({ alloc: "", av: "" }), [params]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Bid summary as it stands, minus the overlay — filters, open bid and all. */
+  const closeHref = (() => {
+    const back = new URLSearchParams(params.toString());
+    back.delete("alloc");
+    back.delete("av");
+    return `/bid-summary${back.toString() ? `?${back}` : ""}`;
+  })();
+  /** The full page, told to come BACK to exactly that. */
+  const fullPageHref = (() => {
+    if (!allocStyle) return "";
+    const q = new URLSearchParams();
+    if (allocVar) q.set("v", allocVar);
+    q.set("back", closeHref);
+    return `/products/${allocStyle}/award?${q}`;
+  })();
   // The same vendor on EVERY variant of this product, regardless of filters —
   // "the ability to look at other variants of the same product" (P7).
   const siblings = openRow
@@ -305,7 +337,7 @@ function BidSummaryInner() {
                 a filter you cannot see must never silently narrow the list. */}
             <button
               type="button"
-              className="btn btn--ghost btn--sm"
+              className="btn btn--ghost sm"
               aria-expanded={moreOpen}
               onClick={() => setMoreOpen((v) => !v)}
             >
@@ -324,7 +356,7 @@ function BidSummaryInner() {
             ) : null}
             {anyFilter ? (
               <button
-                className="btn btn--ghost btn--sm"
+                className="btn btn--ghost sm"
                 onClick={() => {
                   const next = new URLSearchParams();
                   if (params.get("view")) next.set("view", params.get("view")!);
@@ -393,6 +425,7 @@ function BidSummaryInner() {
                       onSelect={toggleRow}
                       onChanged={reload}
                       onOpen={openBid}
+                      onAllocate={openAllocate}
                       openKey={openKey}
                     />
                   ))}
@@ -402,12 +435,24 @@ function BidSummaryInner() {
           )}
 
           <BidDrawer
-            row={openRow}
+            row={allocStyle ? null : openRow}
             siblings={siblings}
             onClose={() => openBid(null)}
             onPrev={idx > 0 ? () => openBid(order[idx - 1]!) : undefined}
             onNext={idx >= 0 && idx < order.length - 1 ? () => openBid(order[idx + 1]!) : undefined}
             onSelect={openBid}
+            onAllocate={openAllocate}
+            onChanged={reload}
+          />
+
+          <AwardOverlay
+            styleId={allocStyle}
+            variationId={allocVar}
+            title={allocGroup ? `Allocate · ${allocGroup.styleNumber}` : "Allocate"}
+            fullPageHref={fullPageHref}
+            closeHref={closeHref}
+            onSelectVariation={(id) => setParam("av", id ?? "")}
+            onClose={closeAllocate}
             onChanged={reload}
           />
 
@@ -435,6 +480,7 @@ function GroupRows({
   onSelect,
   onChanged,
   onOpen,
+  onAllocate,
   openKey,
 }: {
   group: BidGroup;
@@ -446,6 +492,7 @@ function GroupRows({
   /** Refetch after a write — never a full page reload, which loses scroll. */
   onChanged: () => void;
   onOpen: (row: FlatRow) => void;
+  onAllocate: (group: BidGroup) => void;
   openKey: string | null;
 }) {
   const bids = rows.filter((r) => r.hasBid).length;
@@ -492,14 +539,11 @@ function GroupRows({
               <Badge tone={group.allocated ? "success" : undefined}>
                 {group.allocated ? "Allocated" : `${Math.round(group.allocatedPct)}% allocated`}
               </Badge>
-              {/* P8 — allocation happens in ONE place, opened on this size. */}
-              <Link
-                className="btn btn--ghost btn--sm"
-                href={`/products/${group.styleId}/award${group.variationId ? `?v=${group.variationId}` : ""}`}
-              >
+              {/* P8 — allocation happens in ONE place, opened on this size,
+                  now as an overlay so Bid summary stays underneath. */}
+              <button type="button" className="btn btn--ghost sm" onClick={() => onAllocate(group)}>
                 Allocate
-                <Icon name="external" size="sm" />
-              </Link>
+              </button>
             </span>
           </div>
         </td>
@@ -729,11 +773,11 @@ function SplitEditor({ group, onSaved }: { group: BidGroup; onSaved: () => void 
           </span>
           <span className="bs-split-acts">
             {group.split.set ? (
-              <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => save(null)}>
+              <button className="btn btn--ghost sm" disabled={busy} onClick={() => save(null)}>
                 Reset to 70 / 30
               </button>
             ) : null}
-            <button className="btn btn--secondary btn--sm" disabled={busy || !valid} onClick={() => save(value)}>
+            <button className="btn btn--secondary sm" disabled={busy || !valid} onClick={() => save(value)}>
               Apply
             </button>
           </span>

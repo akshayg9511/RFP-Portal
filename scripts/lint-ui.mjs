@@ -515,6 +515,19 @@ const STATES = {
   ],
   "/bid-summary": [
     {
+      // 5 Oct — the product award page hosted as an overlay on Bid summary.
+      name: "bid summary · allocate overlay",
+      open: async (page) => {
+        await page.waitForSelector("tr.bs-group", { timeout: 10000 });
+        await page.locator('tr.bs-group button:has-text("Allocate")').first().click();
+        await page.waitForSelector(".ao-sheet .pd-footer", { timeout: 20000 });
+        await page.waitForTimeout(600);
+      },
+      cleanup: async (page) => {
+        await page.keyboard.press("Escape");
+      },
+    },
+    {
       // U3 — the per-variant split editor, open over the grid.
       name: "bid summary · split editor open",
       open: async (page) => {

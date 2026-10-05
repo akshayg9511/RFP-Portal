@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
 import { SideDrawer } from "@/components/SideDrawer";
 import { BidLifecycle } from "@/components/BidLifecycle";
@@ -32,6 +31,7 @@ export function BidDrawer({
   onPrev,
   onNext,
   onSelect,
+  onAllocate,
   onChanged,
 }: {
   row: FlatRow | null;
@@ -41,6 +41,7 @@ export function BidDrawer({
   onPrev?: () => void;
   onNext?: () => void;
   onSelect: (row: FlatRow) => void;
+  onAllocate: (group: FlatRow["group"]) => void;
   onChanged: () => void;
 }) {
   return (
@@ -59,7 +60,7 @@ export function BidDrawer({
     >
       {row ? (
         // Keyed, so switching bid never shows the previous one's numbers.
-        <DrawerBody key={row.rowKey} row={row} siblings={siblings} onSelect={onSelect} onChanged={onChanged} />
+        <DrawerBody key={row.rowKey} row={row} siblings={siblings} onSelect={onSelect} onAllocate={onAllocate} onChanged={onChanged} />
       ) : null}
     </SideDrawer>
   );
@@ -69,11 +70,13 @@ function DrawerBody({
   row,
   siblings,
   onSelect,
+  onAllocate,
   onChanged,
 }: {
   row: FlatRow;
   siblings: FlatRow[];
   onSelect: (row: FlatRow) => void;
+  onAllocate: (group: FlatRow["group"]) => void;
   onChanged: () => void;
 }) {
   const g = row.group;
@@ -153,13 +156,9 @@ function DrawerBody({
           </dd>
           <dt>RFP</dt><dd>{row.rfp.name}</dd>
         </dl>
-        <Link
-          className="btn btn--secondary btn--sm"
-          href={`/products/${g.styleId}/award${g.variationId ? `?v=${g.variationId}` : ""}`}
-        >
+        <button type="button" className="btn btn--secondary sm" onClick={() => onAllocate(g)}>
           Allocate this variant
-          <Icon name="external" size="sm" />
-        </Link>
+        </button>
       </div>
     </>
   );

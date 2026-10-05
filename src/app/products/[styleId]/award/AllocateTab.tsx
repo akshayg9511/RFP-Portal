@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Badge, Icon } from "@/ds/components";
-import { money, percent, unitCost, units } from "@/lib/format";
+import { money, percent, unitCost, units, moneyCompact } from "@/lib/format";
 import type { allocate } from "@/domain/award";
 import type { RegionSplit } from "@/domain/strategies";
 import { BASIS_LABEL, vendorType, type ProductBids } from "../types";
@@ -82,7 +82,7 @@ export function AllocateTab({
           </span>
           {onCopyToAll ? (
             <button
-              className="btn btn--ghost btn--sm"
+              className="btn btn--ghost sm"
               disabled={busy || !result?.isValid}
               onClick={onCopyToAll}
               title={
@@ -173,7 +173,7 @@ export function AllocateTab({
                     <td className="num">
                       {share > 0 ? (
                         <>
-                          {money(line?.awardedDollars ?? 0)}
+                          {moneyCompact(line?.awardedDollars ?? 0)}
                           <span className="pd-basis">
                             {units(line?.awardedUnits ?? 0)} units
                           </span>
@@ -190,7 +190,7 @@ export function AllocateTab({
                             (line?.savingsDollars ?? 0) >= 0 ? "pos" : "neg"
                           }
                         >
-                          {money(line?.savingsDollars ?? 0)}
+                          {moneyCompact(line?.savingsDollars ?? 0)}
                         </span>
                       ) : (
                         <span className="pd-none">—</span>

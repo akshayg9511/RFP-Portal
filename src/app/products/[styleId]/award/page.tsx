@@ -47,34 +47,48 @@ import { CompareBidsTab } from "./CompareBidsTab";
  */
 type Tab = "compare" | "allocate" | "strategies";
 
-function ProductAwardInner() {
-  const params = useParams<{ styleId: string }>();
-  const router = useRouter();
-  const styleId = params.styleId;
-  /**
-   * WHICH VARIATION — decision N2, 5 Oct.
-   *
-   * Awarding is per variation, so one dropdown in the header drives all three
-   * tabs. It lives in the URL (`?v=`) for the same reason Award Summary's
-   * filters do: a link to "Queen of U-BEDD-138" is shareable and survives
-   * Back. Absent = the first variation, so the page never opens on "pick one".
-   */
-  const search = useSearchParams();
-  const variationParam = search.get("v");
+/**
+ * The product award page — Compare bids · Allocate · Strategies + the pinned
+ * footer — as a COMPONENT, so it can be hosted by its own route AND as an
+ * overlay on Bid summary (Akshay, 5 Oct: "everything that is there in the
+ * award summary detail page… a single point of view to play around with the
+ * award summary from the bid summary itself").
+ *
+ * One implementation, two hosts: the overlay is not a second allocation
+ * surface to keep in step — it is this one. Everything the host owns (which
+ * product and variation, where "back" goes, what happens after an award)
+ * comes in as props; nothing here reads the URL.
+ */
+export type ProductAwardProps = {
+  styleId: string;
+  /** The selected variation; null = the first group. */
+  variationParam: string | null;
+  onSelectVariation: (id: string | null) => void;
+  backHref: string;
+  backLabel: string;
+  /** After an AWARD lands: the route navigates back, the overlay closes. */
+  onAwarded: () => void;
+  /** After any save, so a host list can refresh behind the overlay. */
+  onChanged?: () => void;
+  /** Hosted in an overlay: footer and header pin to it, not the window. */
+  embedded?: boolean;
+};
+
+export function ProductAward({
+  styleId,
+  variationParam,
+  onSelectVariation,
+  backHref,
+  backLabel,
+  onAwarded,
+  onChanged,
+  embedded = false,
+}: ProductAwardProps) {
   const { data, loading, error, reload } = useApi<ProductBids>(
     styleId
       ? `/api/styles/${styleId}/bids${variationParam ? `?variationId=${encodeURIComponent(variationParam)}` : ""}`
       : null,
   );
-
-  function selectVariation(id: string | null) {
-    const next = new URLSearchParams(search.toString());
-    if (id) next.set("v", id);
-    else next.delete("v");
-    // replace, not push — switching size is not a navigation worth a Back.
-    router.replace(`?${next.toString()}`, { scroll: false });
-    setApplied(null);
-  }
 
   /**
    * Lands on ALLOCATE even though Compare bids is first in the row: arriving
@@ -95,22 +109,6 @@ function ProductAwardInner() {
    */
   const [galleryOpen, setGalleryOpen] = React.useState(false);
 
-  /**
-   * Where the breadcrumb goes back to.
-   *
-   * Award Summary keeps its filters in the URL and passes that querystring
-   * through as `?back=`, so returning restores all seven filters and the view
-   * toggle. Without it, clicking a product silently dropped the lot.
-   */
-  const backQuery = search.get("back") ?? "";
-  const backHref = backQuery ? `/award?${backQuery}` : "/award";
-  const backLabel = React.useMemo(() => {
-    if (!backQuery) return "Award summary";
-    const applied = new URLSearchParams(backQuery);
-    applied.delete("view");
-    const n = [...applied.keys()].filter((k) => applied.get(k)).length;
-    return n ? `Award summary · ${n} filter${n === 1 ? "" : "s"}` : "Award summary";
-  }, [backQuery]);
 
   /**
    * Award % AS TYPED, keyed by vendor, holding only what the user changed.
@@ -150,6 +148,11 @@ function ProductAwardInner() {
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [confirmAward, setConfirmAward] = React.useState(false);
   const [applied, setApplied] = React.useState<string | null>(null);
+
+  function selectVariation(id: string | null) {
+    onSelectVariation(id);
+    setApplied(null);
+  }
   /** Outcome of an apply-to-all — names any variation it could not reach. */
   const [notice, setNotice] = React.useState<string | null>(null);
 
@@ -346,7 +349,8 @@ function ProductAwardInner() {
       setCommentEdit(null);
       setConfirmAward(false);
       setNotice(null);
-      if (status === "AWARDED") router.push(backHref);
+      onChanged?.();
+      if (status === "AWARDED") onAwarded();
       else reload();
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : String(err));
@@ -427,7 +431,7 @@ function ProductAwardInner() {
   const isAwarded = status === "AWARDED";
 
   return (
-    <div className="pd-page has-pinned">
+    <div className={embedded ? "pd-page has-pinned is-embedded" : "pd-page has-pinned"}>
       {/*
         STICKY: identity + facts + tabs are one unit that pins to the top of
         the scroll container (`.shell > .ct`, measured overflow-y: auto — NOT
@@ -727,7 +731,51 @@ export function Readout({
 export default function Page() {
   return (
     <React.Suspense fallback={<div className="pd-page"><div className="sk" style={{ blockSize: 160, marginBlockEnd: 24 }} /><div className="sk" style={{ blockSize: 320 }} /></div>}>
-      <ProductAwardInner />
+      <ProductAwardRoute />
     </React.Suspense>
+  );
+}
+
+/** The route host: reads the URL, owns navigation. */
+function ProductAwardRoute() {
+  const params = useParams<{ styleId: string }>();
+  const router = useRouter();
+  const search = useSearchParams();
+
+  /**
+   * WHERE "BACK" GOES.
+   *
+   * `?back=` is either Award Summary's own querystring (its filters) or, new
+   * on 5 Oct, a full PATH — Bid summary passes `/bid-summary?…` so its
+   * filters, open variant and open bid survive the round trip. Opening this
+   * page from Bid summary used to send the breadcrumb to Award summary, and
+   * Akshay could not get back.
+   */
+  const back = search.get("back") ?? "";
+  const backHref = back.startsWith("/") ? back : back ? `/award?${back}` : "/award";
+  const backLabel = React.useMemo(() => {
+    if (back.startsWith("/bid-summary")) return "Bid summary";
+    if (!back) return "Award summary";
+    const applied = new URLSearchParams(back);
+    applied.delete("view");
+    const n = [...applied.keys()].filter((k) => applied.get(k)).length;
+    return n ? `Award summary · ${n} filter${n === 1 ? "" : "s"}` : "Award summary";
+  }, [back]);
+
+  return (
+    <ProductAward
+      styleId={params.styleId}
+      variationParam={search.get("v")}
+      onSelectVariation={(id) => {
+        const next = new URLSearchParams(search.toString());
+        if (id) next.set("v", id);
+        else next.delete("v");
+        // replace, not push — switching size is not a navigation worth a Back.
+        router.replace(`?${next.toString()}`, { scroll: false });
+      }}
+      backHref={backHref}
+      backLabel={backLabel}
+      onAwarded={() => router.push(backHref)}
+    />
   );
 }
