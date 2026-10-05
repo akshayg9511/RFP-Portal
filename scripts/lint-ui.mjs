@@ -531,7 +531,10 @@ const STATES = {
       // P10 — bulk: ticked rows, the selection bar and the one-note modal.
       name: "bid summary · bulk move modal",
       open: async (page) => {
-        await page.waitForSelector("tr.bs-row .bs-c-check .checkbox", { timeout: 10000 });
+        // Variants open collapsed (5 Oct), so expand one to reach a row.
+        await page.waitForSelector("tr.bs-group .aw-chev", { timeout: 10000 });
+        await page.locator("tr.bs-group .aw-chev").first().click();
+        await page.waitForSelector("tr.bs-row .bs-c-check .checkbox", { timeout: 4000 });
         await page.locator("tr.bs-row .bs-c-check .checkbox").first().click();
         await page.waitForSelector(".sel-bar", { timeout: 4000 });
         await page.locator('.sel-bar button:has-text("With")').click();
@@ -549,7 +552,11 @@ const STATES = {
       // U6 — the bid drawer: status, thread, freight, buckets, terms.
       name: "bid summary · bid drawer open",
       open: async (page) => {
-        await page.waitForSelector("tr.bs-row", { timeout: 10000 });
+        await page.waitForSelector("tr.bs-group .aw-chev", { timeout: 10000 });
+        if (!(await page.locator("tr.bs-row").count())) {
+          await page.locator("tr.bs-group .aw-chev").first().click();
+        }
+        await page.waitForSelector("tr.bs-row", { timeout: 4000 });
         await page.locator("tr.bs-row").first().click();
         await page.waitForSelector(".drawer .bl-state", { timeout: 8000 });
         await page.waitForTimeout(1500);

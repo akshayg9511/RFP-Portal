@@ -6051,3 +6051,13 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   line-height: var(--type-caption-line);
   color: var(--color-fg-muted);
 }
+
+/* Bid summary · second pass (5 Oct). */
+/* The "Show" control leads the filter strip — it is the one that decides
+   which bids you are looking at. */
+.bs-show { font-weight: var(--type-emphasis-weight); }
+/* Product, pinned with vendor so a row still says what it is mid-scroll. */
+.bs-c-product { inset-inline-start: 40px; inline-size: 120px; min-inline-size: 120px; max-inline-size: 120px; }
+.bs-c-vendor { inset-inline-start: 160px; }
+/* Collapsed headers carry the one thing worth acting on in bold. */
+.bs-await { color: var(--color-feedback-warning-fg); }

@@ -35,3 +35,19 @@ export function label(value: string): string {
     .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
     .join(" ");
 }
+
+/**
+ * Compact signed money for dense grids: −$5.3K, $25K, −$1.2M.
+ *
+ * `money()` falls through to full cents below $10K, so a savings column
+ * mixed "$25K" with "$-5275.98" — and put the minus sign after the dollar.
+ * A true minus (U+2212) before the $ reads correctly at a glance.
+ */
+export function moneyCompact(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const sign = value < 0 ? "\u2212" : "";
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(abs >= 100_000 ? 0 : 1)}K`;
+  return `${sign}$${Math.round(abs)}`;
+}

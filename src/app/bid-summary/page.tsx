@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Checkbox, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
-import { money, unitCost, units } from "@/lib/format";
+import { moneyCompact, unitCost, units } from "@/lib/format";
 import { FacetSelect, facetsOf } from "@/components/FacetSelect";
 import type { BidGroup, BidSummary, FlatRow } from "./types";
 import { BidDrawer } from "./BidDrawer";
@@ -28,15 +28,35 @@ import { BulkBar } from "./BulkBar";
 
 type View = "review" | "notbid" | "unallocated" | "all";
 
-const VIEWS: { key: View; label: string }[] = [
-  // U4 — the default, and a removable filter. "Awaiting review" is the Quince
-  // side of the vendor's "With Quince": the same moment, named from each seat.
-  { key: "review", label: "Awaiting review" },
-  { key: "notbid", label: "Not bid" },
-  { key: "unallocated", label: "Unallocated variants" },
-];
 
 const FREIGHT_LABEL = { QUINCE_BLEND: "Quince-paid", DDP_BLEND: "DDP" } as const;
+
+/**
+ * EVERY STAGE HAS A COLOUR, chosen by whose move it is.
+ *
+ * Untoned badges render with no fill, so "In negotiation" and "Invited" read
+ * as stray text beside filled pills and the column looked misaligned — the
+ * same defect the RFP list had with DRAFT (A12).
+ *  - warning: Quince's turn — what this screen exists to surface
+ *  - accent:  in progress with the vendor
+ *  - info:    nothing back yet (the DS's "no status yet" grey)
+ *  - success: done; danger (tinted, never solid): ended
+ */
+const STAGE_TONE: Record<string, "warning" | "accent" | "info" | "success" | "danger"> = {
+  INITIAL_IN_REVIEW: "warning",
+  FULL_IN_REVIEW: "warning",
+  FINAL_IN_REVIEW: "warning",
+  CHANGES_REQUESTED: "accent",
+  INITIAL_CLEARED: "accent",
+  IN_NEGOTIATION: "accent",
+  FINAL_REQUESTED: "accent",
+  INVITED: "info",
+  BID_ACCEPTED: "success",
+  NOT_PROCEEDING: "danger",
+  // The DS has four status tones and no neutral one, so a vendor-side exit
+  // takes the same grey as "nothing back yet".
+  WITHDRAWN: "info",
+};
 
 export default function BidSummaryPage() {
   // useSearchParams() needs a Suspense boundary to prerender (A17).
@@ -184,10 +204,12 @@ function BidSummaryInner() {
     ).length;
 
   // ── collapse + selection ────────────────────────────────────────────────
-  const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
+  // Collapsed by default (Akshay, 5 Oct) — the list opens as one line per
+  // product x variant, and a variant expands on click. So track EXPANDED.
+  const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const toggleCollapse = (key: string) =>
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -248,33 +270,21 @@ function BidSummaryInner() {
 
       {data ? (
         <>
-          {/* QUICK VIEWS (U4). Awaiting review is the default and a removable
-              chip — clearing it shows every bid. */}
-          <div className="bs-views" role="group" aria-label="Quick views">
-            {VIEWS.map((v) => {
-              const on = view === v.key;
-              return (
-                <button
-                  key={v.key}
-                  type="button"
-                  className={on ? "bs-view on" : "bs-view"}
-                  aria-pressed={on}
-                  onClick={() => setView(on ? "all" : v.key)}
-                >
-                  {v.label}
-                  <span className="ct">{viewCount(v.key)}</span>
-                  {on ? <Icon name="close" size="sm" /> : null}
-                </button>
-              );
-            })}
-            <span className="bs-views-total">
-              {view === "all"
-                ? `All ${flat.filter((r) => matches(r)).length} bids`
-                : `${visible.length} shown`}
-            </span>
-          </div>
-
           <div className="aw-filters bs-filters">
+            {/* ONE "Show" control, not three chips (Akshay, 5 Oct: "keep
+                awaiting review, not bid and unallocated variants as one
+                filter"). Defaults to Awaiting review; "All bids" clears it. */}
+            <select
+              className="control sm bs-show"
+              aria-label="Show"
+              value={view}
+              onChange={(e) => setView(e.target.value as View)}
+            >
+              <option value="review">Awaiting review ({viewCount("review")})</option>
+              <option value="notbid">Not bid ({viewCount("notbid")})</option>
+              <option value="unallocated">Unallocated variants ({viewCount("unallocated")})</option>
+              <option value="all">All bids ({flat.filter((r) => matches(r)).length})</option>
+            </select>
             <div className="control search sm aw-search">
               <Icon name="search" size="sm" />
               <input
@@ -348,6 +358,7 @@ function BidSummaryInner() {
                 <thead>
                   <tr>
                     <th rowSpan={2} className="bs-sticky bs-c-check" aria-label="Select" />
+                    <th rowSpan={2} className="bs-sticky bs-c-product">Product</th>
                     <th rowSpan={2} className="bs-sticky bs-c-vendor">Vendor</th>
                     <th rowSpan={2}>COO</th>
                     <th rowSpan={2} className="num">FOB</th>
@@ -376,7 +387,7 @@ function BidSummaryInner() {
                       key={group.key}
                       group={group}
                       rows={rows}
-                      collapsed={collapsed.has(group.key)}
+                      collapsed={!expanded.has(group.key)}
                       onToggle={() => toggleCollapse(group.key)}
                       selected={selected}
                       onSelect={toggleRow}
@@ -413,7 +424,7 @@ function BidSummaryInner() {
   );
 }
 
-const COLS = 17;
+const COLS = 18;
 
 function GroupRows({
   group,
@@ -468,7 +479,13 @@ function GroupRows({
             {collapsed ? (
               <span className="bs-fact">
                 {bids} bid{bids === 1 ? "" : "s"}
-                {awaiting ? ` · ${awaiting} awaiting review` : ""}
+                {group.lowestBestCost !== null ? ` · lowest ${unitCost(group.lowestBestCost)}` : ""}
+                {awaiting ? (
+                  <>
+                    {" · "}
+                    <strong className="bs-await">{awaiting} awaiting review</strong>
+                  </>
+                ) : null}
               </span>
             ) : null}
             <span className="bs-group-alloc">
@@ -521,6 +538,7 @@ function BidRowView({
   isOpen: boolean;
 }) {
   const p = row.price;
+  const stageTone = STAGE_TONE[row.stage.status] ?? "info";
   const usingDdp = p?.basis === "DDP_BLEND";
   const isLowest = p !== null && lowest !== null && Math.abs(p.bestCost - lowest) < 1e-9;
   // The basis NOT in use recedes, so "which price are we using" reads at a
@@ -544,6 +562,12 @@ function BidRowView({
     >
       <td className="bs-sticky bs-c-check" onClick={(e) => e.stopPropagation()}>
         <Checkbox checked={checked} onChange={onCheck} aria-label={`Select ${row.vendor.name}`} />
+      </td>
+      {/* PRODUCT on every row (Akshay, 5 Oct) — the header names it once,
+          but a row should still say what it is when you scan down. */}
+      <td className="bs-sticky bs-c-product">
+        <span className="id">{row.group.styleNumber}</span>
+        <span className="bs-vendor-meta">{row.group.variationLabel}</span>
       </td>
       <td className="bs-sticky bs-c-vendor">
         <span className="bs-vendor">{row.vendor.name}</span>
@@ -580,7 +604,7 @@ function BidRowView({
             )}
           </td>
           <td className="num">
-            <span className={p.annualSavings < 0 ? "aw-neg" : undefined}>{money(p.annualSavings)}</span>
+            <span className={p.annualSavings < 0 ? "aw-neg" : undefined}>{moneyCompact(p.annualSavings)}</span>
           </td>
         </>
       ) : (
@@ -597,14 +621,16 @@ function BidRowView({
         {row.award ? (
           <>
             {Math.round(row.award.pct)}%
-            <span className="bs-vendor-meta">{money(row.award.dollars)}</span>
+            <span className="bs-vendor-meta">{moneyCompact(row.award.dollars)}</span>
           </>
         ) : "—"}
       </td>
       <td>
         {/* Quince's turn carries the only emphasis — it is what this
             screen exists to surface. */}
-        <Badge tone={row.stage.awaitingReview ? "warning" : row.stage.status === "BID_ACCEPTED" ? "success" : undefined}>
+        {/* `accent` is a flag on Badge, not a tone — the DS keeps status to
+            four tones and treats accent as "the product talking". */}
+        <Badge tone={stageTone === "accent" ? undefined : stageTone} accent={stageTone === "accent"}>
           {row.stage.quinceLabel}
         </Badge>
       </td>
