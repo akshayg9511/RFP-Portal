@@ -51,12 +51,15 @@ export function BidLifecycle({
    * (T11), and the Quince side opens from within the bid drawer.
    */
   threadAs = "drawer",
+  onChanged,
 }: {
   invitationId: string;
   styleId: string;
   side?: "QUINCE" | "VENDOR";
   authorName?: string | null;
   threadAs?: "drawer" | "panel";
+  /** Called after a status move or comment lands, so a host list refreshes. */
+  onChanged?: () => void;
 }) {
   const { data, loading, reload } = useApi<BidView>(
     `/api/bids/${invitationId}/${styleId}?side=${side}`,
@@ -83,6 +86,7 @@ export function BidLifecycle({
       setNote("");
       setMoveTo("");
       reload();
+      onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update");
     } finally {

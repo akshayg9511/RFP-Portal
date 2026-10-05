@@ -513,6 +513,31 @@ const STATES = {
       },
     },
   ],
+  "/bid-summary": [
+    {
+      // U3 — the per-variant split editor, open over the grid.
+      name: "bid summary · split editor open",
+      open: async (page) => {
+        await page.waitForSelector(".bs-split-btn", { timeout: 10000 });
+        await page.locator(".bs-split-btn").first().click();
+        await page.waitForSelector(".bs-split-pop", { timeout: 4000 });
+        await page.waitForTimeout(400);
+      },
+      cleanup: async (page) => {
+        await page.keyboard.press("Escape");
+      },
+    },
+    {
+      // U6 — the bid drawer: status, thread, freight, buckets, terms.
+      name: "bid summary · bid drawer open",
+      open: async (page) => {
+        await page.waitForSelector("tr.bs-row", { timeout: 10000 });
+        await page.locator("tr.bs-row").first().click();
+        await page.waitForSelector(".drawer .bl-state", { timeout: 8000 });
+        await page.waitForTimeout(1500);
+      },
+    },
+  ],
   "/vendors": [
     {
       name: "vendor drawer open",

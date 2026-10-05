@@ -8,6 +8,7 @@ import { useApi } from "@/lib/useApi";
 import { money, unitCost, units } from "@/lib/format";
 import { FacetSelect, facetsOf } from "@/components/FacetSelect";
 import type { BidGroup, BidSummary, FlatRow } from "./types";
+import { BidDrawer } from "./BidDrawer";
 
 /**
  * BID SUMMARY — Phase 3, 5 Oct.
@@ -200,6 +201,23 @@ function BidSummaryInner() {
     });
 
   const anyFilter = Object.entries(f).some(([, v]) => v);
+
+  /**
+   * THE OPEN BID — in the URL (`?bid=`), so a link opens straight onto it.
+   * Previous / next walk the visible list in its displayed order (U6).
+   */
+  const openKey = params.get("bid");
+  const openRow = flat.find((r) => r.rowKey === openKey) ?? null;
+  const order = visible;
+  const idx = openRow ? order.findIndex((r) => r.rowKey === openRow.rowKey) : -1;
+  const openBid = (r: FlatRow | null) => setParam("bid", r ? r.rowKey : "");
+  // The same vendor on EVERY variant of this product, regardless of filters —
+  // "the ability to look at other variants of the same product" (P7).
+  const siblings = openRow
+    ? flat.filter(
+        (r) => r.invitationId === openRow.invitationId && r.group.styleId === openRow.group.styleId,
+      )
+    : [];
   const hiddenActive = [f.material, f.colour, f.country, f.gm, f.partner, f.freight].filter(Boolean).length;
   // Open by default when one of its filters is already applied (e.g. a shared
   // link), so an active filter is never hidden on arrival.
@@ -362,12 +380,24 @@ function BidSummaryInner() {
                       selected={selected}
                       onSelect={toggleRow}
                       onChanged={reload}
+                      onOpen={openBid}
+                      openKey={openKey}
                     />
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+
+          <BidDrawer
+            row={openRow}
+            siblings={siblings}
+            onClose={() => openBid(null)}
+            onPrev={idx > 0 ? () => openBid(order[idx - 1]!) : undefined}
+            onNext={idx >= 0 && idx < order.length - 1 ? () => openBid(order[idx + 1]!) : undefined}
+            onSelect={openBid}
+            onChanged={reload}
+          />
         </>
       ) : null}
     </>
@@ -384,6 +414,8 @@ function GroupRows({
   selected,
   onSelect,
   onChanged,
+  onOpen,
+  openKey,
 }: {
   group: BidGroup;
   rows: FlatRow[];
@@ -393,6 +425,8 @@ function GroupRows({
   onSelect: (key: string) => void;
   /** Refetch after a write — never a full page reload, which loses scroll. */
   onChanged: () => void;
+  onOpen: (row: FlatRow) => void;
+  openKey: string | null;
 }) {
   const bids = rows.filter((r) => r.hasBid).length;
   const awaiting = rows.filter((r) => r.hasBid && r.stage.awaitingReview).length;
@@ -454,6 +488,8 @@ function GroupRows({
               lowest={group.lowestBestCost}
               checked={selected.has(r.rowKey)}
               onCheck={() => onSelect(r.rowKey)}
+              onOpen={() => onOpen(r)}
+              isOpen={openKey === r.rowKey}
             />
           ))}
     </>
@@ -465,11 +501,15 @@ function BidRowView({
   lowest,
   checked,
   onCheck,
+  onOpen,
+  isOpen,
 }: {
   row: FlatRow;
   lowest: number | null;
   checked: boolean;
   onCheck: () => void;
+  onOpen: () => void;
+  isOpen: boolean;
 }) {
   const p = row.price;
   const usingDdp = p?.basis === "DDP_BLEND";
@@ -480,7 +520,19 @@ function BidRowView({
   const ddpCls = (extra = "") => `num ${p && !usingDdp ? "bs-muted" : ""} ${extra}`.trim();
 
   return (
-    <tr className={row.hasBid ? "bs-row" : "bs-row is-nobid"}>
+    <tr
+      className={`bs-row${row.hasBid ? "" : " is-nobid"}${isOpen ? " is-open" : ""}`}
+      onClick={onOpen}
+      tabIndex={0}
+      role="button"
+      aria-label={`Open ${row.vendor.name}'s bid on ${row.group.styleNumber} ${row.group.variationLabel}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+    >
       <td className="bs-sticky bs-c-check" onClick={(e) => e.stopPropagation()}>
         <Checkbox checked={checked} onChange={onCheck} aria-label={`Select ${row.vendor.name}`} />
       </td>

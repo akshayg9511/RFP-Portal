@@ -29,6 +29,7 @@ export function SideDrawer({
   size = "lg",
   onPrev,
   onNext,
+  stepNoun = "style",
   footer,
   children,
 }: {
@@ -39,6 +40,8 @@ export function SideDrawer({
   size?: "sm" | "lg";
   onPrev?: () => void;
   onNext?: () => void;
+  /** What previous / next step through — read out by screen readers. */
+  stepNoun?: string;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -123,7 +126,7 @@ export function SideDrawer({
                 <button
                   className="btn btn--ghost icon"
                   onClick={onPrev}
-                  aria-label="Previous style"
+                  aria-label={`Previous ${stepNoun}`}
                 >
                   <Icon name="chevron_left" />
                 </button>
@@ -132,7 +135,7 @@ export function SideDrawer({
                 <button
                   className="btn btn--ghost icon"
                   onClick={onNext}
-                  aria-label="Next style"
+                  aria-label={`Next ${stepNoun}`}
                 >
                   <Icon name="chevron_right" />
                 </button>
