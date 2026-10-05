@@ -528,6 +528,24 @@ const STATES = {
       },
     },
     {
+      // P10 — bulk: ticked rows, the selection bar and the one-note modal.
+      name: "bid summary · bulk move modal",
+      open: async (page) => {
+        await page.waitForSelector("tr.bs-row .bs-c-check .checkbox", { timeout: 10000 });
+        await page.locator("tr.bs-row .bs-c-check .checkbox").first().click();
+        await page.waitForSelector(".sel-bar", { timeout: 4000 });
+        await page.locator('.sel-bar button:has-text("With")').click();
+        await page.waitForSelector(".sel-menu .menu-item", { timeout: 4000 });
+        await page.locator(".sel-menu .menu-item").first().click();
+        await page.waitForSelector(".modal", { timeout: 4000 });
+        await page.waitForTimeout(400);
+      },
+      cleanup: async (page) => {
+        await page.locator(".modal .x").click().catch(() => {});
+        await page.locator('.sel-bar button:has-text("Clear")').click().catch(() => {});
+      },
+    },
+    {
       // U6 — the bid drawer: status, thread, freight, buckets, terms.
       name: "bid summary · bid drawer open",
       open: async (page) => {

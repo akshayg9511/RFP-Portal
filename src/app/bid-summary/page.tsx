@@ -9,6 +9,7 @@ import { money, unitCost, units } from "@/lib/format";
 import { FacetSelect, facetsOf } from "@/components/FacetSelect";
 import type { BidGroup, BidSummary, FlatRow } from "./types";
 import { BidDrawer } from "./BidDrawer";
+import { BulkBar } from "./BulkBar";
 
 /**
  * BID SUMMARY — Phase 3, 5 Oct.
@@ -397,6 +398,14 @@ function BidSummaryInner() {
             onNext={idx >= 0 && idx < order.length - 1 ? () => openBid(order[idx + 1]!) : undefined}
             onSelect={openBid}
             onChanged={reload}
+          />
+
+          {/* P10 — the selection bar, only while something is ticked. Rows
+              that left the list after a move drop out of it too. */}
+          <BulkBar
+            rows={flat.filter((r) => selected.has(r.rowKey))}
+            onClear={() => setSelected(new Set())}
+            onDone={reload}
           />
         </>
       ) : null}
