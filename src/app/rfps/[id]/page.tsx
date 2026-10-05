@@ -567,7 +567,7 @@ export default function RfpDetailPage() {
               </span>
 
               <button
-                className="btn btn--ghost btn--sm rd-sum-edit"
+                className="btn btn--ghost sm rd-sum-edit"
                 onClick={() => setOwnerOpen((v) => !v)}
                 aria-expanded={ownerOpen}
               >

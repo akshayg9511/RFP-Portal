@@ -240,7 +240,7 @@ export default function VendorDashboard() {
                               Continue when they owe us something, View when
                               the bid is with Quince. */}
                           <Link
-                            className="btn btn--ghost btn--sm"
+                            className="btn btn--ghost sm"
                             href={`/vendor/quote/${row.invitationId}/${row.id}`}
                           >
                             {vendorCanEdit(row.bidStatus)

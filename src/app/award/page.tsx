@@ -322,7 +322,7 @@ function AwardPageInner() {
             {params.get("reason") ? ` · ${params.get("reason")}` : ""}
           </span>
           <button
-            className="btn btn--ghost btn--sm"
+            className="btn btn--ghost sm"
             onClick={clearArrivedFilter}
             aria-label="Clear this filter"
           >
@@ -416,7 +416,7 @@ function AwardPageInner() {
         />
 
         {anyFilter ? (
-          <button className="btn btn--ghost btn--sm" onClick={clearAll}>
+          <button className="btn btn--ghost sm" onClick={clearAll}>
             Clear filters
           </button>
         ) : null}

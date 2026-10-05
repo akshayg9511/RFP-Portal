@@ -118,7 +118,7 @@ export default function RfpsPage() {
               {rows.length} of {(data ?? []).length}
             </span>
             <button
-              className="btn btn--ghost btn--sm"
+              className="btn btn--ghost sm"
               onClick={() => {
                 setPartner("");
                 setGm("");

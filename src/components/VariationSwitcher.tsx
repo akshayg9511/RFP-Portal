@@ -65,7 +65,7 @@ export function VariationSwitcher({
   return (
     <span className="vsw" ref={wrap}>
       <button
-        className="btn btn--ghost btn--sm vsw-btn"
+        className="btn btn--ghost sm vsw-btn"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"

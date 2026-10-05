@@ -65,7 +65,7 @@ export function WithdrawAction({
       <div className="bl-withdraw-acts">
         {startArmed ? null : (
           <button
-            className="btn btn--ghost btn--sm"
+            className="btn btn--ghost sm"
             onClick={() => {
               setArming(false);
               setReason("");
@@ -75,7 +75,7 @@ export function WithdrawAction({
           </button>
         )}
         <button
-          className="btn btn--secondary btn--sm"
+          className="btn btn--secondary sm"
           disabled={busy || !reason.trim()}
           onClick={() => onConfirm(reason)}
         >

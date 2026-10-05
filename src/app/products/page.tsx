@@ -275,7 +275,7 @@ export default function ProductCatalogPage() {
         </select>
 
         {filtered ? (
-          <button className="btn btn--ghost btn--sm" onClick={clearFilters}>
+          <button className="btn btn--ghost sm" onClick={clearFilters}>
             Clear
           </button>
         ) : null}

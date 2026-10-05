@@ -242,7 +242,7 @@ function InsightsInner() {
           />
           {filtered ? (
             <button
-              className="btn btn--ghost btn--sm"
+              className="btn btn--ghost sm"
               onClick={() => router.replace("?", { scroll: false })}
             >
               Show the whole wave

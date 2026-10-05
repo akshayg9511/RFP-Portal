@@ -176,7 +176,7 @@ export function StrategiesTab({
           />
         ) : (
           <button
-            className="btn btn--ghost btn--sm"
+            className="btn btn--ghost sm"
             onClick={() => setSaveOpen(true)}
             disabled={!canSave}
             title={
@@ -207,7 +207,7 @@ export function StrategiesTab({
                   <span className="pd-chip-current">current</span>
                 ) : (
                   <button
-                    className="btn btn--ghost btn--sm"
+                    className="btn btn--ghost sm"
                     onClick={() => onApply(c.key, c.split)}
                   >
                     Apply
@@ -215,7 +215,7 @@ export function StrategiesTab({
                 )}
                 {onApplyToAll ? (
                   <button
-                    className="btn btn--ghost btn--sm"
+                    className="btn btn--ghost sm"
                     onClick={() => onApplyToAll({ kind: "builtin", key: c.key })}
                     title="Worked out separately for every variation, from that variation's own bids"
                   >
@@ -270,7 +270,7 @@ export function StrategiesTab({
                 <span className="pd-chip-current">current</span>
               ) : (
                 <button
-                  className="btn btn--ghost btn--sm"
+                  className="btn btn--ghost sm"
                   onClick={() => onApply(c.id, c.split)}
                 >
                   Apply
@@ -278,7 +278,7 @@ export function StrategiesTab({
               )}
               {onApplyToAll ? (
                 <button
-                  className="btn btn--ghost btn--sm"
+                  className="btn btn--ghost sm"
                   onClick={() => onApplyToAll({ kind: "saved", split: c.split })}
                   title="Copies this exact split to every variation"
                 >
@@ -300,7 +300,7 @@ export function StrategiesTab({
             <div className="pd-strat-del">
               <span>Delete this strategy?</span>
               <button
-                className="btn btn--ghost btn--sm"
+                className="btn btn--ghost sm"
                 onClick={() => setConfirmDelete(null)}
                 disabled={savedBusy}
               >
@@ -310,7 +310,7 @@ export function StrategiesTab({
                   the page's secondary. The danger foreground plus being last
                   is what marks it, per the menu rule. */}
               <button
-                className="btn btn--ghost btn--sm pd-del-yes"
+                className="btn btn--ghost sm pd-del-yes"
                 onClick={() => {
                   onDelete(c.id);
                   setConfirmDelete(null);
@@ -322,7 +322,7 @@ export function StrategiesTab({
             </div>
           ) : (
             <button
-              className="btn btn--ghost btn--sm pd-strat-delbtn"
+              className="btn btn--ghost sm pd-strat-delbtn"
               onClick={() => setConfirmDelete(c.id)}
             >
               Delete
@@ -419,7 +419,7 @@ function SaveForm({
       ) : null}
 
       <div className="pd-strat-formacts">
-        <button className="btn btn--ghost btn--sm" onClick={onCancel} disabled={busy}>
+        <button className="btn btn--ghost sm" onClick={onCancel} disabled={busy}>
           Cancel
         </button>
         {/* GHOST, not secondary. The page already has a secondary — "Ready
@@ -427,7 +427,7 @@ function SaveForm({
             ON SCREEN, not what belongs to which component. A second secondary
             competes with the page's real runner-up. */}
         <button
-          className="btn btn--ghost btn--sm"
+          className="btn btn--ghost sm"
           disabled={busy || !name.trim() || clash}
           onClick={() => onSave(name.trim(), note.trim())}
         >

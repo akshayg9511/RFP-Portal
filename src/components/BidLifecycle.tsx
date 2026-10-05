@@ -152,7 +152,7 @@ export function BidLifecycle({
 
         <button
           type="button"
-          className="btn btn--ghost btn--sm bl-comments"
+          className="btn btn--ghost sm bl-comments"
           onClick={() => setThreadOpen(true)}
         >
           <Icon name="chat" size="sm" />
@@ -263,7 +263,7 @@ export function BidLifecycle({
                 />
               </div>
               <button
-                className="btn btn--secondary btn--sm"
+                className="btn btn--secondary sm"
                 disabled={busy || !note.trim()}
                 onClick={() => send({ to: moveTo, note })}
               >

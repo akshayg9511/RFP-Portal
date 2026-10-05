@@ -130,7 +130,7 @@ export function BidThread({
           />
         </div>
         <button
-          className="btn btn--secondary btn--sm"
+          className="btn btn--secondary sm"
           disabled={busy || !draft.trim()}
           onClick={send}
         >
@@ -150,7 +150,7 @@ export function BidThread({
           <strong>Conversation</strong>
           <button
             type="button"
-            className="btn btn--ghost btn--sm"
+            className="btn btn--ghost sm"
             onClick={onClose}
           >
             Hide

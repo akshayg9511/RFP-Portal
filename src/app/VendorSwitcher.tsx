@@ -65,7 +65,7 @@ export function VendorSwitcher() {
           Viewing as <strong>{vendorName}</strong>
         </span>
         <button
-          className="btn btn--sm vv-exit"
+          className="btn sm vv-exit"
           onClick={() => {
             exit();
             router.push("/style-sets");
@@ -80,7 +80,7 @@ export function VendorSwitcher() {
   return (
     <div className="vv-wrap" ref={wrap}>
       <button
-        className="btn btn--ghost btn--sm"
+        className="btn btn--ghost sm"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}

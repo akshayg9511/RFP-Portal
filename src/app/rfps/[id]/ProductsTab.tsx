@@ -219,7 +219,7 @@ export function ProductsTab({
                       {/* One destination for "see the complete bid" — the
                           product with every vendor side by side. */}
                       <button
-                        className="btn btn--ghost btn--sm"
+                        className="btn btn--ghost sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           onOpenBid(inv.id, style.id, inv.vendorName);

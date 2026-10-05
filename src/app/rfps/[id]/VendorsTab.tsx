@@ -163,7 +163,7 @@ export function VendorsTab({
         {!issued ? (
           /* Ghost: this sits in a UTILITY strip beside the filters, and the
              page's secondary is Save nominations. */
-          <button className="btn btn--ghost btn--sm" onClick={onAddVendors}>
+          <button className="btn btn--ghost sm" onClick={onAddVendors}>
             <Icon name="plus" size="sm" />
             Add vendors
           </button>
@@ -360,7 +360,7 @@ export function VendorsTab({
                             <span className="rd-vrow-value">
                               {inSubset && quote?.status === "SUBMITTED" ? (
                                 <button
-                                  className="btn btn--ghost btn--sm"
+                                  className="btn btn--ghost sm"
                                   onClick={() =>
                                     onOpenBid(inv!.id, style.id, info!.name)
                                   }
@@ -412,7 +412,7 @@ export function VendorsTab({
                                 <span className="rd-vrow-value">
                                   {issued && quote?.status === "SUBMITTED" ? (
                                     <button
-                                      className="btn btn--ghost btn--sm"
+                                      className="btn btn--ghost sm"
                                       onClick={() =>
                                         onOpenBid(inv!.id, style.id, info!.name)
                                       }
@@ -440,7 +440,7 @@ export function VendorsTab({
 
                   {!issued ? (
                     <button
-                      className="btn btn--ghost btn--sm rd-compare"
+                      className="btn btn--ghost sm rd-compare"
                       onClick={() => onRemove(vendorId)}
                     >
                       Remove {info!.name} from this RFP

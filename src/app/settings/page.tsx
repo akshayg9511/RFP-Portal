@@ -240,7 +240,7 @@ export default function VariationSetupPage() {
 
             {filtered ? (
               <button
-                className="btn btn--ghost btn--sm"
+                className="btn btn--ghost sm"
                 onClick={() => {
                   setQuery("");
                   setDivision("");
@@ -387,7 +387,7 @@ export default function VariationSetupPage() {
                                 .map((g) => (
                                   <button
                                     key={g}
-                                    className="btn btn--ghost btn--sm"
+                                    className="btn btn--ghost sm"
                                     disabled={busy}
                                     onClick={() => setGrain([row.id], g)}
                                   >
@@ -432,7 +432,7 @@ export default function VariationSetupPage() {
                 {bulkAllowed.map((g) => (
                   <button
                     key={g}
-                    className="btn btn--ghost btn--sm"
+                    className="btn btn--ghost sm"
                     disabled={busy}
                     onClick={() => setGrain([...picked], g)}
                   >

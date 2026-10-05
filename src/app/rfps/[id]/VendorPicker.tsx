@@ -133,7 +133,7 @@ export function VendorPicker({
             </option>
           ))}
         </select>
-        <button className="btn btn--ghost btn--sm" onClick={onNewVendor}>
+        <button className="btn btn--ghost sm" onClick={onNewVendor}>
           <Icon name="plus" size="sm" />
           New vendor
         </button>

@@ -136,7 +136,7 @@ export default function StyleSetPage() {
           </div>
         </div>
         <div className="fb-actions">
-          <button className="btn btn--ghost btn--sm" onClick={selectAllVisible}>
+          <button className="btn btn--ghost sm" onClick={selectAllVisible}>
             {allSelected ? "Deselect all" : `Select all ${visible.length}`}
           </button>
         </div>
