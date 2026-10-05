@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { FacetSelect, facetsOf } from "@/components/FacetSelect";
-import { money, percent, unitCost, units } from "@/lib/format";
+import { money, unitCost, units } from "@/lib/format";
 
 /**
  * S6 — Award Summary.
@@ -126,12 +126,13 @@ function AwardPageInner() {
   const subDepartment = params.get("subDepartment") ?? "";
   const material = params.get("material") ?? "";
   const vendor = params.get("vendor") ?? "";
-  /**
-   * By product or by vendor. §10.2 wanted the vendor pivot as a filter, and
-   * this overrides that deliberately: "how is Tirupur doing across the wave"
-   * is a real question a product-row list answers only awkwardly.
+  /*
+   * BY PRODUCT ONLY — 5 Oct. Akshay: "remove product/vendor toggle in award
+   * summary page. as we will just have By product." The by-vendor pivot is
+   * gone with its toggle; "how is a vendor doing across the wave" is Wave
+   * Insights' vendor spend table, which already answers it per vendor with
+   * the cap. The `vendor` FILTER above stays — it narrows products.
    */
-  const view = params.get("view") === "vendor" ? "vendor" : "product";
 
   /**
    * `replace`, not `push`: a filter change is not a navigation step. With
@@ -160,8 +161,6 @@ function AwardPageInner() {
   const setSubDepartment = (v: string) => setParam("subDepartment", v);
   const setMaterial = (v: string) => setParam("material", v);
   const setVendor = (v: string) => setParam("vendor", v);
-  const setView = (v: "product" | "vendor") =>
-    setParam("view", v === "vendor" ? "vendor" : "");
   /**
    * Search is the one filter that stays LOCAL, mirrored to the URL on a
    * debounce.
@@ -302,52 +301,6 @@ function AwardPageInner() {
     setQuery("");
   }
 
-  /**
-   * The by-vendor pivot — built from `allocation[]`, which already carries
-   * everything needed, so this needs no endpoint of its own.
-   *
-   * It aggregates AWARDED value, because "how is this vendor doing" is a
-   * question about money placed, not bids received.
-   */
-  const vendorRows = React.useMemo(() => {
-    const byVendor = new Map<
-      string,
-      {
-        vendorId: string;
-        vendorName: string;
-        cooRegion: string | null;
-        products: number;
-        awardedDollars: number;
-        savingsDollars: number;
-        awarded: number;
-      }
-    >();
-
-    for (const r of rows) {
-      for (const a of r.allocation) {
-        if (a.awardPct <= 0) continue;
-        const cur = byVendor.get(a.vendorId) ?? {
-          vendorId: a.vendorId,
-          vendorName: a.vendorName,
-          cooRegion: a.cooRegion,
-          products: 0,
-          awardedDollars: 0,
-          savingsDollars: 0,
-          awarded: 0,
-        };
-        cur.products += 1;
-        cur.awardedDollars += a.awardedDollars ?? 0;
-        cur.savingsDollars += a.savingsDollars ?? 0;
-        if (r.status === "AWARDED") cur.awarded += 1;
-        byVendor.set(a.vendorId, cur);
-      }
-    }
-
-    return [...byVendor.values()].sort(
-      (a, b) => b.awardedDollars - a.awardedDollars,
-    );
-  }, [rows]);
-
   const withBids = rows.filter((r) => r.bidCount > 0);
   const totalPotential = withBids.reduce((s, r) => s + Math.max(0, r.savingsPotential), 0);
   const placed = rows.reduce((s, r) => s + r.awardedDollars, 0);
@@ -402,25 +355,6 @@ function AwardPageInner() {
       ) : null}
 
       {/* Filters in one row above the grid. */}
-      {/* Segmented, not tabs: both views show the same filtered set from two
-          angles, so this is a control on one screen rather than navigation
-          between two. The filters below apply to both. */}
-      <div className="seg aw-views" role="group" aria-label="Summary view">
-        <button
-          className={view === "product" ? "on" : undefined}
-          aria-pressed={view === "product"}
-          onClick={() => setView("product")}
-        >
-          By product
-        </button>
-        <button
-          className={view === "vendor" ? "on" : undefined}
-          aria-pressed={view === "vendor"}
-          onClick={() => setView("vendor")}
-        >
-          By vendor
-        </button>
-      </div>
 
       <div className="aw-filters">
         <div className="control search sm aw-search">
@@ -488,28 +422,12 @@ function AwardPageInner() {
         ) : null}
 
         <span className="aw-filter-count">
-          {view === "product"
-            ? `${rows.length} of ${data?.length ?? 0} products`
-            : `${vendorRows.length} vendors across ${rows.length} products`}
+          {`${rows.length} of ${data?.length ?? 0} products`}
         </span>
 
-        {/* Filters select PRODUCTS, and in the vendor view that is not
-            self-evident: filtering region to ISC still lists EMEA and CHINA
-            vendors, because they hold volume on products an ISC vendor bid.
-            Correct, but a reader assumes the filter narrowed the vendors —
-            so it says which. */}
-        {view === "vendor" && anyFilter ? (
-          <span className="aw-filter-note">
-            <Icon name="info_circle" size="sm" />
-            Every vendor allocated on the {rows.length} matching{" "}
-            {rows.length === 1 ? "product" : "products"} — filters select
-            products, not vendors.
-          </span>
-        ) : null}
       </div>
 
-      {view === "product" ? (
-        <div className="data-grid-surface">
+      <div className="data-grid-surface">
           <table className="data-grid aw-grid">
             <colgroup>
               <col style={{ width: "38%" }} />
@@ -763,125 +681,11 @@ function AwardPageInner() {
             </tbody>
           </table>
         </div>
-      ) : (
-        <VendorView rows={vendorRows} />
-      )}
 
     </>
   );
 }
 
-/**
- * The by-vendor pivot.
- *
- * §10.2 specified the vendor angle as a filter rather than a view, and this
- * overrides that deliberately: "how is Tirupur doing across the wave" is a
- * real question, and a product-row list answers it only by making the reader
- * add up percentages across rows.
- *
- * Built entirely from `allocation[]` on the product rows — no endpoint of its
- * own — so the two views can never report different totals for the same
- * filtered set.
- */
-function VendorView({
-  rows,
-}: {
-  rows: {
-    vendorId: string;
-    vendorName: string;
-    cooRegion: string | null;
-    products: number;
-    awardedDollars: number;
-    savingsDollars: number;
-    awarded: number;
-  }[];
-}) {
-  const total = rows.reduce((s, r) => s + r.awardedDollars, 0);
-
-  if (rows.length === 0) {
-    return (
-      <div className="empty compact">
-        <span className="glyph">
-          <Icon name="users" size="lg" />
-        </span>
-        <div className="ttl">Nothing allocated yet</div>
-        <div className="desc">
-          This view shows where award value has been placed. Allocate a product
-          and its vendors appear here.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="data-grid-surface">
-      <table className="data-grid aw-grid">
-        <colgroup>
-          <col style={{ width: "30%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: "22%" }} />
-          <col style={{ width: "14%" }} />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Vendor</th>
-            <th className="num">Products</th>
-            <th className="num">Awarded value</th>
-            <th className="num">Savings</th>
-            <th>Share of allocated value</th>
-            <th className="num">Awarded</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const share = total > 0 ? r.awardedDollars / total : 0;
-            return (
-              <tr key={r.vendorId}>
-                <td>
-                  <Link className="aw-vend-link" href={`/vendors/${r.vendorId}`}>
-                    {r.vendorName}
-                  </Link>
-                  <span className="aw-product-meta">
-                    {r.cooRegion ?? "region not set"}
-                  </span>
-                </td>
-                <td className="num">{r.products}</td>
-                <td className="num">{money(r.awardedDollars)}</td>
-                <td className="num">
-                  <span className={r.savingsDollars >= 0 ? "aw-pos" : "aw-neg"}>
-                    {money(r.savingsDollars)}
-                  </span>
-                </td>
-                <td>
-                  {/* Share of what is ALLOCATED in the current filter, not of
-                      the wave — a filtered view showing wave-wide shares would
-                      be read as the wave and it is not. */}
-                  <span className="aw-share">
-                    <span className="aw-share-bar">
-                      <span style={{ inlineSize: percent(share, 0) }} />
-                    </span>
-                    <span className="aw-share-k">{percent(share, 0)}</span>
-                  </span>
-                </td>
-                <td className="num">
-                  {r.awarded > 0 ? (
-                    <Badge tone="success">
-                      {r.awarded} of {r.products}
-                    </Badge>
-                  ) : (
-                    <span className="aw-muted">—</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 /**
  * `useSearchParams()` opts this route out of static prerendering, and Next

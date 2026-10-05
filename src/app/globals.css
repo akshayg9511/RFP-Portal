@@ -1623,14 +1623,6 @@ body > .drawer-frame .drawer {
   flex: 0 0 260px;
 }
 
-.aw-filter-note {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
-}
-
 .aw-filter-count {
   margin-inline-start: auto;
   font-size: var(--type-caption-size);
@@ -4559,24 +4551,11 @@ body > .drawer-frame .drawer {
   .pd-ro:nth-child(3) { border-inline-start: 0; }
 }
 
-/* --- A8 · two views, seven filters ------------------------------------- */
-
-/* The view toggle sits ABOVE the filter row, because the filters apply to
-   BOTH views — putting it inside the filter strip would read as an eighth
-   filter rather than a change of angle on the same filtered set. */
-.aw-views { margin-block-end: var(--space-md); }
+/* --- A8 · seven filters (the by-vendor view was removed 5 Oct) ------- */
 
 /* Seven selects plus a search wrap onto two lines at most widths, so the row
    needs a row-gap it never needed with four. */
 .aw-filters { row-gap: var(--space-sm); }
-
-.aw-vend-link {
-  display: block;
-  color: var(--color-fg-default);
-  font-weight: var(--type-emphasis-weight);
-  text-decoration: none;
-}
-.aw-vend-link:hover { color: var(--color-fg-accent); text-decoration: underline; }
 
 .aw-pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
 
