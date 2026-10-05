@@ -753,6 +753,118 @@ export async function seedBids(
       `$${(total / 1e6).toFixed(1)}M placed · China ${((china / total) * 100).toFixed(1)}%`,
   );
 
+  // Which RFP each bid style went out on — chosen by division in the bid loop.
+  const rfpIdByStyle = new Map<string, string>();
+  for (const style of chosen) {
+    const rfpId = rfps.get(style.division === "Home" ? "Home" : "Womens");
+    if (rfpId) rfpIdByStyle.set(styleIds.get(style.styleNumber)!, rfpId);
+  }
+
+  /**
+   * STAGES THAT AGREE WITH AWARDS — Phase 3, 5 Oct.
+   *
+   * Bid statuses rotate through the ladder independently of who won, so a
+   * vendor could hold 38% of an award while reading "Not proceeding" — the Bid
+   * summary puts both in one row, and the contradiction would be the first
+   * thing anyone saw. An awarded vendor is moved to a stage consistent with
+   * winning, and its not-proceeding note is cleared.
+   */
+  for (const a of allocations) {
+    const rfpId = rfpIdByStyle.get(a.styleId);
+    if (!rfpId) continue;
+    const inv = await db.invitation.findFirst({
+      where: { rfpId, vendorId: a.vendorId },
+      select: { id: true },
+    });
+    if (!inv) continue;
+    const bid = await db.productBid.findFirst({
+      where: { invitationId: inv.id, styleId: a.styleId },
+      select: { id: true, status: true },
+    });
+    if (!bid || bid.status !== "NOT_PROCEEDING") continue;
+    await db.productBid.update({
+      where: { id: bid.id },
+      data: {
+        status: styleStatuses.get(a.styleId) === "AWARDED" ? "BID_ACCEPTED" : "FINAL_IN_REVIEW",
+        statusNote: null,
+      },
+    });
+  }
+
+  /**
+   * NOMINATED BUT NOT BID — Phase 3, 5 Oct.
+   *
+   * Every seeded nomination carried a submitted quote, so the Bid summary's
+   * "Not bid" view was always empty — and "who have we not heard from" is the
+   * chasing question that view exists for. On three bid products, one more
+   * vendor is nominated on every variant and has not quoted.
+   */
+  let notBid = 0;
+  for (const style of chosen.slice(0, 3)) {
+    const styleId = styleIds.get(style.styleNumber)!;
+    const rfpId = rfpIdByStyle.get(styleId);
+    if (!rfpId) continue;
+    const invited = new Set(
+      (
+        await db.invitationStyle.findMany({
+          where: { styleId, invitation: { rfpId } },
+          select: { invitation: { select: { vendorId: true } } },
+        })
+      ).map((r) => r.invitation.vendorId),
+    );
+    // A vendor not on this product anywhere, so §5.3 (one product, one RFP
+    // per vendor) cannot clash.
+    const elsewhere = new Set(
+      (
+        await db.invitationStyle.findMany({
+          where: { styleId },
+          select: { invitation: { select: { vendorId: true } } },
+        })
+      ).map((r) => r.invitation.vendorId),
+    );
+    const extra = vendors.find((v) => !invited.has(v.id) && !elsewhere.has(v.id));
+    if (!extra) continue;
+
+    const row = await db.style.findUnique({
+      where: { id: styleId },
+      select: {
+        variationLevel: true,
+        variations: {
+          select: { id: true, size: true, colour: true, colourwayId: true, sizeSortOrder: true },
+          orderBy: [{ sizeSortOrder: "asc" }],
+        },
+      },
+    });
+    const groupsHere = grainGroups((row?.variationLevel ?? "STYLE") as Grain, row?.variations ?? []);
+
+    const invitation = await db.invitation.upsert({
+      where: { rfpId_vendorId: { rfpId, vendorId: extra.id } },
+      create: { rfpId, vendorId: extra.id, status: "NOT_STARTED", issuedAt: new Date("2026-09-08") },
+      update: {},
+    });
+    for (const g of groupsHere) {
+      const variationId = g.key === WHOLE_STYLE_KEY ? null : g.variationIds[0]!;
+      await db.invitationStyle.upsert({
+        where: {
+          invitationId_styleId_variationKey: {
+            invitationId: invitation.id,
+            styleId,
+            variationKey: variationKeyOf(variationId),
+          },
+        },
+        create: { invitationId: invitation.id, styleId, variationId, variationKey: variationKeyOf(variationId) },
+        update: {},
+      });
+      notBid += 1;
+    }
+    await db.productBid.upsert({
+      where: { invitationId_styleId: { invitationId: invitation.id, styleId } },
+      create: { invitationId: invitation.id, styleId, status: "INVITED" },
+      update: {},
+    });
+  }
+  step(`${notBid} nominated-but-not-bid rows`);
+
   // A DRAFT RFP with no invitations, so the nomination UI has something to
   // demo on. Every seeded RFP is ISSUED because they carry bids, which left
   // the Vendors tab's draft branch — checkboxes, variation picking, the
