@@ -1010,6 +1010,12 @@ body > .drawer-frame .drawer {
 .quote-side {
   position: sticky;
   inset-block-start: var(--space-lg);
+  /* A sticky surface is OPAQUE. Its children are cards that paint
+     themselves, so the gaps between them were the only leak — but the gaps
+     are exactly where long form content scrolls through. Same defect the
+     A15 round recorded on the drawer hero, found here by the first lint
+     state to exercise this route. */
+  background: var(--color-bg-canvas);
 }
 
 .quote-side-media {
@@ -5283,3 +5289,563 @@ body > .drawer-frame .drawer {
 
 /* .rd-vrow-gap was deleted: the style-grain checkbox moved onto its ROW,
    where every other checkbox in the panel sits, so no spacer is needed. */
+
+/* ─ Vendor bid list (2a.3) ─────────────────────────────────────────────────
+   The flat product list that replaced the RFP grouping. Both of these are
+   second-line text under a cell's main value, so they go muted at caption
+   size and claim their own line rather than widening the column. */
+.vb-vars,
+.vb-note {
+  display: block;
+  margin-block-start: var(--space-2xs);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+
+/* ─ Vendor quote form · per-variant + DDP (2a.4) ───────────────────────────── */
+
+/* The variant selector. Each button carries the variant's label AND its
+   current price, so switching is an informed choice rather than a guess. */
+.qv-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.qv-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 104px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+.qv-tab:hover {
+  border-color: var(--color-border-strong);
+}
+/* The selected variant takes the system's selected-SURFACE token — a tab is a
+   surface, not a field. Same token as a selected style card. */
+.qv-tab.on {
+  border-color: var(--color-border-selected-surface);
+  background: var(--color-bg-muted);
+}
+.qv-tab-l {
+  font-weight: var(--type-emphasis-weight);
+  color: var(--color-fg-default);
+}
+.qv-tab-v {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.qv-count {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+
+/* The LIGHT template's folded line items. Present but never required, so a
+   vendor can show their working on round one without being made to. */
+.qv-detail > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.qv-detail-opt {
+  padding-inline: 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+.qv-detail-b {
+  padding-block-start: var(--space-sm);
+  border-block-start: 1px solid var(--color-border-default);
+}
+
+/* DDP — two modes side by side, so air and ocean read as one decision. */
+.qv-ddp {
+  margin-block-start: var(--space-lg);
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.qv-ddp-h {
+  padding-block-end: var(--space-sm);
+  border-block-end: 1px solid var(--color-border-default);
+  font-weight: var(--type-emphasis-weight);
+}
+.qv-ddp-total {
+  padding-inline-start: var(--space-sm);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}
+
+/* ─ Bid lifecycle · state + actions (2a.9) ─────────────────────────────────
+   Rebuilt 5 Oct. The previous version put status, strip, move control and the
+   whole conversation in one panel, which read as clumsy. Now: three facts in
+   three slots, then the strip, then the actions. The chat lives in .bt. */
+
+/* WHOSE TURN. The only emphasis in the row, because a bid needing nothing
+   from the reader should be quiet. */
+.bl-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.bl-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-emphasis-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bl-turn-dot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+/* The reader owes something: warning, the DS's "you must act" tone. */
+.bl-turn.is-vendor {
+  background: var(--color-feedback-warning-bg);
+  color: var(--color-feedback-warning-fg);
+}
+/* Waiting on the other side: quiet, no call to action. */
+.bl-turn.is-quince {
+  background: var(--color-bg-muted);
+  color: var(--color-fg-muted);
+}
+.bl-turn.is-done {
+  background: var(--color-feedback-success-bg);
+  color: var(--color-feedback-success-fg);
+}
+
+/* The hover target is the WRAPPER, so moving between the icon and the
+   detail below does not close it mid-read (J10). */
+.bl-info-wrap {
+  display: inline-flex;
+}
+.bl-info {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-inner);
+  background: transparent;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.bl-info:hover {
+  color: var(--color-fg-default);
+}
+/* The conversation sits at the trailing edge — it is a way out of this
+   panel, not one of its own controls. */
+.bl-comments {
+  margin-inline-start: auto;
+}
+
+.bl-hint {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.bl-detail {
+  margin-block-start: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+  background: var(--color-bg-muted);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+.bl-note {
+  display: flex;
+  gap: 6px;
+  margin: var(--space-sm) 0 0;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+/* THE STRIP. All the stages with this one marked (H1) — loops have no step
+   of their own; stripPosition() maps them back. */
+.bl-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bl-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.bl-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+.bl-step.done .bl-dot {
+  background: var(--color-border-strong);
+}
+.bl-step.on {
+  color: var(--color-fg-default);
+  font-weight: var(--type-emphasis-weight);
+}
+.bl-step.on .bl-dot {
+  border-color: var(--color-fg-accent);
+  background: var(--color-fg-accent);
+}
+
+.bl-act {
+  display: grid;
+  gap: var(--space-sm);
+  justify-items: start;
+  margin-block-start: var(--space-md);
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--color-border-default);
+}
+.bl-act-l,
+.bl-will {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.bl-act > .control,
+.bl-act > select.control {
+  inline-size: 100%;
+}
+/* THE EXIT lives in the page header's action row now (J9), at the LEADING
+   edge so it is never adjacent to the primary commit. `margin-inline-end:
+   auto` is what pushes everything else to the trailing edge. */
+.bl-withdraw {
+  margin-inline-end: auto;
+}
+/* Armed, it needs room for the question, so it takes the full row and the
+   other actions wrap beneath it rather than being squeezed. */
+.bl-withdraw-form {
+  display: grid;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  max-inline-size: 420px;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+  background: var(--color-bg-surface);
+  text-align: start;
+}
+.bl-withdraw-acts {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* ─ Bid thread · the chat (2a.9) ───────────────────────────────────────────── */
+.bt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.bt-list {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bt-msg {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+}
+/* The reader's own messages take the muted fill. Authorship is never carried
+   by the fill alone — every message names its author. */
+.bt-msg.mine {
+  background: var(--color-bg-muted);
+}
+.bt-msg-h {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.bt-msg-h time {
+  margin-inline-start: auto;
+}
+.bt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.bt-msg-b {
+  margin: 4px 0 0;
+}
+.bt-compose {
+  display: grid;
+  gap: var(--space-sm);
+  justify-items: start;
+}
+.bt-compose > .control {
+  inline-size: 100%;
+}
+
+/* The thread as an inline panel — the Quince side opens it from inside the
+   bid drawer, where a second SideDrawer cannot go (T11). */
+.bt-panel {
+  margin-block-start: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+}
+.bt-panel-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+/* ─ Quote actions menu + submit modal (L1 / L2) ────────────────────────────
+   The action row was five buttons, two of them submits. The DS rule is one
+   ghost menu for bulk actions and one primary per screen, so everything
+   secondary moved in here and the commit's SCOPE moved into the modal. */
+.qa-wrap {
+  position: relative;
+}
+/* Mirrors .vv-menu — same surface, radius, elevation and layer, because a
+   second menu convention is a second thing to keep in step. */
+.qa-menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-end: 0;
+  inline-size: 260px;
+  padding-block: var(--space-xs);
+  background: var(--color-bg-surface-raised);
+  border-radius: var(--radius-container);
+  box-shadow: var(--elevation-overlay);
+  z-index: var(--z-popover);
+  overflow: hidden;
+  animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing);
+  text-align: start;
+}
+/* A destructive item is marked by being LAST and by the danger foreground —
+   never by a bare divider, which the system does not have. */
+.qa-danger {
+  color: var(--color-feedback-danger-fg);
+}
+
+.sq-lede {
+  margin-block: 0 var(--space-md);
+  color: var(--color-fg-muted);
+}
+.sq-all {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block-end: var(--space-sm);
+  margin-block-end: var(--space-sm);
+  border-block-end: 1px solid var(--color-border-default);
+  font-weight: var(--type-emphasis-weight);
+  cursor: pointer;
+}
+.sq-list {
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+}
+.sq-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-xs);
+  cursor: pointer;
+}
+.sq-label {
+  flex: 1 1 auto;
+}
+/* The price is what the vendor is checking before they commit, so it is
+   right-aligned against the tick column rather than floating mid-row. */
+.sq-fob {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-muted);
+}
+.sq-done,
+.sq-note {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+
+/* ─ Product page at variation grain (Phase 2b) ───────────────────────────── */
+
+/* The title and the variation dropdown share a line, so the dropdown reads
+   as part of WHICH product this is — the same placement as the style drawer
+   (1.5c), which is where this pattern was first agreed. */
+.pd-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* Which variation is being allocated, and how many are done (N2/N3). */
+.pd-var-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-inner);
+  background: var(--color-bg-muted);
+}
+
+/* Apply + Apply to all sit together on a strategy card. */
+.pd-strat-acts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+/* ─ Award Summary · product → variation nesting (N6) ───────────────────────
+   Mirrors the catalog's .pc-chev / .pc-var-row exactly, so one pattern means
+   one thing across the product. */
+.aw-chev {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--size-control-sm);
+  block-size: var(--size-control-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-inner);
+  background: none;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.aw-chev:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-fg-default);
+}
+/* A single-group product holds the slot, so every name starts on one edge. */
+.aw-chev-gap {
+  flex: 0 0 auto;
+  inline-size: var(--size-control-sm);
+}
+/* Siblings in the SAME table, so their figures stay under the right columns. */
+.aw-var-row > td {
+  background: var(--color-bg-muted);
+  padding-block: var(--space-xs);
+  cursor: pointer;
+}
+.aw-var-row:hover > td {
+  background: var(--color-bg-hover);
+}
+/* Indented past the chevron + thumbnail, so a size reads as belonging to
+   the product above it. */
+.aw-var-label {
+  display: inline-block;
+  padding-inline-start: calc(var(--size-control-sm) + var(--space-xl));
+}
+.aw-var-count {
+  display: block;
+  margin-block-start: 2px;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+
+/* ─ Split cap bar · incumbent / existing / new (N14) ───────────────────────
+   Same colours as the vendor-type chart, so "existing" and "new" mean one
+   colour everywhere. The three were validated together as a set when the
+   chart was three-slice (M4), so adjacency in a stack is covered. */
+.chart-cap--split {
+  /* overflow stays hidden for the fill, so the outline is drawn inside. */
+  box-shadow: inset 0 0 0 1px transparent;
+}
+.chart-cap--split.is-over {
+  box-shadow: inset 0 0 0 2px var(--color-feedback-danger-solid);
+}
+.chart-cap-stack {
+  display: flex;
+  block-size: 100%;
+  /* A 2px surface gap between filled segments (the chart spec), so adjacent
+     categories never fuse into one block for a colour-blind reader. */
+  gap: 2px;
+}
+.chart-cap-seg {
+  display: block;
+  block-size: 100%;
+  transition: inline-size var(--motion-hover-duration) var(--motion-hover-easing);
+}
+/* Incumbent is cat-5 (ochre), NOT cat-1. Computed, not eyeballed: cat-1
+   blue against cat-4 purple measured ΔE 10 (normal) and 1–3 (colour-blind),
+   below the 15 / 8 floors, so incumbent and new were indistinguishable for
+   about one reader in twelve. The old three-slice donut had the same flaw.
+   cat-3 also passes, but orange inside the red over-cap outline reads as a
+   breach. cat-5: ≥17 normal, ≥11 CVD against both neighbours, both modes. */
+.chart-cap-seg.is-incumbent { background: var(--chart-cat-5); }
+.chart-cap-seg.is-existing  { background: var(--chart-cat-2); }
+.chart-cap-seg.is-new       { background: var(--chart-cat-4); }
+/* The vendor's wave-wide total, as a tick, when the page is filtered (N16). */
+.chart-cap-wave {
+  position: absolute;
+  inset-block: -1px;
+  inline-size: 2px;
+  background: var(--color-fg-default);
+  z-index: 2;
+}
+/* Named apart from .wi-legend, which is the vendor-type donut's legend —
+   reusing it restyled that chart from 3,000 lines away. */
+.wi-caplegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-block-end: var(--space-md);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.wi-caplegend-sw {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  margin-inline-end: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+.wi-caplegend-sw.is-incumbent { background: var(--chart-cat-5); }
+.wi-caplegend-sw.is-existing  { background: var(--chart-cat-2); }
+.wi-caplegend-sw.is-new       { background: var(--chart-cat-4); }
+.wi-wave-note {
+  display: block;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}

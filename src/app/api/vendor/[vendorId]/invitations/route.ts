@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { BidStatus } from "@/domain/bidStatus";
 import { handle, num, numOr } from "@/lib/api";
 
 /**
@@ -32,6 +33,7 @@ export async function GET(
             wave: { select: { name: true } },
           },
         },
+        bids: { select: { styleId: true, status: true, statusNote: true } },
         styles: {
           include: {
             variation: {
@@ -110,7 +112,6 @@ export async function GET(
       return {
         id: inv.id,
         status: inv.status,
-        currentRound: inv.currentRound,
         rfp: {
           id: inv.rfp.id,
           name: inv.rfp.name,
@@ -138,9 +139,14 @@ export async function GET(
           const is = rows[0];
           const won = awardByStyle.get(is.styleId);
           const decided = decidedStyleIds.has(is.styleId);
+          // The ladder position for this vendor x product (H9).
+          const bid = inv.bids.find((b) => b.styleId === is.styleId);
 
           return {
             id: is.style.id,
+            /** See domain/bidStatus.ts — the vendor label is derived, not stored. */
+            bidStatus: (bid?.status ?? "INVITED") as BidStatus,
+            statusNote: bid?.statusNote ?? null,
             /** The variations this vendor must price. EMPTY = whole product. */
             variations: rows
               .filter((r) => r.variation !== null)

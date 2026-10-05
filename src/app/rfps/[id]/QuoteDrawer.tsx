@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { SideDrawer } from "@/components/SideDrawer";
+import { BidLifecycle } from "@/components/BidLifecycle";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { unitCost, units } from "@/lib/format";
@@ -196,6 +197,26 @@ export function QuoteDrawer({
             })}
           </div>
         </>
+      ) : null}
+
+      {/* THE LIFECYCLE AND THE THREAD.
+
+          Outside the `data?.quote` branch deliberately: a vendor with NO bid
+          yet is exactly who you need to chase, so the move control and the
+          thread must be reachable before a price exists. */}
+      {invitationId && styleId ? (
+        <div className="section">
+          <div className="hd">Status and conversation</div>
+          <BidLifecycle
+            invitationId={invitationId}
+            styleId={styleId}
+            side="QUINCE"
+            // A PANEL, not a drawer: this already sits inside one, and
+            // SideDrawer cannot nest (T11 — hardcoded id, duplicate Escape
+            // handlers). The thread shows inline when Comments is clicked.
+            threadAs="panel"
+          />
+        </div>
       ) : null}
     </SideDrawer>
   );

@@ -120,6 +120,28 @@ export type QuoteComputation = {
   totalSam: number;
   coreMaterialCost: number;
   coreCraftingCost: number;
+  /**
+   * Buckets whose figure came from a TYPED total rather than its line items
+   * (J1). The form uses this to mark those numbers as the vendor's own
+   * estimate, so a typed total is never presented as if it were derived.
+   */
+  overriddenBuckets: (keyof BucketTotals)[];
+};
+
+/**
+ * The input key a vendor types a bucket total into (J1).
+ *
+ * `totalMaterialCost` and `totalCraftingCost` already exist in both real
+ * templates as DERIVED lines, so the light template reuses those keys
+ * rather than inventing parallel ones — the same field, filled by hand when
+ * the detail behind it does not exist yet.
+ */
+const BUCKET_INPUT: Record<keyof BucketTotals, string> = {
+  BASE_MATERIALS: "totalMaterialCost",
+  TRIM_HARDWARE: "totalTrimCost",
+  PACKAGING: "totalPackagingCost",
+  CRAFTING: "totalCraftingCost",
+  OVERHEAD_SGA_PROFIT: "overheadCost",
 };
 
 /**
@@ -143,13 +165,56 @@ export function computeQuote(
   const packaging = packagingCost(values, spec.packagingKeys);
   const overhead = n(values, "overheadCost");
 
-  const buckets: BucketTotals = {
+  const derived: BucketTotals = {
     BASE_MATERIALS: material.total,
     TRIM_HARDWARE: trim,
     PACKAGING: packaging,
     CRAFTING: crafting.total,
     OVERHEAD_SGA_PROFIT: overhead,
   };
+
+  /**
+   * A TYPED BUCKET TOTAL OVERRIDES THE DERIVED ONE — decision J1, 4 Oct.
+   *
+   * The initial (light) quote asks for five bucket totals and nothing else.
+   * Until now this function ALWAYS derived Materials and Crafting from their
+   * line items, and `totalMaterialCost` is itself a derived line in the
+   * template — so a light template with its line items folded away had no
+   * editable field for the two largest buckets. Akshay found it: "during the
+   * initial quote, how is he entering just the total cost, not the
+   * individual cost?" It was not awkward, it was unusable.
+   *
+   * PRECEDENCE: the line items win once they produce a value, because they
+   * are the more specific statement and the full template is what the later
+   * stages ask for. A typed total is the vendor's estimate BEFORE that
+   * detail exists. `overriddenBuckets` reports which buckets fell back to a
+   * typed figure, so the form can say which numbers are estimates rather
+   * than silently presenting them as derived.
+   *
+   * One function, one documented rule. A second code path for "light" would
+   * be the `if (grain === "STYLE")` mistake in a new place.
+   */
+  const buckets: BucketTotals = { ...derived };
+  const overriddenBuckets: (keyof BucketTotals)[] = [];
+
+  for (const key of Object.keys(derived) as (keyof BucketTotals)[]) {
+    const typed = values[BUCKET_INPUT[key]];
+    const typedNumber =
+      typeof typed === "number"
+        ? typed
+        : typeof typed === "string" && typed.trim() !== ""
+          ? Number(typed)
+          : NaN;
+    if (!Number.isFinite(typedNumber)) continue;
+
+    // Only fall back to the typed figure where the line items produced
+    // nothing. OVERHEAD_SGA_PROFIT is already a single input, so it can
+    // never be overridden — its "derived" value IS the typed one.
+    if (derived[key] === 0 && typedNumber !== 0) {
+      buckets[key] = typedNumber;
+      overriddenBuckets.push(key);
+    }
+  }
 
   // The identity shared by both templates:
   //   SUM(crafting, packaging, trim, material, overhead)
@@ -170,6 +235,8 @@ export function computeQuote(
     totalSam: crafting.totalSam,
     coreMaterialCost: material.core,
     coreCraftingCost: crafting.core,
+    /** Buckets taking a typed total because their line items are empty. */
+    overriddenBuckets,
   };
 }
 
@@ -182,10 +249,53 @@ export function computeQuote(
  */
 export function missingInputs(
   values: QuoteValues,
-  spec: { craftingFormula: CraftingFormula; materialFormula: MaterialFormula },
+  spec: {
+    craftingFormula: CraftingFormula;
+    materialFormula: MaterialFormula;
+    /**
+     * "LIGHT" asks for the five bucket TOTALS; "FULL" asks for the line
+     * items behind them. Defaults to FULL so every existing caller keeps
+     * its current behaviour.
+     */
+    template?: "LIGHT" | "FULL";
+  },
 ): string[] {
   const missing: string[] = [];
   const has = (key: string) => n(values, key) > 0;
+
+  /**
+   * THE LIGHT TEMPLATE IS SATISFIED BY ITS TOTALS.
+   *
+   * This function asks for consumption, grey cost, labour rate, line
+   * efficiency and SAM — the LINE ITEMS. On the light template those fields
+   * are not collected, so a vendor who had correctly entered all five bucket
+   * totals and watched FOB compute still found Submit disabled, with nothing
+   * on screen explaining why. Akshay: "why 5 inputs are still needed. why
+   * can't I submit quote?"
+   *
+   * J1 made the totals ENTERABLE but left this gate asking for the detail,
+   * so the light template could be filled and never submitted — the feature
+   * was half-built, which is worse than absent.
+   *
+   * At LIGHT the question is therefore "do I have a total for every bucket",
+   * and the answer is the buckets themselves. The line items stay optional,
+   * exactly as the form presents them.
+   */
+  if (spec.template === "LIGHT") {
+    const buckets: [string, string][] = [
+      ["totalMaterialCost", "materials"],
+      ["totalTrimCost", "trim"],
+      ["totalPackagingCost", "packaging"],
+      ["totalCraftingCost", "crafting"],
+      ["overheadCost", "overhead"],
+    ];
+    for (const [key, label] of buckets) {
+      // A bucket driven by its line items is satisfied too — a vendor who
+      // filled the detail early must not be asked for the total as well.
+      if (!has(key) && !bucketHasDetail(values, key, spec)) missing.push(label);
+    }
+    return missing;
+  }
 
   if (spec.materialFormula === "ADDITIVE_PER_METER") {
     if (!has("consumption")) missing.push("consumption");
@@ -209,4 +319,25 @@ export function missingInputs(
   if (!has("overheadCost")) missing.push("overheadCost");
 
   return missing;
+}
+
+/**
+ * Does this bucket already have a value from its LINE ITEMS?
+ *
+ * Only Materials and Crafting are computed; the other three are plain sums
+ * of their own money lines, which `computeQuote` reads directly — so for
+ * those the typed total IS the only source and there is nothing to check.
+ */
+function bucketHasDetail(
+  values: QuoteValues,
+  key: string,
+  spec: { craftingFormula: CraftingFormula; materialFormula: MaterialFormula },
+): boolean {
+  if (key === "totalMaterialCost") {
+    return materialCost(values, spec.materialFormula).total > 0;
+  }
+  if (key === "totalCraftingCost") {
+    return craftingCost(values, spec.craftingFormula).total > 0;
+  }
+  return false;
 }

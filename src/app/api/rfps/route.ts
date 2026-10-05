@@ -74,7 +74,6 @@ export function GET() {
         templateName: r.template.name,
         waveName: r.wave.name,
         dueDate: r.dueDate,
-        currentRound: r.currentRound,
         styleCount: r._count.styles,
         vendorCount: r._count.invitations,
         respondedCount: responded,
@@ -84,6 +83,15 @@ export function GET() {
           ? (lowestOfBid - baselineOfBid) / baselineOfBid
           : null,
         instructions: r.instructions,
+        /**
+         * The owners (H5). Akshay: "we will be tracking how many RFPs have
+         * been issued and what all products have been issued so that
+         * sourcing partner and GM can function with clarity." Both columns
+         * already existed on Rfp; the list simply never selected them, so
+         * neither could be filtered on.
+         */
+        sourcingPartner: r.sourcingPartner,
+        gm: r.gm,
         createdAt: r.createdAt,
       };
     });

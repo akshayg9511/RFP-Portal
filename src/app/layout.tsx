@@ -26,18 +26,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="stylesheet" href="/ds/brands/procura.css" />
         <link rel="stylesheet" href="/ds/components.css" />
         <link rel="stylesheet" href="/ds/components-extra.css" />
-        {/* Inter is not bundled with the system; 300/400/500/600 are the
+        {/* INTER IS LOCAL. `ds/fonts.css` declares it from
+            `public/ds/fonts/inter-latin*.woff2`, so the Google Fonts link
+            that used to sit here was dead weight — and over any non-
+            localhost origin it failed CORS and printed a font error on every
+            page load, which is what it did on the shared ngrok link.
+        
+            The comment it replaced claimed "Inter is not bundled with the
+            system", which was simply untrue. 300/400/500/600 are still the
             sanctioned weights (600 is the page title and nothing else). */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
-        />
       </head>
       <body>
         {/* window.QICONS — the 180-glyph runtime set the Icon binding reads.

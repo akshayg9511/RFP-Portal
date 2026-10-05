@@ -154,10 +154,34 @@ export async function PUT(
     // vendor is not nominated, so an existing invitation for them is removed.
     const wantedIds = new Set(allowed.map((w) => w.vendorId));
 
-    // Remove vendors no longer nominated. An ISSUED invitation is not silently
-    // withdrawn — the screen only sends removals for draft RFPs.
+    /**
+     * REMOVALS ARE A DRAFT-ONLY ACTION, AND THE ROUTE ENFORCES IT.
+     *
+     * This used to delete any vendor the payload omitted, on the reasoning
+     * that "the screen only sends removals for draft RFPs". The screen does
+     * — but the route TRUSTED that rather than checking it, and
+     * `Quote.invitation` is `onDelete: Cascade`, so one PUT that omitted a
+     * vendor silently destroyed their submitted bids.
+     *
+     * I did exactly that to Akshay's test RFP while verifying the K4 fix: a
+     * PUT naming one vendor removed the others and cascaded their quotes. A
+     * stale browser tab could do the same, which makes it a real defect
+     * rather than only my mistake.
+     *
+     * Withdrawing a vendor after issue is a state change with a
+     * notification attached — the §5.5 addendum flow, deliberately out of
+     * scope. Until that exists, an issued RFP keeps its vendors.
+     */
+    const canRemove = rfp.status === "DRAFT";
+
     for (const inv of existing) {
       if (!wantedIds.has(inv.vendorId)) {
+        if (!canRemove) {
+          return badRequest(
+            "This RFP has been issued, so a vendor cannot be removed here. " +
+              "Their bid would be deleted with them.",
+          );
+        }
         await db.invitation.delete({ where: { id: inv.id } });
       }
     }
@@ -173,12 +197,41 @@ export async function PUT(
       await db.invitationStyle.deleteMany({
         where: { invitationId: invitation.id },
       });
+
+      /**
+       * WHAT THE RFP CARRIES, PER PRODUCT.
+       *
+       * The fallback below used to send a product WHOLE whenever the client
+       * named no variations for it. That is right for a style-grained
+       * product and wrong for every other: the RFP already carries the
+       * variations (RfpStyle), so going out whole silently discards them and
+       * the vendor is asked to quote one price for a product Quince prices
+       * per size.
+       *
+       * Found via Akshay's report of "I do not see all variants": the RFP
+       * had all 5 sizes on RfpStyle, the invitation had one style-level row,
+       * and the seed gate's grain check flagged the resulting quote.
+       */
+      const rfpVariations = new Map<string, string[]>();
+      for (const row of await db.rfpStyle.findMany({
+        where: { rfpId: id, variationId: { not: null } },
+        select: { styleId: true, variationId: true },
+      })) {
+        const list = rfpVariations.get(row.styleId) ?? [];
+        list.push(row.variationId!);
+        rfpVariations.set(row.styleId, list);
+      }
       // One row per product, or one per NOMINATED VARIATION where the buyer
       // narrowed it. A product absent from variationsByStyle goes out whole,
       // with variationKey '@STYLE' — which is what every pre-1.6 row means.
       await db.invitationStyle.createMany({
         data: inv.styleIds.flatMap((styleId) => {
-          const variationIds = inv.variationsByStyle?.[styleId] ?? [];
+          // What the buyer picked, else everything this RFP holds for the
+          // product. Empty only for a genuinely style-grained product.
+          const variationIds =
+            inv.variationsByStyle?.[styleId]?.length
+              ? inv.variationsByStyle[styleId]
+              : (rfpVariations.get(styleId) ?? []);
           if (!variationIds.length) {
             return [
               {

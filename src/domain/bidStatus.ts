@@ -277,3 +277,182 @@ export function vendorCanEdit(status: BidStatus): boolean {
 export function awaitingQuince(status: BidStatus): boolean {
   return cueOf(status) === "wait";
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   WHOSE TURN, AND WHAT TO DO — decisions J5/J6, 4 Oct.
+
+   `vendorLabel()` was carrying THREE facts in one string: the stage, whose
+   turn it is, and implicitly what to do. Akshay, 4 Oct: "it is not clear
+   whether the action is on the vendor or with Quince", and "'full costing
+   submitted with Quince' doesn't seem like a status. It seems like text."
+
+   He is right — "Full costing submitted — with Quince" is a sentence in a
+   Badge. So the three facts become three functions, and the UI gives each
+   its own slot. `vendorLabel()` is KEPT: the vendor's product LIST is
+   scannable precisely because its one column says both things at once.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/** Whose move it is. Derived from the cue, so it can never disagree with it. */
+export type Turn = "VENDOR" | "QUINCE" | "DONE";
+
+export function turnOf(status: BidStatus): Turn {
+  const cue = cueOf(status);
+  if (cue === "wait") return "QUINCE";
+  if (cue === "done") return "DONE";
+  return "VENDOR";
+}
+
+/** The marker beside the status. The only emphasis on a row that needs one. */
+export function turnLabel(status: BidStatus): string {
+  switch (turnOf(status)) {
+    case "VENDOR":
+      return "Your turn";
+    case "QUINCE":
+      return "With Quince";
+    case "DONE":
+      return "Done";
+  }
+}
+
+/**
+ * The SHORT status name — a name, not a sentence.
+ *
+ * Three stages share a name across the submitted/cleared pair ("Full
+ * costing" is both "needed" and "in review") because the marker now carries
+ * that difference. That is the point: the stage is WHERE the bid is, the
+ * marker is WHO holds it.
+ */
+const VENDOR_STATUS: Record<BidStatus, string> = {
+  INVITED: "Initial quote",
+  // "UNDER REVIEW" WHILE QUINCE HOLDS IT — decision J8, 5 Oct.
+  //
+  // Akshay: "The status should be 'Under Review', not 'Reviewed'. Only when
+  // it is reviewed should it show 'Reviewed'." The previous naming called a
+  // stage "Reviewed" while Quince was still looking at it, which claimed
+  // something untrue. A stage is only reviewed once it has been.
+  INITIAL_IN_REVIEW: "Under review",
+  CHANGES_REQUESTED: "Changes needed",
+  INITIAL_CLEARED: "Full costing",
+  FULL_IN_REVIEW: "Under review",
+  IN_NEGOTIATION: "Revision needed",
+  FINAL_REQUESTED: "Final bid",
+  FINAL_IN_REVIEW: "Under review",
+  BID_ACCEPTED: "Accepted",
+  NOT_PROCEEDING: "Not proceeding",
+  WITHDRAWN: "Withdrawn",
+};
+
+/**
+ * The vendor's STRIP label — the stage as a step in a sequence.
+ *
+ * Mostly the same as the status, which is the point: the strip and the badge
+ * should not disagree about what a stage is called. "Under review" appearing
+ * three times is correct — they are genuinely the same kind of step at
+ * different depths, and the marker plus the position say which one you are
+ * at. That is different from the old defect, where one word claimed a review
+ * had happened when it had not.
+ */
+export function vendorStripLabel(status: BidStatus): string {
+  return VENDOR_STATUS[status];
+}
+
+export function vendorStatus(status: BidStatus): string {
+  return VENDOR_STATUS[status];
+}
+
+/**
+ * The always-visible one-liner under the status (J6).
+ *
+ * Permanent rather than hover-only: a vendor should not have to discover
+ * what is wanted. The tooltip carries the longer explanation; this carries
+ * the instruction.
+ */
+const VENDOR_HINT: Record<BidStatus, string> = {
+  INVITED: "Send bucket totals for each variation you can make.",
+  INITIAL_IN_REVIEW:
+    "Quince is reviewing your initial quote. Nothing needed from you.",
+  CHANGES_REQUESTED:
+    "Quince has asked for changes — open the conversation to see what.",
+  INITIAL_CLEARED: "Send the full cost breakdown for each variation.",
+  FULL_IN_REVIEW:
+    "Quince is reviewing your full costing. Nothing needed from you.",
+  IN_NEGOTIATION:
+    "Quince has asked you to revise — open the conversation to see why.",
+  FINAL_REQUESTED: "Final bid needed, on every variation.",
+  FINAL_IN_REVIEW:
+    "Quince is reviewing your final bid. Nothing needed from you.",
+  BID_ACCEPTED: "Quince has accepted this bid.",
+  NOT_PROCEEDING: "Quince is not proceeding on this product.",
+  WITHDRAWN: "You withdrew from this product. You can reinstate at any time.",
+};
+
+export function hintFor(status: BidStatus): string {
+  return VENDOR_HINT[status];
+}
+
+/** The ⓘ detail — what this stage is, and what happens after it. */
+const VENDOR_DETAIL: Record<BidStatus, string> = {
+  INVITED:
+    "Quince has asked you to quote this product. Give a total for each of the five cost buckets per variation; the line items behind them are optional at this stage. Quince reviews and either asks for changes or clears you to send a full costing.",
+  INITIAL_IN_REVIEW:
+    "Quince is reviewing your initial quote against their own cost model. They will either ask for changes or clear you to send the full costing.",
+  CHANGES_REQUESTED:
+    "Quince wants something changed before this goes further. The conversation says what. Update your quote and resubmit.",
+  INITIAL_CLEARED:
+    "Your initial quote cleared review. Now send the full breakdown — the line items behind each bucket — for every variation. Quince reviews, may ask you to revise, and then accepts or does not proceed.",
+  FULL_IN_REVIEW:
+    "Quince is reviewing your full costing. They may come back asking you to revise a bucket before accepting.",
+  IN_NEGOTIATION:
+    "Quince has asked you to revise this bid. The conversation says which buckets and why. This can happen more than once.",
+  FINAL_REQUESTED:
+    "Quince wants a final bid on every variation of this product. This is the last price before they decide.",
+  FINAL_IN_REVIEW:
+    "Quince is reviewing your final bid and deciding whether to accept it.",
+  BID_ACCEPTED:
+    "Quince has accepted this bid. Award volumes follow separately.",
+  NOT_PROCEEDING:
+    "Quince is not proceeding with you on this product. The bid is kept for the record.",
+  WITHDRAWN:
+    "You withdrew from this product, and Quince can see the reason you gave. You can reinstate at any time if the position changes.",
+};
+
+export function detailFor(status: BidStatus): string {
+  return VENDOR_DETAIL[status];
+}
+
+/**
+ * THE VENDOR'S ONE EXIT.
+ *
+ * Akshay, 5 Oct: "The vendor has only one option, which can be Withdraw,
+ * and Quince have an option that they don't want to proceed."
+ *
+ * So the two exits are named for who owns them: a vendor WITHDRAWS, Quince
+ * does NOT PROCEED. Withdrawal is reversible; not-proceeding is Quince's
+ * call and is not offered to the vendor at all.
+ */
+export const VENDOR_EXIT: BidStatus = "WITHDRAWN";
+
+export function canVendorWithdraw(status: BidStatus): boolean {
+  return canTransition(status, VENDOR_EXIT, "VENDOR");
+}
+
+/**
+ * WHERE SUBMITTING TAKES THE BID.
+ *
+ * Submitting a quote IS the vendor's forward move, so the ladder has to
+ * follow it. Without this, five SUBMITTED quotes sat under a bid still
+ * reading `CHANGES_REQUESTED` — the vendor's screen said "Your turn" after
+ * they had finished, and Quince was never told the work had come back.
+ *
+ * Every acting stage has exactly ONE forward move (withdrawal aside), which
+ * is what makes this derivable rather than a second hand-written map that
+ * could drift from MOVES. Returns null where submitting means nothing —
+ * a bid already with Quince, accepted, dropped, or withdrawn.
+ */
+export function submitAdvancesTo(status: BidStatus): BidStatus | null {
+  if (status === "WITHDRAWN") return null;
+  const forward = transitionsFrom(status, "VENDOR")
+    .map((t) => t.to)
+    .filter((to) => to !== VENDOR_EXIT);
+  return forward.length === 1 ? forward[0]! : null;
+}

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { variationKeyOf } from "@/domain/grain";
+import { submitAdvancesTo, type BidStatus } from "@/domain/bidStatus";
 import { badRequest, notFound, num, ok } from "@/lib/api";
 import { vendorSignals, type VendorSignals } from "@/domain/scoring";
 import { termsFromValues } from "@/domain/terms";
@@ -76,6 +77,17 @@ export async function GET(
      */
     const variantQuotes = await db.quote.findMany({
       where: { invitationId, styleId },
+    });
+
+    /**
+     * The ladder position for this vendor x product. It decides WHICH
+     * template the form asks for — light up to INITIAL_CLEARED, full after —
+     * and whether the vendor may type at all. domain/bidStatus.ts owns both
+     * answers; the route just carries the stored value.
+     */
+    const productBid = await db.productBid.findFirst({
+      where: { invitationId, styleId },
+      select: { status: true, statusNote: true, statusChangedAt: true },
     });
 
     /** The row the form opens on: the style-level one, else the first. */
@@ -188,7 +200,9 @@ export async function GET(
       // Bands and directions only — never the values behind them.
       signals,
       invitationId,
-      round: invitation.currentRound,
+      // No `round`: rounds were replaced by the status ladder (H1), and the
+      // form read this nowhere. `bidStatus` below is what drives the depth
+      // of the template the vendor is asked for.
       vendor: invitation.vendor,
       rfp: {
         id: invitation.rfp.id,
@@ -200,6 +214,13 @@ export async function GET(
         name: invitation.rfp.template.name,
         definition: invitation.rfp.template.definition,
       },
+      /**
+       * ONE stored value, and the client renders the VENDOR label set from
+       * it. Absent means never issued, which reads as INVITED — the floor of
+       * the ladder, so a missing row is the degenerate case, not an error.
+       */
+      bidStatus: productBid?.status ?? "INVITED",
+      bidStatusNote: productBid?.statusNote ?? null,
       style: {
         id: style.id,
         styleNumber: style.styleNumber,
@@ -255,6 +276,18 @@ export async function GET(
             bucketTotals: quote.bucketTotals,
             fob: num(quote.fob),
             dutyType: quote.dutyType,
+            /**
+             * The six DDP fees — three US destinations x two modes. The
+             * unsuffixed trio is OCEAN; see the schema comment. These are a
+             * PER-PRODUCT declaration (Build Doc 3.6) so the form shows one
+             * block and the PUT fans the values across every variant row.
+             */
+            ddpWest: num(quote.ddpWest),
+            ddpCentral: num(quote.ddpCentral),
+            ddpEast: num(quote.ddpEast),
+            ddpWestAir: num(quote.ddpWestAir),
+            ddpCentralAir: num(quote.ddpCentralAir),
+            ddpEastAir: num(quote.ddpEastAir),
             moq: quote.moq,
             productionLeadTime: quote.productionLeadTime,
             maxVolumeCapacity: quote.maxVolumeCapacity,
@@ -316,12 +349,28 @@ export async function PUT(
      * overwritten.
      */
     applyToAll?: boolean;
+    /**
+     * The six DDP fees — three US destinations x two modes. The unsuffixed
+     * trio is OCEAN, matching the schema.
+     *
+     * DDP is declared PER PRODUCT (Build Doc 3.6), but Quote is keyed per
+     * variation, so these are FANNED across every variant row below. The
+     * form shows one block, so the copies cannot visibly disagree.
+     */
+    ddp?: {
+      west?: number | null;
+      central?: number | null;
+      east?: number | null;
+      westAir?: number | null;
+      centralAir?: number | null;
+      eastAir?: number | null;
+    };
   };
 
   try {
     const invitation = await db.invitation.findUnique({
       where: { id: invitationId },
-      select: { id: true, vendorId: true, currentRound: true },
+      select: { id: true, vendorId: true },
     });
     if (!invitation) return badRequest("No such invitation");
 
@@ -339,6 +388,26 @@ export async function PUT(
 
     const variationId = body.variationId ?? null;
     const variationKey = variationKeyOf(variationId);
+
+    /**
+     * The DDP columns, mapped from the request's one block.
+     *
+     * Returns {} when the caller did not send `ddp` at all, so a save that
+     * is not about DDP leaves the stored fees alone — the same reasoning as
+     * dutyType below, and for the same reason: these decide whether a bid is
+     * DDP at all, and nulling them silently changes Best Cost.
+     */
+    const ddpColumns =
+      body.ddp === undefined
+        ? {}
+        : {
+            ddpWest: body.ddp.west ?? null,
+            ddpCentral: body.ddp.central ?? null,
+            ddpEast: body.ddp.east ?? null,
+            ddpWestAir: body.ddp.westAir ?? null,
+            ddpCentralAir: body.ddp.centralAir ?? null,
+            ddpEastAir: body.ddp.eastAir ?? null,
+          };
 
     const quote = await db.quote.upsert({
       where: {
@@ -359,17 +428,35 @@ export async function PUT(
         bucketTotals: (body.bucketTotals ?? {}) as never,
         fob: body.fob ?? null,
         dutyType: body.dutyType ?? null,
+        ...ddpColumns,
         ...termsFromValues((body.values ?? {}) as Record<string, unknown>, body),
         submittedAt: status === "SUBMITTED" ? new Date() : null,
       },
       update: {
         status,
-        values: (body.values ?? {}) as never,
-        bucketTotals: (body.bucketTotals ?? {}) as never,
-        fob: body.fob ?? null,
+        /**
+         * ONLY WRITE WHAT THE CALLER SENT.
+         *
+         * These were written unconditionally, so a save that was not ABOUT
+         * the breakdown — a DDP-only save, say — wrote `{}` over the values
+         * and nulled the FOB of an already-submitted variant. Found by
+         * saving a DDP block and watching a $14.49 Twin become NULL.
+         *
+         * This is the same rule dutyType has carried since 1.6d, for the
+         * same reason: a partial payload must not be read as "delete the
+         * rest".
+         */
+        ...(body.values !== undefined
+          ? { values: body.values as never }
+          : {}),
+        ...(body.bucketTotals !== undefined
+          ? { bucketTotals: body.bucketTotals as never }
+          : {}),
+        ...(body.fob !== undefined ? { fob: body.fob } : {}),
         // dutyType is only overwritten when the caller actually supplies it —
         // it decides whether a bid is DDP, and nulling it changes Best Cost.
         ...(body.dutyType !== undefined ? { dutyType: body.dutyType } : {}),
+        ...ddpColumns,
         ...termsFromValues((body.values ?? {}) as Record<string, unknown>, body),
         ...(status === "SUBMITTED" ? { submittedAt: new Date() } : {}),
       },
@@ -448,6 +535,31 @@ export async function PUT(
           },
         });
       }
+    }
+
+    /**
+     * DDP FANS ACROSS THE PRODUCT.
+     *
+     * DDP is declared once per product (Build Doc 3.6) but Quote is keyed per
+     * variation, so one declaration has to reach every variant row or the
+     * read path sees a product that is DDP for Twin and not for King.
+     * lib/bestCost.ts takes the HIGHEST destination per mode, so a partial
+     * fan-out would not merely be untidy — it would change Best Cost for
+     * some sizes and not others.
+     *
+     * Unlike Apply-to-all this DOES touch submitted rows, and deliberately:
+     * the fees are not that variant's committed price, they are a term of
+     * trade for the whole product. Nothing about the variant's own numbers
+     * (values, bucketTotals, fob, status) is written here.
+     */
+    if (body.ddp !== undefined || body.dutyType !== undefined) {
+      await db.quote.updateMany({
+        where: { invitationId, styleId, NOT: { variationKey } },
+        data: {
+          ...ddpColumns,
+          ...(body.dutyType !== undefined ? { dutyType: body.dutyType } : {}),
+        },
+      });
     }
 
     /**
@@ -553,6 +665,51 @@ export async function PUT(
       },
     });
 
+    /**
+     * SUBMITTING ADVANCES THE LADDER.
+     *
+     * The quote and the bid status were moving independently, so five
+     * SUBMITTED quotes could sit under a bid still reading
+     * CHANGES_REQUESTED: the vendor's screen said "Your turn" after they had
+     * finished, and Quince was never told the work had come back.
+     *
+     * domain/bidStatus.ts owns where it goes (`submitAdvancesTo`), and the
+     * move posts into the thread like any other so the chronology stays
+     * whole. Idempotent: a second submit finds the bid already in review and
+     * `submitAdvancesTo` returns null for it.
+     */
+    if (status === "SUBMITTED") {
+      const bid = await db.productBid.findFirst({
+        where: { invitationId, styleId },
+        select: { id: true, status: true },
+      });
+      const from = (bid?.status ?? "INVITED") as BidStatus;
+      const to = submitAdvancesTo(from);
+
+      if (to) {
+        const row = bid
+          ? await db.productBid.update({
+              where: { id: bid.id },
+              data: { status: to, statusChangedAt: new Date() },
+            })
+          : await db.productBid.create({
+              data: { invitationId, styleId, status: to },
+            });
+
+        await db.bidComment.create({
+          data: {
+            productBidId: row.id,
+            authorSide: "VENDOR",
+            body:
+              variationId === null
+                ? "Submitted this quote."
+                : "Submitted a quote for one variation.",
+            statusChange: to,
+          },
+        });
+      }
+    }
+
     if (status === "SUBMITTED") {
       await db.activityLog.create({
         data: {
@@ -571,7 +728,12 @@ export async function PUT(
       id: quote.id,
       status: quote.status,
       fob: num(quote.fob),
-      submittedCount: submitted,
+      // The COUNT, not the rows. Returning `submitted` (the array) rendered
+      // as "[object Object],[object Object] of 1 products done" in the
+      // vendor's own success message. submittedProducts is the de-duplicated
+      // product count computed above — a quote exists per VARIATION now, so
+      // the raw row count would also have been wrong.
+      submittedCount: submittedProducts,
       productCount: total,
     });
   } catch (error) {

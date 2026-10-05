@@ -82,7 +82,7 @@ export function POST(request: Request) {
 
     const invitation = await db.invitation.findUnique({
       where: { id: body.invitationId },
-      select: { id: true, currentRound: true },
+      select: { id: true },
     });
     if (!invitation) return badRequest("No such invitation");
 
@@ -98,7 +98,9 @@ export function POST(request: Request) {
         where: {
           invitationId: invitation.id,
           styleId: body.styleId,
-          round: invitation.currentRound,
+          // No round filter: rounds were replaced by the status ladder (H1),
+          // and quotes are now one per VARIATION. Filtering on a retired
+          // column would match nothing once it stopped being written.
         },
         select: { bucketTotals: true, values: true },
       });
@@ -133,7 +135,10 @@ export function POST(request: Request) {
         targetPctHi: body.targetPctHi ?? null,
         mandatory: body.mandatory ?? false,
         valueBefore,
-        round: invitation.currentRound,
+        // Ask.round is non-null and Asks is dormant V1 groundwork (cut from
+        // MVP 29 Sep, not to be extended), so this writes the constant the
+        // column has always held rather than reading a retired field.
+        round: 1,
         createdBy: "Procurement",
       },
     });

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   awaitingQuince,
+  canVendorWithdraw,
+  submitAdvancesTo,
+  detailFor,
+  hintFor,
+  turnLabel,
+  turnOf,
+  vendorStatus,
+  vendorStripLabel,
+  VENDOR_EXIT,
   BID_STATUSES,
   canTransition,
   cueOf,
@@ -186,5 +195,150 @@ describe("no status is a dead end by accident", () => {
       (s: BidStatus) => transitionsFrom(s).length === 0,
     );
     expect(dead).toEqual(["BID_ACCEPTED", "NOT_PROCEEDING"]);
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   J5 / J6 — the three facts, separated.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+describe("whose turn it is", () => {
+  it("never disagrees with awaitingQuince", () => {
+    // The two are derived from one cue, and this is the test that keeps them
+    // that way: a future status whose marker says "Your turn" while the
+    // product list says it is waiting on Quince would be the two-sources-of-
+    // truth bug the whole single-stored-value design exists to prevent.
+    for (const s of BID_STATUSES) {
+      expect(turnOf(s) === "QUINCE").toBe(awaitingQuince(s));
+    }
+  });
+
+  it("puts every acting state on the vendor and every done state on neither", () => {
+    expect(BID_STATUSES.filter((s) => turnOf(s) === "VENDOR")).toEqual([
+      "INVITED",
+      "CHANGES_REQUESTED",
+      "INITIAL_CLEARED",
+      "IN_NEGOTIATION",
+      "FINAL_REQUESTED",
+      "WITHDRAWN",
+    ]);
+    expect(BID_STATUSES.filter((s) => turnOf(s) === "DONE")).toEqual([
+      "BID_ACCEPTED",
+      "NOT_PROCEEDING",
+    ]);
+  });
+
+  it("reads 'Your turn' / 'With Quince' / 'Done' and nothing else", () => {
+    const seen = new Set(BID_STATUSES.map(turnLabel));
+    expect([...seen].sort()).toEqual(["Done", "With Quince", "Your turn"]);
+  });
+});
+
+describe("the short status is a name, not a sentence", () => {
+  it("never contains the em-dash phrasing the label set uses", () => {
+    // "Full costing submitted — with Quince" is what this replaces.
+    for (const s of BID_STATUSES) {
+      expect(vendorStatus(s)).not.toContain("—");
+      expect(vendorStatus(s).toLowerCase()).not.toContain("with quince");
+    }
+  });
+
+  it("stays short enough to sit in a badge", () => {
+    for (const s of BID_STATUSES) {
+      expect(vendorStatus(s).length).toBeLessThanOrEqual(18);
+    }
+  });
+
+  /**
+   * SUPERSEDED BY J8. This used to assert that the needed and review stages
+   * shared a name ("Full costing" for both), with the marker carrying the
+   * difference. Akshay: "The status should be 'Under Review', not
+   * 'Reviewed'" — a stage Quince is still looking at must say so, because
+   * the vendor reads the status first and the marker second.
+   */
+  it("says 'Under review' for every stage Quince is holding", () => {
+    for (const s of BID_STATUSES.filter(awaitingQuince)) {
+      expect(vendorStatus(s)).toBe("Under review");
+    }
+  });
+
+  it("NEVER claims a stage is reviewed while it is being reviewed", () => {
+    // The defect this replaces: the strip read "Reviewed" for a stage that
+    // had not been. Nothing awaiting Quince may use that word.
+    for (const s of BID_STATUSES) {
+      if (awaitingQuince(s)) {
+        expect(vendorStatus(s).toLowerCase()).not.toContain("reviewed");
+      }
+    }
+  });
+
+  it("keeps the strip and the badge agreeing on a stage's name", () => {
+    for (const s of BID_STATUSES) {
+      expect(vendorStripLabel(s)).toBe(vendorStatus(s));
+    }
+  });
+});
+
+describe("every status explains itself", () => {
+  it("has a hint and a detail, and the detail says more than the hint", () => {
+    for (const s of BID_STATUSES) {
+      expect(hintFor(s).length).toBeGreaterThan(0);
+      expect(detailFor(s).length).toBeGreaterThan(hintFor(s).length);
+    }
+  });
+
+  it("never tells a waiting vendor to do something", () => {
+    // A row that needs nothing from the vendor must not read as a task.
+    for (const s of BID_STATUSES.filter(awaitingQuince)) {
+      expect(hintFor(s)).toMatch(/Nothing needed/i);
+    }
+  });
+});
+
+describe("the vendor's one exit", () => {
+  it("is withdraw, and is never not-proceeding", () => {
+    expect(VENDOR_EXIT).toBe("WITHDRAWN");
+    // Akshay, 5 Oct: the vendor withdraws, QUINCE does not proceed. A vendor
+    // must never be offered the other side's word for ending a bid.
+    for (const s of BID_STATUSES) {
+      const theirs = transitionsFrom(s, "VENDOR").map((t) => t.to);
+      expect(theirs).not.toContain("NOT_PROCEEDING");
+    }
+  });
+
+  it("is available from every live stage and reversible", () => {
+    const live = BID_STATUSES.filter(
+      (s) => s !== "BID_ACCEPTED" && s !== "NOT_PROCEEDING" && s !== "WITHDRAWN",
+    );
+    for (const s of live) expect(canVendorWithdraw(s)).toBe(true);
+    // Reinstating is what makes withdrawal safe to offer at all.
+    expect(transitionsFrom("WITHDRAWN", "VENDOR").length).toBeGreaterThan(0);
+  });
+});
+
+describe("submitting advances the ladder", () => {
+  it("moves every acting stage to its review stage", () => {
+    expect(submitAdvancesTo("INVITED")).toBe("INITIAL_IN_REVIEW");
+    expect(submitAdvancesTo("CHANGES_REQUESTED")).toBe("INITIAL_IN_REVIEW");
+    expect(submitAdvancesTo("INITIAL_CLEARED")).toBe("FULL_IN_REVIEW");
+    expect(submitAdvancesTo("IN_NEGOTIATION")).toBe("FULL_IN_REVIEW");
+    expect(submitAdvancesTo("FINAL_REQUESTED")).toBe("FINAL_IN_REVIEW");
+  });
+
+  it("does nothing where submitting has no meaning", () => {
+    // Already with Quince, decided, or withdrawn.
+    for (const s of ["INITIAL_IN_REVIEW", "FULL_IN_REVIEW", "FINAL_IN_REVIEW",
+                     "BID_ACCEPTED", "NOT_PROCEEDING", "WITHDRAWN"] as BidStatus[]) {
+      expect(submitAdvancesTo(s)).toBeNull();
+    }
+  });
+
+  it("always lands on a stage that is waiting on Quince", () => {
+    // The invariant that matters: after submitting, the vendor must never
+    // still read "Your turn".
+    for (const s of BID_STATUSES) {
+      const next = submitAdvancesTo(s);
+      if (next) expect(turnOf(next)).toBe("QUINCE");
+    }
   });
 });

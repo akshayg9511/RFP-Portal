@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { percent, units } from "@/lib/format";
+import { FacetSelect, facetsOf } from "@/components/FacetSelect";
+import * as React from "react";
 
 type RfpRow = {
   id: string;
@@ -12,7 +14,6 @@ type RfpRow = {
   templateName: string;
   waveName: string;
   dueDate: string | null;
-  currentRound: number;
   styleCount: number;
   vendorCount: number;
   respondedCount: number;
@@ -20,6 +21,8 @@ type RfpRow = {
   stylesWithBids: number;
   /** Lowest bid vs baseline across products that have bids. Negative saves. */
   lowestVsBaseline: number | null;
+  sourcingPartner: string | null;
+  gm: string | null;
 };
 
 /**
@@ -36,6 +39,50 @@ const STATUS_TONE: Record<string, "success" | "info" | "warning" | undefined> = 
 export default function RfpsPage() {
   const { data, loading, error } = useApi<RfpRow[]>("/api/rfps");
 
+  /**
+   * FILTER BY OWNER (H5).
+   *
+   * Akshay: "The RFP screen should have a filter by sourcing partner or a
+   * filter by GM… so that sourcing partner and GM can function with
+   * clarity." This list had NO filters at all, so net-new but small —
+   * `FacetSelect` is already the convention on seven other call sites.
+   */
+  const [partner, setPartner] = React.useState("");
+  const [gm, setGm] = React.useState("");
+  const [status, setStatus] = React.useState("");
+
+  const rows = React.useMemo(() => {
+    return (data ?? []).filter(
+      (r) =>
+        (!partner || r.sourcingPartner === partner) &&
+        (!gm || r.gm === gm) &&
+        (!status || r.status === status),
+    );
+  }, [data, partner, gm, status]);
+
+  /**
+   * Facet counts EXCLUDE their own dimension, so picking one partner does
+   * not make every other partner read (0) — you could then never see what
+   * switching to them would give you. Same rule as /award.
+   */
+  const facets = React.useMemo(() => {
+    const all = data ?? [];
+    const without = (skip: "partner" | "gm" | "status") =>
+      all.filter(
+        (r) =>
+          (skip === "partner" || !partner || r.sourcingPartner === partner) &&
+          (skip === "gm" || !gm || r.gm === gm) &&
+          (skip === "status" || !status || r.status === status),
+      );
+    return {
+      partner: facetsOf(without("partner"), (r) => r.sourcingPartner),
+      gm: facetsOf(without("gm"), (r) => r.gm),
+      status: facetsOf(without("status"), (r) => r.status),
+    };
+  }, [data, partner, gm, status]);
+
+  const filtered = partner || gm || status;
+
   return (
     <>
       <div className="page-hd">
@@ -46,6 +93,42 @@ export default function RfpsPage() {
             New RFP
           </Link>
         </div>
+      </div>
+
+      {/* A utility strip, so these stay GHOST however close they sit to the
+          title row's primary. */}
+      <div className="aw-filters">
+        <FacetSelect
+          label="Sourcing partner"
+          value={partner}
+          onChange={setPartner}
+          options={facets.partner}
+        />
+        <FacetSelect label="GM" value={gm} onChange={setGm} options={facets.gm} />
+        <FacetSelect
+          label="Status"
+          allLabel="Any status"
+          value={status}
+          onChange={setStatus}
+          options={facets.status}
+        />
+        {filtered ? (
+          <>
+            <span className="rl-count">
+              {rows.length} of {(data ?? []).length}
+            </span>
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => {
+                setPartner("");
+                setGm("");
+                setStatus("");
+              }}
+            >
+              Clear
+            </button>
+          </>
+        ) : null}
       </div>
 
       {error ? (
@@ -99,7 +182,7 @@ export default function RfpsPage() {
                     ))}
                   </tr>
                 ))
-              : (data ?? []).map((rfp) => {
+              : rows.map((rfp) => {
                   const share = rfp.vendorCount
                     ? rfp.respondedCount / rfp.vendorCount
                     : 0;
@@ -111,7 +194,11 @@ export default function RfpsPage() {
                           {rfp.name}
                         </Link>
                         <span className="rl-sub">
-                          {rfp.templateName} · round {rfp.currentRound}
+                          {/* No round. Rounds were replaced by the status
+                              ladder (H1) — negotiation is repeatable, so a
+                              single number could not describe where a vendor
+                              had got to. domain/bidStatus.ts owns it now. */}
+                          {rfp.templateName}
                         </span>
                       </td>
                       <td>

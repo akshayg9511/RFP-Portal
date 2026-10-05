@@ -4,7 +4,13 @@ import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { useVendorView } from "@/lib/vendorView";
-import { percent, unitCost, units } from "@/lib/format";
+import { unitCost } from "@/lib/format";
+import {
+  cueOf,
+  vendorCanEdit,
+  vendorLabel,
+  type BidStatus,
+} from "@/domain/bidStatus";
 
 /**
  * S4 — the vendor dashboard.
@@ -16,7 +22,6 @@ import { percent, unitCost, units } from "@/lib/format";
 type Invitation = {
   id: string;
   status: string;
-  currentRound: number;
   rfp: {
     id: string;
     name: string;
@@ -42,6 +47,10 @@ type Invitation = {
     outcome: "AWARDED" | "NOT_PROCEEDING" | null;
     awardPct: number | null;
     awardedUnits: number | null;
+    /** Per vendor x product — the ladder position. See domain/bidStatus. */
+    bidStatus: BidStatus;
+    statusNote: string | null;
+    variations: { id: string; label: string }[];
   }[];
 };
 
@@ -58,6 +67,27 @@ export default function VendorDashboard() {
   const { vendorId, vendorName, active } = useVendorView();
   const { data, loading, error } = useApi<Invitation[]>(
     vendorId ? `/api/vendor/${vendorId}/invitations` : null,
+  );
+
+  /* The flattening. One row per product the vendor was invited on, with the
+     invitation id carried along so the quote route still resolves — only the
+     LANDING page loses the RFP, not the data model. */
+  const flat = (data ?? []).flatMap((inv) =>
+    inv.products.map((p) => ({
+      ...p,
+      invitationId: inv.id,
+      dueDate: inv.rfp.dueDate,
+    })),
+  );
+
+  /* Instructions, deduped. Two RFPs can legitimately carry the same wording,
+     and the vendor should read it once. */
+  const instructions = Array.from(
+    new Set(
+      (data ?? [])
+        .map((inv) => inv.rfp.instructions?.trim())
+        .filter((t): t is string => Boolean(t)),
+    ),
   );
 
   if (!active) {
@@ -93,7 +123,7 @@ export default function VendorDashboard() {
       <div className="page-hd">
         <div className="row">
           <div className="grow">
-            <h1 className="ttl">Your RFPs</h1>
+            <h1 className="ttl">Products to bid</h1>
             <p className="page-sub">
               {vendorName} · everything Quince has asked you to quote
             </p>
@@ -123,137 +153,123 @@ export default function VendorDashboard() {
               </span>
               <div className="ttl">Nothing to quote yet</div>
               <div className="desc">
-                When Quince issues an RFP to you it appears here.
+                When Quince asks you to quote a product it appears here.
               </div>
             </div>
           </div>
         </div>
       ) : null}
 
-      {(data ?? []).map((inv) => (
-        <div className="card" key={inv.id} style={{ marginBlockEnd: "var(--space-lg)" }}>
-          <div className="card-h">
-            <div className="ttl">{inv.rfp.name}</div>
-            <div className="sub">
-              {inv.productCount} products · due{" "}
-              {inv.rfp.dueDate
-                ? new Date(inv.rfp.dueDate).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : "—"}
-              {inv.rfp.sourcingPartner ? ` · ${inv.rfp.sourcingPartner}` : ""}
-            </div>
-          </div>
-
+      {/* ONE FLAT PRODUCT LIST — no RFP grouping, no RFP names.
+          
+          Akshay, 2 Oct: "I also feel vendor don't need an RFP screen. They
+          just need to have a bid page… RFP, as a concept, is only for
+          Quince." So the vendor never learns the concept exists; the RFP's
+          instruction travels with the product as guidance instead. */}
+      {flat.length ? (
+        <div className="card">
           <div className="card-b">
-            <div className="vendor-rfp-head">
-              <Badge tone={inv.submittedCount === inv.productCount ? "success" : undefined}>
-                {STATUS_LABEL[inv.status] ?? inv.status}
-              </Badge>
-              <div className="vendor-progress">
-                <div className="vendor-progress-bar">
-                  <span style={{ inlineSize: percent(inv.completion, 0) }} />
-                </div>
-                <span className="vendor-progress-label">
-                  {inv.submittedCount} of {inv.productCount} submitted
-                </span>
-              </div>
-
-              {inv.decidedCount > 0 ? (
-                <span className="vo-headline">
-                  {inv.awardedCount > 0
-                    ? `Awarded to you: ${inv.awardedCount} of ${inv.productCount}`
-                    : "No products awarded to you on this RFP"}
-                </span>
-              ) : null}
-            </div>
-
-            {inv.rfp.instructions ? (
-              <div className="bar bar--info" style={{ marginBlockEnd: "var(--space-md)" }}>
-                <Icon name="info_circle" />
-                <div>
-                  <strong>Instructions.</strong> {inv.rfp.instructions}
-                </div>
-              </div>
-            ) : null}
-
             <div className="data-grid-surface">
-              {/* Declared widths put the grid into FIXED layout. Without them
-                  each RFP's table auto-sizes to its own content, so "State"
-                  and "Your FOB" landed at different x-positions from one card
-                  to the next. */}
               <table className="data-grid">
                 <colgroup>
-                  <col style={{ width: "40%" }} />
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "13%" }} />
-                  <col style={{ width: "22%" }} />
-                  <col style={{ width: "11%" }} />
+                  <col style={{ width: "34%" }} />
+                  <col style={{ width: "26%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "16%" }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>Product</th>
-                    <th>State</th>
+                    {/* The ladder position, in the VENDOR's words. */}
+                    <th>Status</th>
                     <th className="num">Your FOB</th>
-                    {/* The answer to "did we win" — the one thing this portal
-                        never told a vendor before. */}
-                    <th>Outcome</th>
-                    <th className="act">Quote</th>
+                    <th>Due</th>
+                    <th className="act">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {inv.products.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <span className="id">{p.styleNumber}</span> · {p.name}
-                      </td>
-                      <td>
-                        {p.state === "SUBMITTED" ? (
-                          <Badge tone="success">Submitted</Badge>
-                        ) : p.state === "DRAFT" ? (
-                          <Badge tone="warning">Draft</Badge>
-                        ) : (
-                          <Badge>Not started</Badge>
-                        )}
-                      </td>
-                      <td className="num">{unitCost(p.fob)}</td>
-                      <td>
-                        {p.outcome === "AWARDED" ? (
-                          <span className="vo-won">
-                            <Badge tone="success">Awarded</Badge>
-                            {/* Their share and their volume — nothing about
-                                anyone else, so this cannot reveal a split. */}
-                            <span className="vo-detail">
-                              {p.awardPct}% ·{" "}
-                              {units(p.awardedUnits)} units
+                  {flat.map((row) => {
+                    const cue = cueOf(row.bidStatus);
+                    return (
+                      <tr key={`${row.invitationId}-${row.id}`}>
+                        <td>
+                          <span className="id">{row.styleNumber}</span>{" "}
+                          {row.name}
+                          {row.variations.length ? (
+                            <span className="vb-vars">
+                              {row.variations.length} variant
+                              {row.variations.length === 1 ? "" : "s"} to quote
                             </span>
-                          </span>
-                        ) : p.outcome === "NOT_PROCEEDING" ? (
-                          <Badge>Not proceeding</Badge>
-                        ) : (
-                          <span className="vo-pending">
-                            {p.state === "SUBMITTED" ? "Under review" : "—"}
-                          </span>
-                        )}
-                      </td>
-                      <td className="act">
-                        <Link
-                          className="btn btn--ghost btn--sm"
-                          href={`/vendor/quote/${inv.id}/${p.id}`}
-                        >
-                          {p.state === "BLANK" ? "Start" : "Open"}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                          ) : null}
+                        </td>
+                        <td>
+                          {/* `act` is the vendor's cue to do something, so it
+                              carries the only emphasis on the row. A waiting
+                              state is deliberately quiet — it needs nothing
+                              from them. */}
+                          <Badge
+                            tone={
+                              cue === "act"
+                                ? "warning"
+                                : row.bidStatus === "BID_ACCEPTED"
+                                  ? "success"
+                                  : undefined
+                            }
+                          >
+                            {vendorLabel(row.bidStatus)}
+                          </Badge>
+                          {row.statusNote ? (
+                            <span className="vb-note">{row.statusNote}</span>
+                          ) : null}
+                        </td>
+                        <td className="num">{unitCost(row.fob)}</td>
+                        <td>
+                          {row.dueDate
+                            ? new Date(row.dueDate).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                              })
+                            : "—"}
+                        </td>
+                        <td className="act">
+                          {/* A row action is chrome for ITS row, so it stays a
+                              ghost however many rows there are — the secondary
+                              is the page's runner-up, and four of them compete.
+                              The LABEL carries the difference instead: Quote /
+                              Continue when they owe us something, View when
+                              the bid is with Quince. */}
+                          <Link
+                            className="btn btn--ghost btn--sm"
+                            href={`/vendor/quote/${row.invitationId}/${row.id}`}
+                          >
+                            {vendorCanEdit(row.bidStatus)
+                              ? row.state === "BLANK"
+                                ? "Quote"
+                                : "Continue"
+                              : "View"}
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {/* The RFP's instruction, shown as plain guidance. The vendor
+                sees WHAT to follow, never which RFP it came from. */}
+            {instructions.length ? (
+              <div className="bar" style={{ marginBlockStart: "var(--space-lg)" }}>
+                <span>
+                  <strong>Instructions.</strong> {instructions.join(" ")}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
-      ))}
+      ) : null}
+
     </>
   );
 }

@@ -33,7 +33,8 @@ const AWARD: Dest[] = [
 
 /** What a vendor sees. Their portal is the same app, scoped to them. */
 const VENDOR_DESTS: Dest[] = [
-  { href: "/vendor", label: "My RFPs", icon: "invoice" },
+  // H4: the vendor never learns the RFP concept exists.
+  { href: "/vendor", label: "Products to bid", icon: "invoice" },
 ];
 
 const SETUP: Dest[] = [

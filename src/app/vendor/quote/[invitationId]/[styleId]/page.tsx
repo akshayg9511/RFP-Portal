@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { ProductGallery, type Colourway } from "@/components/ProductGallery";
+import { BidLifecycle } from "@/components/BidLifecycle";
 import { computeQuote, missingInputs, type QuoteValues } from "@/domain/quote";
 import {
   askSummary,
@@ -15,6 +16,16 @@ import {
   type AskType,
 } from "@/domain/asks";
 import { unitCost, units } from "@/lib/format";
+import {
+  canVendorWithdraw,
+  templateFor,
+  vendorCanEdit,
+  vendorStatus,
+  type BidStatus,
+} from "@/domain/bidStatus";
+import { WithdrawAction } from "@/components/WithdrawAction";
+import { QuoteActionsMenu } from "@/components/QuoteActionsMenu";
+import { SubmitQuoteModal } from "@/components/SubmitQuoteModal";
 
 /**
  * S5 — quote entry.
@@ -40,7 +51,6 @@ type Section = { key: string; label: string; lines: Line[]; totalKey: string };
 
 type QuoteForm = {
   invitationId: string;
-  round: number;
   vendor: { id: string; name: string };
   rfp: { id: string; name: string; instructions: string | null; dueDate: string | null };
   template: {
@@ -71,8 +81,11 @@ type QuoteForm = {
     pricedVariations?: {
       id: string;
       label: string;
-      consumption: number | null;
+      status: string | null;
       fob: number | null;
+      /** This variant's OWN complete breakdown (H8.5). */
+      values: QuoteValues;
+      bucketTotals: Record<string, number>;
     }[];
   };
   quote: {
@@ -89,7 +102,18 @@ type QuoteForm = {
     productionLeadTime: number | null;
     moq: number | null;
     notes: string | null;
+    dutyType: string | null;
+    /** Three US destinations x two modes. Unsuffixed = ocean. */
+    ddpWest: number | null;
+    ddpCentral: number | null;
+    ddpEast: number | null;
+    ddpWestAir: number | null;
+    ddpCentralAir: number | null;
+    ddpEastAir: number | null;
   } | null;
+  /** The ladder position — decides the template depth and who may type. */
+  bidStatus: BidStatus;
+  bidStatusNote: string | null;
   /**
    * Bands and directions only. The clean sheet and every rival's price stay on
    * the server — only the verdict crosses (Build Doc 8.3).
@@ -143,6 +167,32 @@ const FLAG_LABEL: Record<string, string> = {
   BELOW: "Below our model",
 };
 
+/**
+ * Field keys in the vendor's own words.
+ *
+ * `missingInputs()` returns KEYS, which are the template's internal names.
+ * Printing `greyCostPerMeter` at a vendor is the same class of leak as
+ * showing them an RFP name.
+ */
+const MISSING_LABEL: Record<string, string> = {
+  // The light template's buckets.
+  materials: "materials total",
+  trim: "trim & hardware total",
+  packaging: "packaging total",
+  crafting: "crafting total",
+  overhead: "overhead & profit",
+  // The full template's line items.
+  consumption: "fabric consumption",
+  greyCostPerMeter: "grey fabric cost per metre",
+  costPerUom: "fabric cost per unit",
+  directLaborRate: "direct labour rate",
+  lineEfficiency: "line efficiency",
+  sam: "SAM (minutes)",
+  hourlyWage: "hourly wage",
+  sewingSam: "sewing SAM",
+  overheadCost: "overhead & profit",
+};
+
 const BUCKET_LABEL: Record<string, string> = {
   BASE_MATERIALS: "Materials",
   TRIM_HARDWARE: "Trim + hardware",
@@ -162,53 +212,185 @@ export default function QuotePage() {
   );
 
   /**
-   * `edits` holds only what the vendor has TYPED this session; the saved quote
-   * comes from `data` and the two merge at read time.
+   * `variantEdits` (below) holds only what the vendor has TYPED this session,
+   * keyed by variant; the saved quotes come from `data` and the two merge at
+   * read time.
    *
    * This was an effect calling setValues on every fetch, which meant a reload
    * after submit could paint one frame carrying the previous product's numbers.
    * Deriving during render removes the frame and the lint error both.
    */
-  const [edits, setEdits] = React.useState<QuoteValues>({});
   const [busy, setBusy] = React.useState(false);
   const [saved, setSaved] = React.useState<string | null>(null);
-
-  /**
-   * Per-size price edits, layered over what was saved — the same
-   * edits-over-saved shape the values blob uses above, and for the same
-   * reason: a refetch must refresh the saved half without discarding what
-   * the vendor has typed.
-   */
-  const [priceEdits, setPriceEdits] = React.useState<
-    Record<string, { consumption?: string; fob?: string }>
-  >({});
 
   const priced = React.useMemo(
     () => data?.style.pricedVariations ?? [],
     [data],
   );
 
-  function priceOf(variationId: string, field: "consumption" | "fob"): string {
-    const edited = priceEdits[variationId]?.[field];
+  /**
+   * WHICH VARIANT IS BEING QUOTED.
+   *
+   * F7/H8.5: each variant gets its own COMPLETE quote, not a shared
+   * breakdown with a per-size price. So the form edits one variant at a
+   * time and a selector switches between them — 41 fields x 5 sizes is 205
+   * inputs, which is why Apply-to-all exists below rather than as a nicety.
+   *
+   * null = the whole product, which is what a STYLE-grained product means
+   * and what `priced` being empty gives us. The degenerate case of one code
+   * path, not a branch.
+   */
+  const [activeVariation, setActiveVariation] = React.useState<string | null>(
+    null,
+  );
+
+  // Default to the first variant once the payload lands, so the form never
+  // opens on "select a variation first" — Aravind was explicit that a gate
+  // there is a cumbersome extra step.
+  React.useEffect(() => {
+    if (activeVariation === null && priced.length) {
+      setActiveVariation(priced[0]!.id);
+    }
+  }, [priced, activeVariation]);
+
+  const activeRow = priced.find((v) => v.id === activeVariation) ?? null;
+
+  /** Edits are keyed BY VARIANT, so switching away does not lose typing. */
+  const [variantEdits, setVariantEdits] = React.useState<
+    Record<string, QuoteValues>
+  >({});
+
+  const editKey = activeVariation ?? "@STYLE";
+
+  /**
+   * DDP — ONE BLOCK PER PRODUCT, six fees.
+   *
+   * Three US destinations (West/LAX, Central/ORD, East/JFK) x two modes
+   * (air, ocean), exactly as the real Radnik template asks them. Each total
+   * is simply FOB + that destination's fee for that mode, which is what the
+   * template's own formula does (`=E$65+E66`), so there is no new
+   * arithmetic here — only new inputs.
+   *
+   * The toggle is PER PRODUCT (Build Doc 3.6), so these are not keyed by
+   * variant; the route fans them across every variant row on save.
+   */
+  const DDP_FEES = [
+    { key: "west", label: "US West", hint: "LAX", mode: "SHIP" },
+    { key: "central", label: "US Central", hint: "ORD", mode: "SHIP" },
+    { key: "east", label: "US East", hint: "JFK", mode: "SHIP" },
+    { key: "westAir", label: "US West", hint: "LAX", mode: "AIR" },
+    { key: "centralAir", label: "US Central", hint: "ORD", mode: "AIR" },
+    { key: "eastAir", label: "US East", hint: "JFK", mode: "AIR" },
+  ] as const;
+
+  type DdpKey = (typeof DDP_FEES)[number]["key"];
+
+  const [ddpEdits, setDdpEdits] = React.useState<
+    Partial<Record<DdpKey, string>>
+  >({});
+  /** null until the vendor touches it, so the SAVED value decides first. */
+  const [ddpToggle, setDdpToggle] = React.useState<boolean | null>(null);
+
+  const savedDdp = React.useCallback(
+    (key: DdpKey): number | null => {
+      const q = data?.quote;
+      if (!q) return null;
+      const map: Record<DdpKey, number | null> = {
+        west: q.ddpWest,
+        central: q.ddpCentral,
+        east: q.ddpEast,
+        westAir: q.ddpWestAir,
+        centralAir: q.ddpCentralAir,
+        eastAir: q.ddpEastAir,
+      };
+      return map[key];
+    },
+    [data],
+  );
+
+  function ddpOf(key: DdpKey): string {
+    const edited = ddpEdits[key];
     if (edited !== undefined) return edited;
-    const row = priced.find((v) => v.id === variationId);
-    const value = row?.[field];
-    return value === null || value === undefined ? "" : String(value);
+    const stored = savedDdp(key);
+    return stored === null ? "" : String(stored);
   }
 
-  function setPrice(
-    variationId: string,
-    field: "consumption" | "fob",
-    value: string,
-  ) {
-    setPriceEdits((prev) => ({
-      ...prev,
-      [variationId]: { ...prev[variationId], [field]: value },
-    }));
+  /**
+   * DDP is on when the vendor says so, else when the saved quote already
+   * declares VDDP. Edits-over-saved, the same shape as every other field
+   * here — so a refetch cannot flip the toggle back under the vendor.
+   */
+  const ddpOn = ddpToggle ?? data?.quote?.dutyType === "VDDP";
+
+  /**
+   * THE LADDER DECIDES THE DEPTH, AND WHO MAY TYPE.
+   *
+   * One stored status; domain/bidStatus.ts owns both answers so there is no
+   * second source of truth about either. A missing ProductBid reads as
+   * INVITED, the floor of the ladder.
+   */
+  /**
+   * Which bucket a typed total goes into (J1). Mirrors BUCKET_INPUT in
+   * domain/quote.ts — the same keys, because they are the template's own
+   * derived-line keys being filled by hand.
+   */
+  const BUCKET_INPUT_KEY: Record<string, string> = {
+    BASE_MATERIALS: "totalMaterialCost",
+    TRIM_HARDWARE: "totalTrimCost",
+    PACKAGING: "totalPackagingCost",
+    CRAFTING: "totalCraftingCost",
+    OVERHEAD_SGA_PROFIT: "overheadCost",
+  };
+
+  const bidStatus: BidStatus = data?.bidStatus ?? "INVITED";
+  const template = templateFor(bidStatus);
+  const isLight = template === "LIGHT";
+  const canEdit = vendorCanEdit(bidStatus);
+  const canWithdraw = canVendorWithdraw(bidStatus);
+
+  /** The two modal surfaces the collapsed action row opens (L1/L2). */
+  const [submitOpen, setSubmitOpen] = React.useState(false);
+  const [withdrawOpen, setWithdrawOpen] = React.useState(false);
+
+  /**
+   * Withdraw, with the reason the vendor gave (J4/J9).
+   *
+   * Goes through the bid route, not the quote route: withdrawal is a LADDER
+   * move, and that route is what posts the note into the thread so Quince
+   * reads it in the same chronology as everything else.
+   */
+  async function withdrawNow(reason: string) {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bids/${invitationId}/${styleId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          to: "WITHDRAWN",
+          note: reason,
+          authorSide: "VENDOR",
+          authorName: data?.vendor.name ?? null,
+        }),
+      });
+      const b = await res.json();
+      if (!res.ok) throw new Error(b?.message ?? "Could not withdraw");
+      setSaved("You have withdrawn from this product. You can reinstate it at any time.");
+      reload();
+    } catch (e) {
+      setSaved(e instanceof Error ? e.message : "Could not withdraw");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const values = React.useMemo<QuoteValues>(() => {
-    const stored = (data?.quote?.values as QuoteValues) ?? {};
+    /**
+     * The ACTIVE VARIANT's own saved breakdown, falling back to the
+     * product-level row. A style-grained product has no variants, so it
+     * reads `quote` — the same path, one group.
+     */
+    const stored = ((activeRow?.values ??
+      data?.quote?.values) as QuoteValues) ?? {};
     const q = data?.quote;
 
     // Backfill the commercial terms from their typed columns where the values
@@ -229,16 +411,26 @@ export default function QuotePage() {
       }
     }
 
-    return { ...stored, ...backfill, ...edits };
-  }, [data, edits]);
+    return { ...stored, ...backfill, ...(variantEdits[editKey] ?? {}) };
+  }, [data, activeRow, variantEdits, editKey]);
 
   /**
-   * Note `prev` here is the EDITS, not the merged values — which is what the
-   * callers want: spread the edits so far and add one key. A field the vendor
-   * has not touched stays absent from edits and keeps falling through to the
-   * saved value.
+   * Edits land under the ACTIVE VARIANT's key, so switching variant keeps
+   * both sets. A field the vendor has not touched stays absent and keeps
+   * falling through to that variant's saved value.
    */
-  const setValues = setEdits;
+  const setValues = React.useCallback(
+    (next: QuoteValues | ((prev: QuoteValues) => QuoteValues)) => {
+      setVariantEdits((all) => {
+        const mine = all[editKey] ?? {};
+        return {
+          ...all,
+          [editKey]: typeof next === "function" ? next(mine) : next,
+        };
+      });
+    },
+    [editKey],
+  );
 
   const spec = React.useMemo(() => {
     const def = data?.template.definition;
@@ -260,12 +452,119 @@ export default function QuotePage() {
     () => computeQuote(values, spec),
     [values, spec],
   );
+  /**
+   * What is still needed before this variant can be submitted.
+   *
+   * Template-aware: at LIGHT the five bucket totals satisfy it, at FULL the
+   * line items do. Reading it from the stored status rather than a second
+   * flag keeps one source of truth about which template is being asked for.
+   */
   const missing = React.useMemo(
-    () => missingInputs(values, spec),
-    [values, spec],
+    () =>
+      missingInputs(values, {
+        ...spec,
+        template: templateFor(
+          (data?.bidStatus ?? "INVITED") as BidStatus,
+        ) as "LIGHT" | "FULL",
+      }),
+    [values, spec, data],
   );
 
-  async function save(status: "DRAFT" | "SUBMITTED") {
+  /** Buckets whose figure came from a typed total rather than line items. */
+  const overridden: string[] = computed.overriddenBuckets;
+
+  /**
+   * True when the LINE ITEMS are driving this bucket, so the typed field
+   * becomes a read-only echo. The precedence is domain-owned (J1): detail
+   * beats an estimate, and the form shows which it is rather than silently
+   * replacing a number the vendor typed.
+   */
+  /**
+   * WHICH VARIANTS ARE NOT READY — J2.
+   *
+   * Submit-all is blocked by any variant without a price, and NAMES it, so
+   * the vendor is never left guessing which of five is holding them up. A
+   * variant already submitted is complete by definition.
+   */
+  const incomplete = React.useMemo(
+    () =>
+      priced
+        .filter((v) => v.status !== "SUBMITTED" && (v.fob ?? 0) <= 0)
+        .map((v) => v.label),
+    [priced],
+  );
+
+  /**
+   * Submit every variant in one action. Sequential rather than parallel: the
+   * route recomputes the invitation's own status on each save, and two
+   * concurrent writes to that row race.
+   */
+  /**
+   * Submit the variations the modal selected (L2).
+   *
+   * `only` is the picked set; omitting it submits everything unsubmitted,
+   * which is what a style-grained product (no variants) needs.
+   */
+  async function submitAll(only?: string[]) {
+    const pick = only && only.length ? new Set(only) : null;
+    setBusy(true);
+    try {
+      for (const v of priced) {
+        if (v.status === "SUBMITTED") continue;
+        if (pick && !pick.has(v.id)) continue;
+        const r = await fetch(`/api/quotes/${invitationId}/${styleId}`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            variationId: v.id,
+            status: "SUBMITTED",
+            // Each variant submits ITS OWN saved figures. Sending the form's
+            // current values would overwrite four variants with the fifth's
+            // numbers — the "$21.98 five times" bug in a new place.
+            values: v.values,
+            bucketTotals: v.bucketTotals,
+            fob: v.fob,
+          }),
+        });
+        if (!r.ok) {
+          const b = await r.json();
+          throw new Error(b?.message ?? "Could not submit");
+        }
+      }
+      const n = pick ? pick.size : priced.length;
+      setSaved(
+        `Submitted ${n} variation${n === 1 ? "" : "s"}.`,
+      );
+      setSubmitOpen(false);
+      reload();
+    } catch (e) {
+      setSaved(e instanceof Error ? e.message : "Could not submit");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function derivedBucket(key: string): boolean {
+    /**
+     * OVERHEAD IS NEVER DERIVED.
+     *
+     * `overheadCost` is a single input that IS its own bucket total, so the
+     * generic rule ("has a value and was not typed → the line items own
+     * it") locked the field the moment the vendor typed into it: they could
+     * enter overhead once and never correct it. There is no detail behind
+     * this bucket to take precedence.
+     */
+    if (key === "OVERHEAD_SGA_PROFIT") return false;
+
+    const total =
+      computed.buckets[key as keyof typeof computed.buckets] ?? 0;
+    return total > 0 && !overridden.includes(key);
+  }
+
+  async function save(
+    status: "DRAFT" | "SUBMITTED",
+    opts: { applyToAll?: boolean } = {},
+  ) {
     setBusy(true);
     try {
       const response = await fetch(`/api/quotes/${invitationId}/${styleId}`, {
@@ -276,17 +575,36 @@ export default function QuotePage() {
           bucketTotals: computed.buckets,
           fob: computed.fob,
           status,
-          // The complete set every save, so a row for a variation the buyer
-          // has since removed cannot linger.
-          prices: Object.fromEntries(
-            priced.map((v) => [
-              v.id,
-              {
-                consumption: numOrNull(priceOf(v.id, "consumption")),
-                fob: numOrNull(priceOf(v.id, "fob")),
+          /**
+           * Which variant this save is FOR. Omitting it means the whole
+           * product, which is what a STYLE-grained product means.
+           */
+          variationId: activeVariation,
+          applyToAll: opts.applyToAll ?? false,
+          /**
+           * DDP is declared once per PRODUCT, so it rides along with
+           * whichever variant is being saved and the route fans it across
+           * the rest. Sent only when the vendor has opted in — an absent
+           * block leaves the stored fees alone.
+           */
+          dutyType: ddpOn ? "VDDP" : "QDDP",
+          ddp: ddpOn
+            ? {
+                west: numOrNull(ddpOf("west")),
+                central: numOrNull(ddpOf("central")),
+                east: numOrNull(ddpOf("east")),
+                westAir: numOrNull(ddpOf("westAir")),
+                centralAir: numOrNull(ddpOf("centralAir")),
+                eastAir: numOrNull(ddpOf("eastAir")),
+              }
+            : {
+                west: null,
+                central: null,
+                east: null,
+                westAir: null,
+                centralAir: null,
+                eastAir: null,
               },
-            ]),
-          ),
         }),
       });
       const body = await response.json();
@@ -296,11 +614,19 @@ export default function QuotePage() {
           ? `Submitted. ${body.submittedCount} of ${body.productCount} products done.`
           : "Draft saved.",
       );
-      // Stay on the page after submitting, and RELOAD — submission is the
-      // moment the score panel appears, and bouncing straight to the dashboard
-      // meant a vendor never saw the one piece of feedback the system gives
-      // them back.
-      if (status === "SUBMITTED") reload();
+      /**
+       * RELOAD ON EVERY SAVE, not only on submit.
+       *
+       * Submission is the moment the score panel appears, which is why this
+       * reloaded then. But a DRAFT save now changes other variants too —
+       * Copy-to-all writes four more rows — and without a reload the tabs
+       * kept showing "—" for prices that were already in MySQL. It read as
+       * "nothing saved" when everything had.
+       *
+       * Safe because the form derives its values edits-over-saved: a reload
+       * refreshes the saved half and leaves what the vendor has typed.
+       */
+      reload();
     } catch (err: unknown) {
       setSaved(err instanceof Error ? err.message : String(err));
     }
@@ -340,34 +666,113 @@ export default function QuotePage() {
   return (
     <>
       <div className="page-hd">
+        {/* The vendor has no RFPs (H4), so the crumb goes back to the
+            product list and the RFP name is nowhere on this page either. */}
         <nav className="crumbs" aria-label="Breadcrumb">
-          <Link className="crumb" href="/vendor">Your RFPs</Link>
+          <Link className="crumb" href="/vendor">Products to bid</Link>
         </nav>
         <div className="row">
           <div className="grow">
             <h1 className="ttl">{data.style.name}</h1>
             <p className="page-sub">
-              {data.style.styleNumber} · {data.rfp.name} · quoting in USD
+              {data.style.styleNumber} · quoting in USD ·{" "}
+              {isLight
+                ? "bucket totals only for now"
+                : "full costing"}
             </p>
           </div>
           <div className="acts">
-            <button
-              className="btn btn--secondary"
-              onClick={() => save("DRAFT")}
-              disabled={busy}
-            >
-              Save draft
-            </button>
-            <button
-              className="btn btn--primary"
-              onClick={() => save("SUBMITTED")}
-              disabled={busy || missing.length > 0}
-            >
-              Submit quote
-            </button>
+            {/* J11 — the SHORT status, matching the panel below. This still
+                read "Initial quote submitted — with Quince", which is the
+                duplication removed from the panel in 2a.9 and missed here. */}
+            <Badge tone={canEdit ? "warning" : undefined}>
+              {vendorStatus(bidStatus)}
+            </Badge>
+            {/* TWO CONTROLS, NOT FIVE — decision L1, 5 Oct.
+            
+                Akshay: "couple 5 option into 1 or 2 or max 3 option and
+                within option add dropdowns."
+            
+                This row was Withdraw · Copy to all · Save draft · Submit
+                this one · Submit all. Two of those were submits, so the
+                SCOPE of the commit was being decided in a button label,
+                competing with three other actions. The design system's own
+                rule is that bulk actions collapse into one ghost menu and a
+                screen carries one primary.
+            
+                So: everything secondary goes behind "More", and Submit opens
+                the modal where the scope is the content (L2). */}
+            {canEdit || canWithdraw ? (
+              <QuoteActionsMenu
+                canEdit={canEdit}
+                canWithdraw={canWithdraw}
+                hasVariants={priced.length > 1}
+                busy={busy}
+                onCopyAll={() => save("DRAFT", { applyToAll: true })}
+                onSaveDraft={() => save("DRAFT")}
+                onWithdraw={() => setWithdrawOpen(true)}
+              />
+            ) : null}
+
+            {canEdit ? (
+              <button
+                className="btn btn--primary"
+                onClick={() => setSubmitOpen(true)}
+                disabled={busy}
+              >
+                Submit quote
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
+
+      {/* J12 — NOMINATED WHOLE ON A PER-SIZE PRODUCT.
+      
+          Akshay reported "I do not see all variants" on a product that is
+          SIZE grain with 5 variations. The form was right: that vendor's
+          InvitationStyle genuinely had no variation rows, so they were
+          invited whole. The RFP carried all five on RfpStyle — the
+          variations were lost at NOMINATION, not at RFP creation.
+      
+          Not silently fixed, because re-nominating an ISSUED RFP is a buyer
+          action (the §5.5 addendum flow, deliberately out of scope). So the
+          vendor is TOLD, rather than left wondering where the sizes went,
+          and the conversation is the route back. */}
+      {data.style.variationLevel !== "STYLE" && !priced.length ? (
+        <div className="bar bar--warning" style={{ marginBlockEnd: "var(--space-lg)" }}>
+          <Icon name="alert_triangle" />
+          <div>
+            <strong>You were asked to quote this product as a whole.</strong>{" "}
+            Quince normally prices it per{" "}
+            {data.style.variationLevel === "SIZE"
+              ? "size"
+              : data.style.variationLevel === "COLOUR"
+                ? "colour"
+                : "colour and size"}
+            . If that looks wrong, ask them in the conversation before you
+            quote.
+          </div>
+        </div>
+      ) : null}
+
+      {/* Name the blocker (J2) rather than leaving a disabled button
+          unexplained — the DS's rule about disabled controls needing a
+          reason, and the practical one that "which of my five?" is the
+          question a vendor would otherwise have to answer by clicking. */}
+      {canEdit && priced.length > 1 && incomplete.length ? (
+        <div className="bar" style={{ marginBlockEnd: "var(--space-lg)" }}>
+          <Icon name="info_circle" />
+          <div>
+            <strong>
+              {incomplete.length} variation
+              {incomplete.length === 1 ? "" : "s"} still need a price:
+            </strong>{" "}
+            {incomplete.join(", ")}. You can still submit the ones that are
+            ready.
+          </div>
+        </div>
+      ) : null}
 
       {saved ? (
         <div className="bar bar--success" style={{ marginBlockEnd: "var(--space-lg)" }}>
@@ -427,6 +832,82 @@ export default function QuotePage() {
         </div>
       ) : null}
 
+      {/* THE TWO MODAL SURFACES (L1/L2).
+      
+          Submit opens with every priced variation pre-ticked, so the normal
+          case is one click and the scope is visible rather than encoded in a
+          button label. Withdraw keeps its required-note step; it moved from
+          the action row into this modal when the row collapsed. */}
+      {submitOpen ? (
+        <SubmitQuoteModal
+          variants={priced.map((v) => ({
+            id: v.id,
+            label: v.label,
+            fob: v.fob,
+            status: v.status,
+          }))}
+          busy={busy}
+          onClose={() => setSubmitOpen(false)}
+          onSubmit={(ids) => {
+            // No variants means a style-grained product: one plain submit.
+            if (!priced.length) save("SUBMITTED");
+            else submitAll(ids);
+          }}
+        />
+      ) : null}
+
+      {withdrawOpen ? (
+        <div
+          className="scrim app-scrim"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setWithdrawOpen(false);
+          }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="wd-title">
+            <div className="modal-h">
+              <div className="ttl" id="wd-title">Withdraw from this product</div>
+              <button
+                className="x"
+                onClick={() => setWithdrawOpen(false)}
+                aria-label="Close"
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+            <div className="modal-b">
+              <WithdrawAction
+                reinstate={bidStatus === "WITHDRAWN"}
+                busy={busy}
+                startArmed
+                onConfirm={(reason) => {
+                  setWithdrawOpen(false);
+                  withdrawNow(reason);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* THE LADDER AND THE THREAD, vendor side.
+
+          Same component, `side="VENDOR"`, so the vendor reads the vendor
+          label set and posts into the SAME thread — there is one
+          conversation per vendor x product, not a copy each side (H6). */}
+      <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
+        <div className="card-h">
+          <div className="ttl">Where this bid stands</div>
+        </div>
+        <div className="card-b">
+          <BidLifecycle
+            invitationId={invitationId}
+            styleId={styleId}
+            side="VENDOR"
+            authorName={data.vendor.name}
+          />
+        </div>
+      </div>
+
       {data.rfp.instructions ? (
         <div className="bar bar--info" style={{ marginBlockEnd: "var(--space-lg)" }}>
           <Icon name="info_circle" />
@@ -436,74 +917,66 @@ export default function QuotePage() {
 
       <div className="quote-layout">
         <div>
-          {/* PER-SIZE PRICE — first, because it is what the buyer asked for
-              and the breakdown below explains it.
+          {/* WHICH VARIANT — a selector, not a page each.
 
-              Rows, not one form per size: the worst-case vendor here holds 9
-              variation groups, and a page each would be 9 navigations to
-              submit one bid. The real Lauren Home template is one sheet with
-              a column per size, which is this. */}
-          {priced.length ? (
-            <div
-              className="card"
-              style={{ marginBlockEnd: "var(--space-lg)" }}
-            >
+              F7/H8.5: every variant carries its own COMPLETE quote, so the
+              form edits one at a time. The worst-case vendor here holds 9
+              variation groups and a page each would be 9 navigations to
+              submit one bid; the real Lauren Home template is one sheet per
+              colourway with the sizes beside each other, which is this.
+
+              Absent at STYLE grain — a one-item selector reads as broken. */}
+          {priced.length > 1 ? (
+            <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
               <div className="card-h">
-                <div className="ttl">Price per variation</div>
+                <div className="ttl">Which variation</div>
+                <div className="act">
+                  <span className="qv-count">
+                    {priced.filter((v) => v.status === "SUBMITTED").length} of{" "}
+                    {priced.length} submitted
+                  </span>
+                </div>
               </div>
               <div className="card-b">
-                <p className="quote-side-note" style={{ marginBlockStart: 0 }}>
-                  The cost breakdown below is shared across these — only
-                  consumption and FOB change by variation.
-                </p>
-                <div className="data-grid-surface">
-                  <table className="data-grid">
-                    <thead>
-                      <tr>
-                        <th>Variation</th>
-                        <th className="num">Consumption</th>
-                        <th className="num">FOB</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {priced.map((v) => (
-                        <tr key={v.id}>
-                          <td>{v.label}</td>
-                          <td className="num">
-                            <input
-                              className="control sm num"
-                              type="number"
-                              min={0}
-                              step="0.0001"
-                              value={priceOf(v.id, "consumption")}
-                              onChange={(e) =>
-                                setPrice(v.id, "consumption", e.target.value)
-                              }
-                              aria-label={`Consumption for ${v.label}`}
-                            />
-                          </td>
-                          <td className="num">
-                            <input
-                              className="control sm num"
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={priceOf(v.id, "fob")}
-                              onChange={(e) =>
-                                setPrice(v.id, "fob", e.target.value)
-                              }
-                              aria-label={`FOB for ${v.label}`}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="qv-tabs" role="tablist">
+                  {priced.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={v.id === activeVariation}
+                      className={`qv-tab${v.id === activeVariation ? " on" : ""}`}
+                      onClick={() => setActiveVariation(v.id)}
+                    >
+                      <span className="qv-tab-l">{v.label}</span>
+                      <span className="qv-tab-v">
+                        {v.fob === null ? "—" : unitCost(v.fob)}
+                      </span>
+                    </button>
+                  ))}
                 </div>
+                <p className="quote-side-note">
+                  Each variation is priced in full and submitted on its own.
+                  Fill one, then{" "}
+                  <strong>copy it to the rest</strong> and adjust — a
+                  variation you have already submitted is never overwritten.
+                </p>
               </div>
             </div>
           ) : null}
 
+          {/* THE TEMPLATE, LIGHT OR FULL.
+
+              H2/H3: what changes across the lifecycle is HOW MUCH the vendor
+              must fill, not how many bids exist. Light asks the 5 bucket
+              totals; full adds the line items beneath them. Verified in the
+              data: the buckets sum EXACTLY to FOB on real quotes, so the
+              split needs no new arithmetic — the light template is the
+              buckets and the full one is what drives them.
+
+              Light keeps the line items present but COLLAPSED and never
+              required, so a vendor who wants to show their working on round
+              one can, and most will not bother. */}
           {def.sections.map((section) => (
             <div className="card" key={section.key} style={{ marginBlockEnd: "var(--space-lg)" }}>
               <div className="card-h">
@@ -520,7 +993,71 @@ export default function QuotePage() {
                 </div>
               </div>
               <div className="card-b">
-                {section.lines.map((line) => (
+                {isLight ? (
+                  <>
+                    {/* THE LIGHT TEMPLATE ASKS FOR THE TOTAL — J1.
+                     
+                        This used to render ONLY the folded line items, which
+                        meant Materials and Crafting had no editable field at
+                        all: both are derived, and `totalMaterialCost` is
+                        itself a derived line. Akshay: "during the initial
+                        quote, how is he entering just the total cost, not
+                        the individual cost?" It was unusable, not untidy.
+                     
+                        domain/quote.ts now takes a typed total and lets the
+                        line items override it once they produce a value. */}
+                    <div className="quote-line qv-bucket">
+                      <label
+                        className="quote-line-label"
+                        htmlFor={`bucket-${section.key}`}
+                      >
+                        {BUCKET_LABEL[section.key]} total
+                        <span className="quote-line-help">
+                          {overridden.includes(section.key)
+                            ? "Your figure for this bucket"
+                            : derivedBucket(section.key)
+                              ? "From the line items below"
+                              : "Enter a total for now — detail comes later"}
+                        </span>
+                      </label>
+                      <div className="control quote-line-input">
+                        <input
+                          id={`bucket-${section.key}`}
+                          type="number"
+                          step="any"
+                          min={0}
+                          disabled={!canEdit || derivedBucket(section.key)}
+                          value={
+                            derivedBucket(section.key)
+                              ? (computed.buckets[
+                                  section.key as keyof typeof computed.buckets
+                                ] ?? 0).toFixed(4)
+                              : ((values[
+                                  BUCKET_INPUT_KEY[section.key]
+                                ] as string | number) ?? "")
+                          }
+                          onChange={(e) =>
+                            setValues((prev) => ({
+                              ...prev,
+                              [BUCKET_INPUT_KEY[section.key]]:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
+                            }))
+                          }
+                        />
+                        <span className="affix">USD</span>
+                      </div>
+                    </div>
+
+                    <details className="qv-detail">
+                    <summary>
+                      Show the {section.lines.filter((l) => !l.derived).length}{" "}
+                      line items behind this
+                      <span className="qv-detail-opt">optional</span>
+                    </summary>
+                    <div className="qv-detail-b">
+                      {section.lines.map((line) => (
                   <div className="quote-line" key={line.key}>
                     <label className="quote-line-label" htmlFor={line.key}>
                       {line.label}
@@ -565,10 +1102,153 @@ export default function QuotePage() {
                       </div>
                     )}
                   </div>
-                ))}
+                      ))}
+                    </div>
+                    </details>
+                  </>
+                ) : (
+                  section.lines.map((line) => (
+                    <div className="quote-line" key={line.key}>
+                      <label className="quote-line-label" htmlFor={line.key}>
+                        {line.label}
+                        {line.help ? (
+                          <span className="quote-line-help">{line.help}</span>
+                        ) : null}
+                      </label>
+
+                      {line.derived ? (
+                        <output className="quote-line-derived" id={line.key}>
+                          {line.inputType === "percent"
+                            ? `${(derived[line.key] ?? 0).toFixed(1)}%`
+                            : line.inputType === "minutes"
+                              ? `${(derived[line.key] ?? 0).toFixed(0)} min`
+                              : unitCost(derived[line.key] ?? 0)}
+                        </output>
+                      ) : (
+                        <div className="control quote-line-input">
+                          <input
+                            id={line.key}
+                            type={line.inputType === "text" ? "text" : "number"}
+                            step="any"
+                            min={line.inputType === "text" ? undefined : 0}
+                            value={(values[line.key] as string | number) ?? ""}
+                            onChange={(e) =>
+                              setValues((prev) => ({
+                                ...prev,
+                                [line.key]:
+                                  line.inputType === "text"
+                                    ? e.target.value
+                                    : e.target.value === ""
+                                      ? ""
+                                      : Number(e.target.value),
+                              }))
+                            }
+                          />
+                          {line.unit ? (
+                            <span className="affix">{line.unit}</span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           ))}
+
+          {/* 5. DDP COST — the real Radnik template's own section.
+
+              Six fees: three US destinations x two modes. Each total is
+              FOB + that destination's fee for that mode, which is exactly
+              what the template computes (`=E$65+E66`) — so the arithmetic
+              is the template's, not ours.
+
+              ONE block per product, not per variant: duty type is a term of
+              trade for the whole product (Build Doc 3.6), and the route
+              fans these across every variant row on save. */}
+          <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
+            <div className="card-h">
+              <div className="ttl">DDP cost</div>
+              <div className="sub">
+                Optional — quote this only if you deliver duty-paid
+              </div>
+            </div>
+            <div className="card-b">
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={ddpOn}
+                  disabled={!canEdit}
+                  onChange={(e) => setDdpToggle(e.target.checked)}
+                />
+                <span className="track" aria-hidden="true" />
+                <span className="lbl">
+                  I can deliver DDP into the US
+                  <span className="quote-line-help">
+                    Applies to this whole product, every variation
+                  </span>
+                </span>
+              </label>
+
+              {ddpOn ? (
+                <div className="qv-ddp">
+                  {(["SHIP", "AIR"] as const).map((mode) => (
+                    <div className="qv-ddp-mode" key={mode}>
+                      <div className="qv-ddp-h">
+                        {mode === "SHIP" ? "Ocean" : "Air"}
+                      </div>
+                      {DDP_FEES.filter((f) => f.mode === mode).map((f) => {
+                        const fee = numOrNull(ddpOf(f.key));
+                        return (
+                          <div className="quote-line" key={f.key}>
+                            <label
+                              className="quote-line-label"
+                              htmlFor={`ddp-${f.key}`}
+                            >
+                              {f.label}
+                              <span className="quote-line-help">
+                                Additional charge into {f.hint}
+                              </span>
+                            </label>
+                            <div className="control quote-line-input">
+                              <input
+                                id={`ddp-${f.key}`}
+                                type="number"
+                                step="any"
+                                min={0}
+                                disabled={!canEdit}
+                                value={ddpOf(f.key)}
+                                onChange={(e) =>
+                                  setDdpEdits((prev) => ({
+                                    ...prev,
+                                    [f.key]: e.target.value,
+                                  }))
+                                }
+                              />
+                              <span className="affix">USD</span>
+                            </div>
+                            {/* The template's own total, shown so the vendor
+                                sees what Quince will compare. */}
+                            <output className="qv-ddp-total">
+                              {fee === null || computed.fob === null
+                                ? "—"
+                                : unitCost(computed.fob + fee)}
+                            </output>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  <p className="quote-side-note">
+                    Totals are your FOB plus each destination fee. Quince
+                    compares your <strong>most expensive</strong> destination
+                    in each mode, so a DDP quote wins only if it beats our own
+                    freight everywhere.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
 
           {def.additionalInformation ? (
             <div className="card" style={{ marginBlockEnd: "var(--space-2xl)" }}>
@@ -688,12 +1368,18 @@ export default function QuotePage() {
                 </p>
               ) : null}
 
+              {/* NAME WHAT IS MISSING.
+              
+                  This used to read "5 inputs still needed" with no clue
+                  WHICH, so a vendor facing a disabled Submit had nothing to
+                  act on — Akshay: "why 5 inputs are still needed. why can't
+                  I submit quote?" A count is not a reason. */}
               {missing.length ? (
                 <div className="bar bar--warning" style={{ marginBlockStart: "var(--space-md)" }}>
                   <Icon name="alert_triangle" />
                   <div>
-                    <strong>{missing.length} inputs still needed</strong> before
-                    you can submit.
+                    <strong>Still needed before you can submit:</strong>{" "}
+                    {missing.map((k) => MISSING_LABEL[k] ?? k).join(", ")}.
                   </div>
                 </div>
               ) : (
@@ -706,7 +1392,9 @@ export default function QuotePage() {
           </div>
 
           <div className="card" style={{ marginBlockStart: "var(--space-lg)" }}>
-            <div className="card-h"><div className="ttl">Products in this RFP</div></div>
+            {/* H4 — the vendor never learns the RFP concept exists, so this
+                is "your other products", not "products in this RFP". */}
+            <div className="card-h"><div className="ttl">Your other products</div></div>
             <div className="card-b quote-nav">
               {data.products.map((p) => (
                 <Link

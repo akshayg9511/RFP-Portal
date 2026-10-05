@@ -248,3 +248,167 @@ describe("negative inputs", () => {
     expect(cheating.fob).toBe(honest.fob);
   });
 });
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   J1 — the light template: a typed bucket total overrides the derived one.
+
+   This is the regression guard for the defect Akshay found on 4 Oct: the
+   initial quote had NO editable field for Materials or Crafting, because
+   both are always derived and `totalMaterialCost` is itself a derived line.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+describe("typed bucket totals (the light template)", () => {
+  const spec = {
+    craftingFormula: "CPM_OVER_EFFICIENCY" as const,
+    materialFormula: "ADDITIVE_PER_METER" as const,
+    trimKeys: ["sewingThread", "buttons"],
+    packagingKeys: ["polyBag", "cartonBox"],
+  };
+
+  it("accepts five typed totals and sums them to FOB", () => {
+    // The whole of round one: six numbers, no line items at all.
+    const r = computeQuote(
+      {
+        totalMaterialCost: 4.16,
+        totalTrimCost: 0.9,
+        totalPackagingCost: 0.3,
+        totalCraftingCost: 3.42,
+        overheadCost: 0.4,
+      },
+      spec,
+    );
+
+    expect(r.buckets.BASE_MATERIALS).toBeCloseTo(4.16, 4);
+    expect(r.buckets.TRIM_HARDWARE).toBeCloseTo(0.9, 4);
+    expect(r.buckets.PACKAGING).toBeCloseTo(0.3, 4);
+    expect(r.buckets.CRAFTING).toBeCloseTo(3.42, 4);
+    expect(r.buckets.OVERHEAD_SGA_PROFIT).toBeCloseTo(0.4, 4);
+    // The identity both real templates share still holds.
+    expect(r.fob).toBeCloseTo(9.18, 4);
+  });
+
+  it("reports which buckets are typed rather than derived", () => {
+    const r = computeQuote(
+      { totalMaterialCost: 4.16, totalCraftingCost: 3.42 },
+      spec,
+    );
+    expect(r.overriddenBuckets).toContain("BASE_MATERIALS");
+    expect(r.overriddenBuckets).toContain("CRAFTING");
+  });
+
+  it("LETS THE LINE ITEMS WIN once they produce a value", () => {
+    // The precedence rule that will otherwise bite: a vendor types a total on
+    // round one, then fills the detail on round two. The detail is the more
+    // specific statement, so it takes over — and the form must say so rather
+    // than silently replacing a number the vendor typed.
+    const typedOnly = computeQuote({ totalMaterialCost: 99 }, spec);
+    expect(typedOnly.buckets.BASE_MATERIALS).toBeCloseTo(99, 4);
+
+    const withDetail = computeQuote(
+      {
+        totalMaterialCost: 99,
+        consumption: 2,
+        greyCostPerMeter: 1.5,
+        wastage: 0,
+      },
+      spec,
+    );
+    expect(withDetail.buckets.BASE_MATERIALS).toBeCloseTo(3, 4);
+    expect(withDetail.overriddenBuckets).not.toContain("BASE_MATERIALS");
+  });
+
+  it("ignores a blank or non-numeric typed total", () => {
+    const r = computeQuote(
+      { totalMaterialCost: "", totalCraftingCost: "   " },
+      spec,
+    );
+    // `Number("   ")` is 0, not NaN — the trap that bit the terms mapper in
+    // P1b. A whitespace-only field must not become a zero-cost bucket.
+    expect(r.buckets.BASE_MATERIALS).toBe(0);
+    expect(r.overriddenBuckets).toHaveLength(0);
+  });
+
+  it("never lets a typed zero mask real line items", () => {
+    const r = computeQuote(
+      { totalMaterialCost: 0, consumption: 2, greyCostPerMeter: 1.5, wastage: 0 },
+      spec,
+    );
+    expect(r.buckets.BASE_MATERIALS).toBeCloseTo(3, 4);
+  });
+});
+
+describe("the submit gate knows which template it is asking for", () => {
+  const spec = {
+    craftingFormula: "CPM_OVER_EFFICIENCY" as const,
+    materialFormula: "ADDITIVE_PER_METER" as const,
+  };
+
+  it("LETS A LIGHT QUOTE SUBMIT on its five totals alone", () => {
+    // The regression this guards: J1 made the totals enterable but left the
+    // gate demanding the line items, so a vendor could fill the light
+    // template completely, watch FOB compute, and still find Submit
+    // disabled with no reason given.
+    const light = missingInputs(
+      {
+        totalMaterialCost: 4.16,
+        totalTrimCost: 0.9,
+        totalPackagingCost: 0.3,
+        totalCraftingCost: 3.42,
+        overheadCost: 0.4,
+      },
+      { ...spec, template: "LIGHT" },
+    );
+    expect(light).toEqual([]);
+  });
+
+  it("still blocks a light quote with a bucket left blank, and names it", () => {
+    const light = missingInputs(
+      { totalMaterialCost: 4.16, overheadCost: 0.4 },
+      { ...spec, template: "LIGHT" },
+    );
+    expect(light).toEqual(["trim", "packaging", "crafting"]);
+  });
+
+  it("accepts line items in place of a typed total at LIGHT", () => {
+    // A vendor who filled the detail early must not also be asked for the
+    // total — the bucket has a value either way.
+    const light = missingInputs(
+      {
+        consumption: 2,
+        greyCostPerMeter: 1.5,
+        directLaborRate: 10,
+        lineEfficiency: 0.8,
+        sam: 20,
+        totalTrimCost: 0.9,
+        totalPackagingCost: 0.3,
+        overheadCost: 0.4,
+      },
+      { ...spec, template: "LIGHT" },
+    );
+    expect(light).toEqual([]);
+  });
+
+  it("STILL demands the line items at FULL", () => {
+    // The full template is the whole point of the later stages; bucket
+    // totals must not satisfy it.
+    const full = missingInputs(
+      {
+        totalMaterialCost: 4.16,
+        totalTrimCost: 0.9,
+        totalPackagingCost: 0.3,
+        totalCraftingCost: 3.42,
+        overheadCost: 0.4,
+      },
+      { ...spec, template: "FULL" },
+    );
+    expect(full).toContain("consumption");
+    expect(full).toContain("directLaborRate");
+  });
+
+  it("defaults to FULL when no template is given", () => {
+    // Every pre-existing caller must keep its behaviour.
+    const a = missingInputs({}, spec);
+    const b = missingInputs({}, { ...spec, template: "FULL" });
+    expect(a).toEqual(b);
+  });
+});
