@@ -5,7 +5,7 @@ import { bucketFlags } from "@/domain/scoring";
 import { resolveBestCost } from "@/lib/bestCost";
 import { loadRateBook } from "@/lib/rateBook";
 import { variationKeyOf } from "@/domain/grain";
-import { awardGroups, VARIATION_SELECT } from "@/lib/variationGroups";
+import { awardGroups, FREIGHT_SPLIT_SELECT, VARIATION_SELECT } from "@/lib/variationGroups";
 
 /**
  * @openapi
@@ -75,9 +75,11 @@ export function GET(
             select: { vendorId: true },
           },
           variations: VARIATION_SELECT,
+          freightSplits: FREIGHT_SPLIT_SELECT,
           quotes: {
             where: { status: "SUBMITTED" },
             select: {
+              freightBasis: true,
               id: true,
               variationKey: true,
               fob: true,
@@ -155,7 +157,7 @@ export function GET(
      * the award save uses, so the readout and the stored award can never
      * disagree about a group's volume or baseline.
      */
-    const groups = awardGroups(style);
+    const groups = awardGroups(style, rates.blend);
 
     const selected =
       groups.find((g) => g.variationId === requestedVariation) ?? groups[0]!;
@@ -208,7 +210,7 @@ export function GET(
 
     const bids = quotesForGroup
       .map((q) => {
-        const cost = resolveBestCost(q, style, q.vendor, rates, selected.size);
+        const cost = resolveBestCost(q, style, q.vendor, rates, selected.size, selected.blend);
         if (!cost) return null;
         return {
           quoteId: q.id,

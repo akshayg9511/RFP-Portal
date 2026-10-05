@@ -10,6 +10,7 @@ import { resolveBestCost } from "@/lib/bestCost";
 import { loadRateBook } from "@/lib/rateBook";
 import {
   awardGroups,
+  FREIGHT_SPLIT_SELECT,
   VARIATION_SELECT,
   type AwardGroup,
 } from "@/lib/variationGroups";
@@ -66,6 +67,7 @@ export function PUT(
         where: { id },
         include: {
           variations: VARIATION_SELECT,
+          freightSplits: FREIGHT_SPLIT_SELECT,
           currentSuppliers: {
             where: { variationId: null },
             select: { vendorId: true },
@@ -73,6 +75,7 @@ export function PUT(
           quotes: {
             where: { status: "SUBMITTED" },
             select: {
+              freightBasis: true,
               fob: true,
               vendorId: true,
               variationKey: true,
@@ -101,7 +104,7 @@ export function PUT(
     const wave = await db.wave.findFirst({ orderBy: { createdAt: "desc" } });
     if (!wave) return badRequest("No wave exists");
 
-    const groups = awardGroups(style);
+    const groups = awardGroups(style, rates.blend);
     const incumbents = new Set(style.currentSuppliers.map((c) => c.vendorId));
 
     /** One group's split → priced, validated allocation, or the reason not. */
@@ -124,7 +127,7 @@ export function PUT(
             reason: `a vendor in the split has no bid on ${group.label}`,
           };
         }
-        const cost = resolveBestCost(quote, style!, quote.vendor, rates, group.size);
+        const cost = resolveBestCost(quote, style!, quote.vendor, rates, group.size, group.blend);
         if (!cost) return { ok: false, reason: `no price on ${group.label}` };
         vendors.push({
           vendorId: a.vendorId,
@@ -158,7 +161,7 @@ export function PUT(
       const bids = style!.quotes
         .filter((q) => q.variationKey === group.variationKey)
         .map((q) => {
-          const cost = resolveBestCost(q, style!, q.vendor, rates, group.size);
+          const cost = resolveBestCost(q, style!, q.vendor, rates, group.size, group.blend);
           return cost
             ? {
                 vendorId: q.vendorId,

@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { handle, num, numOr } from "@/lib/api";
 import { savingsPotential, styleStatus } from "@/domain/award";
 import { resolveBestCost } from "@/lib/bestCost";
-import { awardGroups, VARIATION_SELECT } from "@/lib/variationGroups";
+import { awardGroups, FREIGHT_SPLIT_SELECT, VARIATION_SELECT } from "@/lib/variationGroups";
 import { loadRateBook } from "@/lib/rateBook";
 
 /**
@@ -53,9 +53,11 @@ export function GET(request: Request) {
             select: { url: true },
           },
           variations: VARIATION_SELECT,
+          freightSplits: FREIGHT_SPLIT_SELECT,
           quotes: {
             where: { status: "SUBMITTED" },
             select: {
+              freightBasis: true,
               fob: true,
               vendorId: true,
               variationKey: true,
@@ -111,14 +113,14 @@ export function GET(request: Request) {
          *
          * A STYLE-grained product is one group, so it is unchanged.
          */
-        const groups = awardGroups(style);
+        const groups = awardGroups(style, rates.blend);
         const groupRows = groups.map((group) => {
           // The real chain, per bid. A quote with no FOB resolves to null and
           // is dropped rather than counted as free.
           const bids = style.quotes
             .filter((q) => q.variationKey === group.variationKey)
             .map((q) => {
-              const cost = resolveBestCost(q, style, q.vendor, rates, group.size);
+              const cost = resolveBestCost(q, style, q.vendor, rates, group.size, group.blend);
               return cost
                 ? {
                     vendorId: q.vendorId,

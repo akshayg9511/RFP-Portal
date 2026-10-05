@@ -24,6 +24,8 @@ export type QuoteCostFields = {
   ddpWestAir: Prisma.Decimal | number | null;
   ddpCentralAir: Prisma.Decimal | number | null;
   ddpEastAir: Prisma.Decimal | number | null;
+  /** Quince's override (P3). Absent/null = automatic. */
+  freightBasis?: string | null;
 };
 
 /**
@@ -124,6 +126,13 @@ export function resolveBestCost(
   vendor: { countryIso: string | null },
   rates: RateBook,
   size?: string | null,
+  /**
+   * The VARIANT's air/ocean split (P5). Omitted = the wave default from the
+   * rate book. Every vendor on one variant must be resolved with the same
+   * split, which is why callers take it from lib/variationGroups, never per
+   * bid.
+   */
+  blend?: Blend,
 ): CostResult | null {
   const fob = num(quote.fob);
   if (fob === null) return null;
@@ -143,6 +152,10 @@ export function resolveBestCost(
     logisticsAir: air,
     ddpOcean,
     ddpAir,
-    blend: rates.blend,
+    blend: blend ?? rates.blend,
+    basis:
+      quote.freightBasis === "QUINCE_BLEND" || quote.freightBasis === "DDP_BLEND"
+        ? quote.freightBasis
+        : null,
   });
 }

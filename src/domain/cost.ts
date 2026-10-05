@@ -22,7 +22,16 @@ export type CostInputs = {
   ddpOcean?: number | null;
   ddpAir?: number | null;
   blend?: Blend;
+  /**
+   * Quince's freight decision for this bid (P3, 5 Oct). Absent = automatic,
+   * the cheaper of the two blends. An override to DDP on a bid with no
+   * (two-mode) DDP quote is IGNORED — Quince cannot choose a price the vendor
+   * never gave, and silently costing it at zero would be the worst outcome.
+   */
+  basis?: Basis | null;
 };
+
+export type Basis = "QUINCE_BLEND" | "DDP_BLEND";
 
 export type CostResult = {
   landedOcean: number;
@@ -34,7 +43,11 @@ export type CostResult = {
    * Which side min() picked. Must be visible in the UI — two vendors' Best Cost
    * can differ in kind, and the selection is otherwise silent (Build Doc 11.7).
    */
-  bestCostBasis: "QUINCE_BLEND" | "DDP_BLEND";
+  bestCostBasis: Basis;
+  /** What automatic selection WOULD pick — shown beside an override. */
+  automaticBasis: Basis;
+  /** True only when Quince's override changed the answer's basis input. */
+  overridden: boolean;
 };
 
 export function landedOcean(
@@ -74,15 +87,25 @@ export function computeCost(inputs: CostInputs): CostResult {
     ? blended(inputs.ddpAir as number, inputs.ddpOcean as number, blend)
     : null;
 
-  const useDdp = ddpBlend !== null && ddpBlend < quinceBlend;
+  const automaticBasis: Basis =
+    ddpBlend !== null && ddpBlend < quinceBlend ? "DDP_BLEND" : "QUINCE_BLEND";
+
+  // An override applies only where both bases exist. DDP chosen on a bid with
+  // no DDP quote falls back to automatic rather than to a price of zero.
+  const overrideUsable =
+    inputs.basis === "QUINCE_BLEND" ||
+    (inputs.basis === "DDP_BLEND" && ddpBlend !== null);
+  const basis: Basis = overrideUsable ? inputs.basis! : automaticBasis;
 
   return {
     landedOcean: lo,
     landedAir: la,
     quinceBlend,
     ddpBlend,
-    bestCost: useDdp ? (ddpBlend as number) : quinceBlend,
-    bestCostBasis: useDdp ? "DDP_BLEND" : "QUINCE_BLEND",
+    bestCost: basis === "DDP_BLEND" ? (ddpBlend as number) : quinceBlend,
+    bestCostBasis: basis,
+    automaticBasis,
+    overridden: overrideUsable,
   };
 }
 

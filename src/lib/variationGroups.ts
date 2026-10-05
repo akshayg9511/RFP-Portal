@@ -30,6 +30,13 @@ export type AwardGroup = {
    * against landed, as allocate() requires (§award, the -$8.29M error).
    */
   baselineLanded: number;
+  /**
+   * The air / ocean split for this variant (P5). Every vendor on the group
+   * is resolved with it, so the comparison stays like-for-like.
+   */
+  blend: { air: number; ocean: number };
+  /** True when Quince set the split; false = the wave default. */
+  splitSet: boolean;
 };
 
 type VariationIn = {
@@ -42,13 +49,22 @@ type VariationIn = {
   baselineFob: unknown;
 };
 
-export function awardGroups(style: {
-  variationLevel: string | null;
-  planUnits: number | null;
-  baselineFob: unknown;
-  baselineLanded: unknown;
-  variations: VariationIn[];
-}): AwardGroup[] {
+export function awardGroups(
+  style: {
+    variationLevel: string | null;
+    planUnits: number | null;
+    baselineFob: unknown;
+    baselineLanded: unknown;
+    variations: VariationIn[];
+    /** Per-variant splits, where Quince has set one. */
+    freightSplits?: { variationKey: string; airPct: unknown }[];
+  },
+  /** The wave default, from the rate book. */
+  defaultBlend: { air: number; ocean: number } = { air: 0.7, ocean: 0.3 },
+): AwardGroup[] {
+  const splits = new Map(
+    (style.freightSplits ?? []).map((f) => [f.variationKey, Number(f.airPct)]),
+  );
   const rows = style.variations.map((v) => ({
     ...v,
     planUnits: v.planUnits ?? 0,
@@ -85,6 +101,12 @@ export function awardGroups(style: {
           : own.reduce((sum, v) => sum + v.planUnits, 0),
         baselineFob,
         baselineLanded: styleLanded * scale,
+        ...(() => {
+          const airPct = splits.get(variationKeyOf(variationId));
+          return airPct === undefined || !Number.isFinite(airPct)
+            ? { blend: defaultBlend, splitSet: false }
+            : { blend: { air: airPct / 100, ocean: 1 - airPct / 100 }, splitSet: true };
+        })(),
       };
     },
   );
@@ -102,4 +124,9 @@ export const VARIATION_SELECT = {
     planUnits: true,
     baselineFob: true,
   },
+};
+
+/** Prisma select for a style's per-variant freight splits. */
+export const FREIGHT_SPLIT_SELECT = {
+  select: { variationKey: true, airPct: true },
 };

@@ -93,6 +93,7 @@ model Style {
   quotes           Quote[]
   productBids      ProductBid[]
   awards           Award[]
+  freightSplits           VariantFreight[]
   strategies       AwardStrategy[]
 
   @@index([division, department, subDepartment])
@@ -470,6 +471,11 @@ model Quote {
   // Duty type is declared by the vendor PER PRODUCT (Build Doc 3.6).
   dutyType String? // VDDP | QDDP
 
+  /// Quince's freight decision for THIS bid (P3, 5 Oct). NULL = automatic —
+  /// the cheaper of the Quince-paid and DDP blends. QUINCE_BLEND | DDP_BLEND
+  /// when Quince overrides it; the screens mark an overridden bid.
+  freightBasis String?
+
   // DDP is quoted per MODE (air / ocean), and the three US destinations are a
   // second axis WITHIN each mode — six numbers, not three. The unsuffixed trio
   // is the OCEAN set; the naming is asymmetric for backwards compatibility and
@@ -760,4 +766,21 @@ model ActivityLog {
 
   @@index([entity, entityId])
   @@index([styleId])
+}
+
+/// The air / ocean split for one product x variant (P5, 5 Oct).
+///
+/// Applies to EVERY vendor on that variant, so all of a size's bids are
+/// compared on the same freight assumption. No row = the wave default,
+/// 70 air / 30 ocean. Keyed by variationKey ('@STYLE' for a whole product),
+/// the same sentinel every other per-variation table uses.
+model VariantFreight {
+  id           String   @id @default(cuid())
+  styleId      String
+  style        Style    @relation(fields: [styleId], references: [id], onDelete: Cascade)
+  variationKey String   @default("@STYLE")
+  airPct       Decimal  @default(70) @db.Decimal(5, 2)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([styleId, variationKey])
 }
