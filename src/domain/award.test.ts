@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { allocate, savingsPotential, scenarios, styleStatus } from "./award";
+import {
+  allocate,
+  allocateGrouped,
+  savingsPotential,
+  scenarios,
+  styleStatus,
+  weightedBaseline,
+} from "./award";
 
 const vendor = (
   id: string,
@@ -217,5 +224,85 @@ describe("landed against landed — the sign regression", () => {
       2,
     );
     expect(result.savingsPercent).toBeGreaterThan(0);
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Variation-level awarding (N1 / N3).
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const gv = (id: string, pct: number, cost: number) => ({
+  vendorId: id,
+  vendorName: id,
+  cooRegion: "ISC",
+  awardPct: pct,
+  bestCost: cost,
+  bestCostBasis: "QUINCE_BLEND" as const,
+  isNewToQuince: false,
+});
+
+describe("allocateGrouped — 100% per variation", () => {
+  it("is valid only when EVERY variation is exactly 100", () => {
+    const r = allocateGrouped([
+      { styleId: "s", variationId: "q", label: "Queen", planUnits: 100, baselineLanded: 10, vendors: [gv("A", 60, 9), gv("B", 40, 9.5)] },
+      { styleId: "s", variationId: "k", label: "King", planUnits: 80, baselineLanded: 11, vendors: [gv("A", 100, 10)] },
+    ]);
+    expect(r.isValid).toBe(true);
+    expect(r.invalid).toEqual([]);
+  });
+
+  it("refuses the whole save when ONE variation is at 99, and names it", () => {
+    const r = allocateGrouped([
+      { styleId: "s", variationId: "q", label: "Queen", planUnits: 100, baselineLanded: 10, vendors: [gv("A", 100, 9)] },
+      { styleId: "s", variationId: "k", label: "King", planUnits: 80, baselineLanded: 11, vendors: [gv("A", 99, 10)] },
+    ]);
+    expect(r.isValid).toBe(false);
+    expect(r.invalid).toEqual(["King"]);
+  });
+
+  it("accepts 5 sizes x 100% — it is NOT 500%", () => {
+    // The Wave 1 bug in reverse: checking 100% at style scope would reject
+    // five correctly-allocated sizes as 500%.
+    const sizes = ["Twin", "Full", "Queen", "King", "Cal King"];
+    const r = allocateGrouped(
+      sizes.map((s) => ({
+        styleId: "s", variationId: s, label: s, planUnits: 50, baselineLanded: 10,
+        vendors: [gv("A", 100, 9)],
+      })),
+    );
+    expect(r.isValid).toBe(true);
+  });
+
+  it("treats a STYLE-grained product as one group, identical to allocate()", () => {
+    const style = { styleId: "s", planUnits: 100, baselineLanded: 10, vendors: [gv("A", 70, 9), gv("B", 30, 9.5)] };
+    const grouped = allocateGrouped([{ ...style, variationId: null, label: "All" }]);
+    const single = allocate(style);
+    expect(grouped.totalAwardedDollars).toBeCloseTo(single.totalAwardedDollars, 6);
+    expect(grouped.totalSavingsDollars).toBeCloseTo(single.totalSavingsDollars, 6);
+    expect(grouped.blendedCost).toBeCloseTo(single.blendedCost, 6);
+  });
+
+  it("weights blended cost by units, not as a mean of means", () => {
+    const r = allocateGrouped([
+      { styleId: "s", variationId: "q", label: "Queen", planUnits: 900, baselineLanded: 10, vendors: [gv("A", 100, 10)] },
+      { styleId: "s", variationId: "c", label: "Cal King", planUnits: 100, baselineLanded: 20, vendors: [gv("A", 100, 20)] },
+    ]);
+    // Mean of means would be 15. Weighted: (10*900 + 20*100)/1000 = 11.
+    expect(r.blendedCost).toBeCloseTo(11, 6);
+  });
+});
+
+describe("weightedBaseline", () => {
+  it("is volume-weighted and differs from a plain mean on skewed volume", () => {
+    const v = [
+      { baseline: 10, planUnits: 900 },
+      { baseline: 20, planUnits: 100 },
+    ];
+    expect(weightedBaseline(v)).toBeCloseTo(11, 6);
+    expect(weightedBaseline(v)).not.toBeCloseTo(15, 1);
+  });
+
+  it("returns 0 rather than NaN with no volume", () => {
+    expect(weightedBaseline([])).toBe(0);
   });
 });

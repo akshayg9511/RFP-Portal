@@ -23,6 +23,24 @@ export type StyleSeed = {
   buckets: Record<string, number>;
 };
 
+/**
+ * Relative sell-through by size. Bedding volume concentrates in Queen and
+ * King; Twin and Cal King are the tails. Sizes not listed weigh 1, i.e. an
+ * even split among themselves, which leaves apparel size runs and one-size
+ * products exactly as they were.
+ */
+const SIZE_CURVE: Record<string, number> = {
+  twin: 1,
+  "twin xl": 1,
+  full: 1.5,
+  "full/queen": 3,
+  "king/cal king": 2.5,
+  queen: 3.5,
+  king: 3,
+  "cal king": 1,
+  "california king": 1,
+};
+
 /** The five cost components, which map 1:1 onto the template's buckets. */
 const BUCKET_COLUMNS: Record<string, string> = {
   "Material Cost": "BASE_MATERIALS",
@@ -192,20 +210,37 @@ export async function seedStyles(
       }
 
       // Variations — one per SKU.
+      //
+      // VOLUME FOLLOWS A SIZE CURVE, not an even split. The source data has
+      // plan units per STYLE only, so this split was always invented — but it
+      // was invented FLAT (1/n), which put all 65 multi-variation products at
+      // exactly 20% per size. Real bedding skews hard to Queen and King, and
+      // with a flat split the volume-weighted baseline (Phase 2b) is
+      // numerically identical to a plain mean, so the weighting the plan
+      // insists on could never be seen working.
+      //
+      // Made-up data is fine; the arithmetic is not. Weights are renormalised
+      // per product so volumeShare still sums to exactly 1 (seed gate).
       const totalUnits = planUnits.get(styleNumber) ?? 0;
-      const share = skuRows.length ? 1 / skuRows.length : 0;
+      const weights = skuRows.map(
+        (row) => SIZE_CURVE[(str(row["Size"]) ?? "").toLowerCase()] ?? 1,
+      );
+      const weightSum = weights.reduce((a, b) => a + b, 0);
       await db.variation.createMany({
-        data: skuRows.map((row) => ({
-          styleId: style.id,
-          colourwayId: colourwayIds.get(str(row["Style Color ID"]) ?? "") ?? null,
-          size: str(row["Size"]),
-          sizeSortOrder: int(row["Size Sort Order"]),
-          colour: str(row["Color"]),
-          sku: str(row["SKU"]),
-          planUnits: totalUnits ? Math.round(totalUnits * share) : null,
-          volumeShare: share,
-          baselineFob: money(row["Product Cost"]),
-        })),
+        data: skuRows.map((row, i) => {
+          const share = weightSum ? weights[i]! / weightSum : 0;
+          return {
+            styleId: style.id,
+            colourwayId: colourwayIds.get(str(row["Style Color ID"]) ?? "") ?? null,
+            size: str(row["Size"]),
+            sizeSortOrder: int(row["Size Sort Order"]),
+            colour: str(row["Color"]),
+            sku: str(row["SKU"]),
+            planUnits: totalUnits ? Math.round(totalUnits * share) : null,
+            volumeShare: share,
+            baselineFob: money(row["Product Cost"]),
+          };
+        }),
       });
 
       // BOTH cost splits are stored. The baseline is the real per-bucket cost

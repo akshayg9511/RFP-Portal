@@ -21,10 +21,38 @@ import {
  *     responses:
  *       200: { description: The rollup }
  */
-export function GET() {
+export function GET(request: Request) {
   return handle(async () => {
-    const [awards, styles, cooConfig, capConfig] = await Promise.all([
+    /**
+     * THE HIERARCHY FILTERS — decision N8, 5 Oct.
+     *
+     * Tony and Jeremiah: percentages must be viewable at wave / division /
+     * department / sub-department — "is China under 30% across all apparel".
+     * No wave filter: the unfiltered page IS the wave. Every block below is
+     * computed on the selected slice.
+     */
+    const url = new URL(request.url);
+    const division = url.searchParams.get("division") || null;
+    const department = url.searchParams.get("department") || null;
+    const subDepartment = url.searchParams.get("subDepartment") || null;
+    const filtered = Boolean(division || department || subDepartment);
+    const styleWhere = {
+      ...(division ? { division } : {}),
+      ...(department ? { department } : {}),
+      ...(subDepartment ? { subDepartment } : {}),
+    };
+
+    /**
+     * WHAT COUNTS — N17. Only AWARDED and READY_FOR_REVIEW, per feature list
+     * #40. This read every award row with no `where`, so a split someone was
+     * still experimenting with (ALLOCATED) moved committed spend and China
+     * share on every save.
+     */
+    const COUNTED = ["AWARDED", "READY_FOR_REVIEW"];
+
+    const [allAwards, styles, cooConfig, capConfig, hierarchy] = await Promise.all([
       db.award.findMany({
+        where: { status: { in: COUNTED } },
         include: {
           vendor: {
             select: {
@@ -42,6 +70,9 @@ export function GET() {
               baselineFob: true,
               baselineLanded: true,
               planUnits: true,
+              division: true,
+              department: true,
+              subDepartment: true,
               // Who supplies this style TODAY — the only way to derive
               // INCUMBENT, which is a property of the style x vendor pair and
               // is never stored (Build Doc 3.7).
@@ -51,6 +82,7 @@ export function GET() {
         },
       }),
       db.style.findMany({
+        where: styleWhere,
         select: {
           id: true,
           planUnits: true,
@@ -63,7 +95,23 @@ export function GET() {
       }),
       db.config.findUnique({ where: { key: "guardrails.coo" } }),
       db.config.findUnique({ where: { key: "guardrails.vendorSpendCap" } }),
+      // Every style's place in the hierarchy, for the filter facets.
+      db.style.findMany({
+        select: { division: true, department: true, subDepartment: true },
+      }),
     ]);
+
+    // Awards in the selected slice. The whole wave is kept too (N16): a
+    // vendor cap is a property of the VENDOR, not the slice.
+    const inSlice = (st: {
+      division: string | null;
+      department: string | null;
+      subDepartment: string | null;
+    }) =>
+      (!division || st.division === division) &&
+      (!department || st.department === department) &&
+      (!subDepartment || st.subDepartment === subDepartment);
+    const awards = allAwards.filter((a) => inSlice(a.style));
 
     const rules = (cooConfig?.value ?? {}) as CooRules;
     const caps = (capConfig?.value ?? {
@@ -71,14 +119,24 @@ export function GET() {
       new: 10_000_000,
     }) as SpendCaps;
 
-    const rows: AwardRow[] = awards.map((a) => ({
+    /**
+     * One row per award — which is PER VARIATION now. Each carries its own
+     * dollars (its own share of the style's volume), so summing them counts
+     * every dollar once; style counts below use a Set of styleIds, so a
+     * 5-size product is still one style.
+     */
+    const toRow = (a: (typeof allAwards)[number]): AwardRow => ({
       styleId: a.styleId,
       vendorId: a.vendor.id,
       vendorName: a.vendor.name,
       cooRegion: a.vendor.cooRegion,
       isNewToQuince: a.vendor.isNewToQuince,
       awardedDollars: numOr(a.awardedDollars),
-    }));
+      // N14 — incumbent on THIS style, derived, never stored.
+      isIncumbent: a.style.currentSuppliers.some((c) => c.vendorId === a.vendorId),
+    });
+    const rows: AwardRow[] = awards.map(toRow);
+    const waveRows: AwardRow[] = allAwards.map(toRow);
 
     const dollarsPlaced = rows.reduce((s, r) => s + r.awardedDollars, 0);
     /**
@@ -110,25 +168,61 @@ export function GET() {
       committedSpend: dollarsPlaced,
     });
 
-    // Vendor type split by award dollars. All THREE types, derived — the
-    // previous version could only ever emit EXISTING and NEW, so the incumbent
-    // share was silently folded into "existing" and the donut showed two
-    // slices where the Build Doc defines three.
-    const typeSplit = { INCUMBENT: 0, EXISTING: 0, NEW: 0 } as Record<
-      string,
-      number
-    >;
-    for (const a of awards) {
-      const suppliesThisStyle = a.style.currentSuppliers.some(
-        (c) => c.vendorId === a.vendorId,
-      );
-      const key = a.vendor.isNewToQuince
-        ? "NEW"
-        : suppliesThisStyle
-          ? "INCUMBENT"
-          : "EXISTING";
-      typeSplit[key] += numOr(a.awardedDollars);
+    /**
+     * VENDOR TYPE: EXISTING vs NEW only — decision N12, 5 Oct.
+     *
+     * Akshay: "incumbent doesn't make sense here. Incumbent and existing are
+     * product-level attributes, not wave-level or RFP-level attributes." A
+     * vendor is new to Quince or not; whether it is the incumbent depends on
+     * the product, so incumbency lives in the per-vendor cap bars (N14).
+     */
+    const typeSplit = { EXISTING: 0, NEW: 0 } as Record<string, number>;
+    for (const r of rows) {
+      typeSplit[r.isNewToQuince ? "NEW" : "EXISTING"] += r.awardedDollars;
     }
+
+    /**
+     * VENDOR SPEND, in the slice AND across the wave — N16.
+     *
+     * The bar shows the slice; the cap is checked on the WAVE-WIDE total, so
+     * filtering to a division where a vendor is under $20M can never hide that
+     * they are over it across the wave.
+     */
+    const waveSpend = new Map(
+      vendorSpend(waveRows, caps).map((v) => [v.vendorId, v]),
+    );
+    const vendors = vendorSpend(rows, caps).map((v) => {
+      const wave = waveSpend.get(v.vendorId);
+      return {
+        ...v,
+        waveDollars: wave?.dollars ?? v.dollars,
+        waveBreached: wave?.breached ?? v.breached,
+      };
+    });
+
+    /** Facets for the three filters, each narrowed by the levels above it. */
+    const count = (values: (string | null)[]) => {
+      const m = new Map<string, number>();
+      for (const v of values) if (v) m.set(v, (m.get(v) ?? 0) + 1);
+      return [...m.entries()]
+        .map(([value, n]) => ({ value, count: n }))
+        .sort((a, b) => a.value.localeCompare(b.value));
+    };
+    const facets = {
+      division: count(hierarchy.map((h) => h.division)),
+      department: count(
+        hierarchy.filter((h) => !division || h.division === division).map((h) => h.department),
+      ),
+      subDepartment: count(
+        hierarchy
+          .filter(
+            (h) =>
+              (!division || h.division === division) &&
+              (!department || h.department === department),
+          )
+          .map((h) => h.subDepartment),
+      ),
+    };
 
     return {
       coverage: {
@@ -144,10 +238,27 @@ export function GET() {
       // per-style rail because it is actionable from one style; under-min does
       // not, because it usually needs a bidder-pool change rather than an
       // allocation (Build Doc 11.8).
+      /**
+       * N9 — the SAME thresholds at every level, but below wave level a
+       * breach is a FLAG: one department can be legitimately China-heavy
+       * while the wave stays compliant. The client reads `filtered`.
+       */
+      scope: { filtered, division, department, subDepartment },
+      facets,
+
       guardrails: {
         coo: cooBreakdown(rows, rules),
-        vendors: vendorSpend(rows, caps),
+        vendors,
         unclassifiedDollars: unclassifiedDollars(rows),
+        /** Totals for the cap bars' legend (N15). */
+        incumbencyTotals: vendors.reduce(
+          (t, v) => ({
+            incumbent: t.incumbent + v.split.incumbent,
+            existing: t.existing + v.split.existing,
+            new: t.new + v.split.new,
+          }),
+          { incumbent: 0, existing: 0, new: 0 },
+        ),
       },
 
       vendorTypeSplit: typeSplit,

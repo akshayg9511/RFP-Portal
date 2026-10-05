@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Icon, Tooltip } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { SideDrawer } from "@/components/SideDrawer";
+import { FacetSelect } from "@/components/FacetSelect";
 import { money, percent, unitCost, units } from "@/lib/format";
 
 /** 1,360,287 -> 1.36M. Rollup altitude; the exact figure lives on the row. */
@@ -14,7 +15,7 @@ function compactUnits(n: number): string {
   return units(n);
 }
 import {
-  CapBar,
+  SplitCapBar,
   CoverageMeter,
   Donut,
   RangeBars,
@@ -50,11 +51,19 @@ type VendorSpend = {
   vendorId: string;
   vendorName: string;
   isNewToQuince: boolean;
+  /** Spend in the SELECTED slice. */
   dollars: number;
   cap: number;
   breached: boolean;
   headroom: number;
+  /** N14 — the slice's spend split by relationship to each product won. */
+  split: { incumbent: number; existing: number; new: number };
+  /** N16 — the vendor's WAVE-WIDE total, which is what the cap is checked on. */
+  waveDollars: number;
+  waveBreached: boolean;
 };
+
+type Facet = { value: string; count: number };
 
 type Insights = {
   coverage: {
@@ -78,7 +87,16 @@ type Insights = {
     coo: CooStatus[];
     vendors: VendorSpend[];
     unclassifiedDollars: number;
+    incumbencyTotals: { incumbent: number; existing: number; new: number };
   };
+  /** N8/N9 — whether a filter is applied, and which. */
+  scope: {
+    filtered: boolean;
+    division: string | null;
+    department: string | null;
+    subDepartment: string | null;
+  };
+  facets: { division: Facet[]; department: Facet[]; subDepartment: Facet[] };
   vendorTypeSplit: Record<string, number>;
   savings: { dollars: number; percentVsBaseline: number };
   stylesTakingIncrease: {
@@ -90,23 +108,70 @@ type Insights = {
   }[];
 };
 
+/**
+ * Existing vs New only (N12). Incumbent is a PRODUCT-level attribute, so it
+ * left this chart and lives in the cap bars instead (N14).
+ */
 const TYPE_LABEL: Record<string, string> = {
-  INCUMBENT: "Incumbent",
   EXISTING: "Existing",
   NEW: "New to Quince",
 };
 
 // Vendor type is its own axis, so it does NOT reuse the region palette —
 // reusing it would imply a relationship between "China" and "Incumbent".
+// cat-2 and cat-4 match the cap bars' existing and new segments, so the two
+// charts never disagree about what a colour means.
 const TYPE_COLOR: Record<string, string> = {
-  INCUMBENT: "var(--chart-cat-1)",
   EXISTING: "var(--chart-cat-2)",
   NEW: "var(--chart-cat-4)",
 };
 
+/**
+ * `useSearchParams()` needs a Suspense boundary to prerender — the reason
+ * `next build` failed on three pages in A17. Same shape as /award.
+ */
 export default function InsightsPage() {
+  return (
+    <React.Suspense fallback={<div className="sk" style={{ blockSize: 320 }} />}>
+      <InsightsInner />
+    </React.Suspense>
+  );
+}
+
+function InsightsInner() {
   const router = useRouter();
-  const { data, loading, error } = useApi<Insights>("/api/wave-insights");
+  /**
+   * DIVISION · DEPARTMENT · SUB-DEPARTMENT — N8.
+   *
+   * In the URL, like Award Summary, so "China across Womens" is a link
+   * someone can be sent. No wave filter: the unfiltered page IS the wave.
+   * Each level narrows the ones below it, and changing a level clears what
+   * sits under it — a sub-department from another division is a filter that
+   * can only ever return nothing.
+   */
+  const search = useSearchParams();
+  const division = search.get("division") ?? "";
+  const department = search.get("department") ?? "";
+  const subDepartment = search.get("subDepartment") ?? "";
+  const query = new URLSearchParams();
+  if (division) query.set("division", division);
+  if (department) query.set("department", department);
+  if (subDepartment) query.set("subDepartment", subDepartment);
+  const qs = query.toString();
+  const { data, loading, error } = useApi<Insights>(
+    `/api/wave-insights${qs ? `?${qs}` : ""}`,
+  );
+
+  function setLevel(level: "division" | "department" | "subDepartment", value: string) {
+    const next = new URLSearchParams(search.toString());
+    const order = ["division", "department", "subDepartment"] as const;
+    // Clear this level and everything beneath it, then set this one.
+    for (const l of order.slice(order.indexOf(level))) next.delete(l);
+    if (value) next.set(level, value);
+    const out = next.toString();
+    router.replace(out ? `?${out}` : "?", { scroll: false });
+  }
+  const filtered = Boolean(division || department || subDepartment);
 
   const cov = data?.coverage;
   const coo = React.useMemo(() => {
@@ -121,7 +186,8 @@ export default function InsightsPage() {
   }, [data]);
 
   const breaches = coo.filter((c) => c.overMax || c.underMin);
-  const vendorBreaches = (data?.guardrails.vendors ?? []).filter((v) => v.breached);
+  // Judged on the WAVE-WIDE total (N16), so a filter can never hide one.
+  const vendorBreaches = (data?.guardrails.vendors ?? []).filter((v) => v.waveBreached);
 
   const [vendorQuery, setVendorQuery] = React.useState("");
   const [openVendorId, setOpenVendorId] = React.useState<string | null>(null);
@@ -136,7 +202,7 @@ export default function InsightsPage() {
     return (data?.guardrails.vendors ?? [])
       .filter((v) => !q || v.vendorName.toLowerCase().includes(q))
       .sort((a, b) => {
-        if (a.breached !== b.breached) return a.breached ? -1 : 1;
+        if (a.waveBreached !== b.waveBreached) return a.waveBreached ? -1 : 1;
         return b.dollars - a.dollars;
       });
   }, [data, vendorQuery]);
@@ -154,6 +220,54 @@ export default function InsightsPage() {
         <h1>Wave insights</h1>
       </div>
 
+      {data ? (
+        <div className="aw-filters">
+          <FacetSelect
+            label="Division"
+            value={division}
+            onChange={(v) => setLevel("division", v)}
+            options={data.facets.division}
+          />
+          <FacetSelect
+            label="Department"
+            value={department}
+            onChange={(v) => setLevel("department", v)}
+            options={data.facets.department}
+          />
+          <FacetSelect
+            label="Sub-department"
+            value={subDepartment}
+            onChange={(v) => setLevel("subDepartment", v)}
+            options={data.facets.subDepartment}
+          />
+          {filtered ? (
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => router.replace("?", { scroll: false })}
+            >
+              Show the whole wave
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* N9 — the same thresholds below wave level, but as FLAGS. One
+          department can be legitimately China-heavy while the wave stays
+          compliant, so the hard guardrail is only ever the wave's. */}
+      {filtered ? (
+        <div className="bar bar--info" style={{ marginBlockEnd: "var(--space-lg)" }}>
+          <Icon name="info_circle" />
+          <div>
+            <strong>
+              Showing {[division, department, subDepartment].filter(Boolean).join(" › ")} only.
+            </strong>{" "}
+            The same ranges apply, shown as flags — the guardrail itself is
+            judged on the whole wave. Vendor caps are always checked on each
+            vendor&rsquo;s wave-wide total.
+          </div>
+        </div>
+      ) : null}
+
       {error ? (
         <div className="bar bar--danger">
           <Icon name="alert_triangle" />
@@ -163,7 +277,7 @@ export default function InsightsPage() {
         </div>
       ) : null}
 
-      {loading ? (
+      {loading && !data ? (
         <div className="card">
           <div className="card-b">
             <div className="sk" style={{ blockSize: 180 }} />
@@ -246,7 +360,9 @@ export default function InsightsPage() {
                     </span>
                   </div>
                   <div className="wi-stat">
-                    <span className="k">Guardrails outside range</span>
+                    <span className="k">
+                      {filtered ? "Flags in this slice" : "Guardrails outside range"}
+                    </span>
                     <span className={breaches.length ? "v is-warn" : "v"}>
                       {breaches.length}
                     </span>
@@ -311,8 +427,12 @@ export default function InsightsPage() {
                         )
                       }
                     >
-                      <Badge tone={c.overMax ? "danger" : "warning"}>
-                        {c.overMax ? "Over max" : "Under min"}
+                      <Badge tone={filtered ? "warning" : c.overMax ? "danger" : "warning"}>
+                        {filtered
+                          ? `Flag · ${c.overMax ? "over max" : "under min"}`
+                          : c.overMax
+                            ? "Over max"
+                            : "Under min"}
                       </Badge>
                       <span className="wi-breach-text">
                         <strong>{c.region}</strong> is at {percent(c.share)},{" "}
@@ -487,6 +607,23 @@ export default function InsightsPage() {
                 </div>
               ) : null}
 
+              {/* N15 — the legend carries the incumbency totals; there is no
+                  separate incumbency chart. */}
+              <div className="wi-caplegend" aria-label="What the bar colours mean">
+                <span>
+                  <span className="wi-caplegend-sw is-incumbent" />
+                  Incumbent {money(data.guardrails.incumbencyTotals.incumbent)}
+                </span>
+                <span>
+                  <span className="wi-caplegend-sw is-existing" />
+                  Existing {money(data.guardrails.incumbencyTotals.existing)}
+                </span>
+                <span>
+                  <span className="wi-caplegend-sw is-new" />
+                  New {money(data.guardrails.incumbencyTotals.new)}
+                </span>
+              </div>
+
               {/* Search, because a 38-row table is a list you scan rather than
                   read, and the question is usually about ONE vendor. */}
               <div className="aw-filters">
@@ -547,20 +684,34 @@ export default function InsightsPage() {
                           )}
                         </td>
                         <td>
-                          <CapBar
-                            value={v.dollars}
+                          <SplitCapBar
+                            split={v.split}
                             cap={v.cap}
-                            breached={v.breached}
+                            breached={v.waveBreached}
+                            wave={
+                              filtered && Math.abs(v.waveDollars - v.dollars) > 0.5
+                                ? v.waveDollars
+                                : undefined
+                            }
                           />
                         </td>
-                        <td className="num">{money(v.dollars)}</td>
                         <td className="num">
-                          {v.breached ? (
+                          {money(v.dollars)}
+                          {/* The wave-wide figure the cap is judged on, when
+                              the slice is only part of it (N16). */}
+                          {filtered && Math.abs(v.waveDollars - v.dollars) > 0.5 ? (
+                            <span className="wi-wave-note">
+                              {money(v.waveDollars)} wave-wide
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="num">
+                          {v.waveBreached ? (
                             <span className="aw-neg">
-                              {money(-v.headroom)} over
+                              {money(v.waveDollars - v.cap)} over
                             </span>
                           ) : (
-                            money(v.headroom)
+                            money(v.cap - v.waveDollars)
                           )}
                         </td>
                       </tr>

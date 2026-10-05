@@ -47,6 +47,23 @@ export type AwardRow = {
   savingsPotential: number;
   status: "UNTOUCHED" | "ALLOCATED" | "READY_FOR_REVIEW" | "AWARDED";
   allocation: AllocationRow[];
+  /** N6 — how many variations, and how many are at 100%. */
+  variationCount: number;
+  allocatedVariations: number;
+  /** One per variation; EMPTY for a single-group (STYLE-grained) product. */
+  variations: {
+    variationId: string | null;
+    label: string;
+    planUnits: number;
+    bidCount: number;
+    bestAvailableCost: number | null;
+    savingsPotential: number;
+    allocatedPct: number;
+    status: string;
+    awardedDollars: number;
+    savingsDollars: number;
+    allocation: { vendorId: string; vendorName: string; awardPct: number }[];
+  }[];
   /**
    * EVERY vendor that bid, with their region — not only the winners. The
    * region filter reads this, so a style with bids but no allocation is still
@@ -260,14 +277,23 @@ function AwardPageInner() {
    * so its breadcrumb can return to THIS list rather than a bare /award.
    */
   const productHref = React.useCallback(
-    (styleId: string) => {
-      const q = params.toString();
-      return q
-        ? `/products/${styleId}/award?back=${encodeURIComponent(q)}`
-        : `/products/${styleId}/award`;
+    (styleId: string, variationId?: string | null) => {
+      const q = new URLSearchParams();
+      const back = params.toString();
+      if (back) q.set("back", back);
+      // A variation row opens the product ON that size (N6).
+      if (variationId) q.set("v", variationId);
+      const qs = q.toString();
+      return qs ? `/products/${styleId}/award?${qs}` : `/products/${styleId}/award`;
     },
     [params],
   );
+
+  /**
+   * One product open at a time — the catalog's rule (1b), so the list never
+   * turns into a wall of size rows.
+   */
+  const [openId, setOpenId] = React.useState<string | null>(null);
 
   function clearAll() {
     // One replace, not eight — setting each param in turn would each read a
@@ -534,12 +560,14 @@ function AwardPageInner() {
 
               {rows.map((row) => {
                 const hasBids = row.bidCount > 0;
+                const expandable = row.variations.length > 1;
+                const isOpen = openId === row.id;
                 return (
-                  /* A ROW NAVIGATES now. It used to open the Playground
-                     drawer; allocation is a full page, so the destination is a
-                     URL that can be sent to someone. */
+                  <React.Fragment key={row.id}>
+                  {/* A ROW NAVIGATES. It used to open the Playground drawer;
+                     allocation is a full page, so the destination is a URL
+                     that can be sent to someone. */}
                   <tr
-                    key={row.id}
                     className={hasBids ? "aw-row" : "aw-row is-disabled"}
                     onClick={
                       hasBids
@@ -558,6 +586,29 @@ function AwardPageInner() {
                   >
                     <td>
                       <div className="aw-product">
+                        {/* The chevron is its OWN button inside the cell —
+                            the row already navigates, so it stops the click
+                            from reaching the row (the catalog pattern, 1b).
+                            Absent on a STYLE-grained product: an expander
+                            onto one row restating the product reads as
+                            broken. */}
+                        {expandable ? (
+                          <button
+                            type="button"
+                            className="aw-chev"
+                            aria-expanded={isOpen}
+                            aria-label={`${isOpen ? "Hide" : "Show"} ${row.variations.length} variations of ${row.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenId(isOpen ? null : row.id);
+                            }}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          >
+                            <Icon name={isOpen ? "chevron_down" : "chevron_right"} size="sm" />
+                          </button>
+                        ) : (
+                          <span className="aw-chev-gap" aria-hidden="true" />
+                        )}
                         {row.heroImage ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
@@ -629,8 +680,84 @@ function AwardPageInner() {
                       <Badge tone={STATUS_TONE[row.status]}>
                         {STATUS_LABEL[row.status]}
                       </Badge>
+                      {/* How many sizes are done — a product cannot move to
+                          review until every one is at 100 (N3). */}
+                      {expandable ? (
+                        <span className="aw-var-count">
+                          {row.allocatedVariations} of {row.variationCount} allocated
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
+
+                  {isOpen
+                    ? row.variations.map((v) => (
+                        <tr
+                          key={`${row.id}-${v.variationId}`}
+                          className="aw-var-row"
+                          onClick={() => router.push(productHref(row.id, v.variationId))}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Allocate ${v.label} of ${row.name}`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              router.push(productHref(row.id, v.variationId));
+                            }
+                          }}
+                        >
+                          <td>
+                            <span className="aw-var-label">
+                              {v.label}
+                              <span className="aw-product-meta">
+                                {" · "}
+                                {units(v.planUnits)} units/yr
+                              </span>
+                            </span>
+                          </td>
+                          <td className="num">{v.bidCount || "—"}</td>
+                          <td className="num">
+                            {v.bestAvailableCost !== null ? unitCost(v.bestAvailableCost) : "—"}
+                          </td>
+                          <td className="num">
+                            <span className={v.savingsPotential < 0 ? "aw-neg" : undefined}>
+                              {money(v.savingsPotential)}
+                            </span>
+                          </td>
+                          <td>
+                            {v.allocation.length ? (
+                              <span className="aw-split">
+                                {v.allocation
+                                  .slice()
+                                  .sort((a, b) => b.awardPct - a.awardPct)
+                                  .map((a) => (
+                                    <span className="aw-split-part" key={a.vendorId}>
+                                      <span className="pct">{a.awardPct}%</span>
+                                      {a.vendorName}
+                                    </span>
+                                  ))}
+                              </span>
+                            ) : (
+                              <span className="aw-muted">Not allocated</span>
+                            )}
+                          </td>
+                          <td className="act">
+                            <Badge
+                              tone={
+                                Math.abs(v.allocatedPct - 100) < 0.005
+                                  ? STATUS_TONE[v.status as AwardRow["status"]]
+                                  : undefined
+                              }
+                            >
+                              {Math.abs(v.allocatedPct - 100) < 0.005
+                                ? STATUS_LABEL[v.status as AwardRow["status"]]
+                                : "Not yet"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    : null}
+                  </React.Fragment>
                 );
               })}
             </tbody>

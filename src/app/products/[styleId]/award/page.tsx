@@ -51,9 +51,30 @@ function ProductAwardInner() {
   const params = useParams<{ styleId: string }>();
   const router = useRouter();
   const styleId = params.styleId;
+  /**
+   * WHICH VARIATION — decision N2, 5 Oct.
+   *
+   * Awarding is per variation, so one dropdown in the header drives all three
+   * tabs. It lives in the URL (`?v=`) for the same reason Award Summary's
+   * filters do: a link to "Queen of U-BEDD-138" is shareable and survives
+   * Back. Absent = the first variation, so the page never opens on "pick one".
+   */
+  const search = useSearchParams();
+  const variationParam = search.get("v");
   const { data, loading, error, reload } = useApi<ProductBids>(
-    styleId ? `/api/styles/${styleId}/bids` : null,
+    styleId
+      ? `/api/styles/${styleId}/bids${variationParam ? `?variationId=${encodeURIComponent(variationParam)}` : ""}`
+      : null,
   );
+
+  function selectVariation(id: string | null) {
+    const next = new URLSearchParams(search.toString());
+    if (id) next.set("v", id);
+    else next.delete("v");
+    // replace, not push — switching size is not a navigation worth a Back.
+    router.replace(`?${next.toString()}`, { scroll: false });
+    setApplied(null);
+  }
 
   /**
    * Lands on ALLOCATE even though Compare bids is first in the row: arriving
@@ -81,7 +102,6 @@ function ProductAwardInner() {
    * through as `?back=`, so returning restores all seven filters and the view
    * toggle. Without it, clicking a product silently dropped the lot.
    */
-  const search = useSearchParams();
   const backQuery = search.get("back") ?? "";
   const backHref = backQuery ? `/award?${backQuery}` : "/award";
   const backLabel = React.useMemo(() => {
@@ -100,12 +120,38 @@ function ProductAwardInner() {
    * now (Playground, quote form, RFP nomination). A reload refreshes the saved
    * half and leaves the edits alone.
    */
-  const [edits, setEdits] = React.useState<Record<string, string>>({});
+  /**
+   * Edits are kept PER VARIATION, so switching from Queen to King and back
+   * does not lose what was typed on Queen. Keyed by variationId, "@STYLE"
+   * for the whole product.
+   */
+  const [allEdits, setAllEdits] = React.useState<
+    Record<string, Record<string, string>>
+  >({});
+  const editKey = data?.selectedVariationId ?? "@STYLE";
+  const edits = React.useMemo(
+    () => allEdits[editKey] ?? {},
+    [allEdits, editKey],
+  );
+  const setEdits = React.useCallback(
+    (
+      next:
+        | Record<string, string>
+        | ((prev: Record<string, string>) => Record<string, string>),
+    ) =>
+      setAllEdits((all) => ({
+        ...all,
+        [editKey]: typeof next === "function" ? next(all[editKey] ?? {}) : next,
+      })),
+    [editKey],
+  );
   const [commentEdit, setCommentEdit] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [confirmAward, setConfirmAward] = React.useState(false);
   const [applied, setApplied] = React.useState<string | null>(null);
+  /** Outcome of an apply-to-all — names any variation it could not reach. */
+  const [notice, setNotice] = React.useState<string | null>(null);
 
   /**
    * Named strategies saved on this product.
@@ -279,9 +325,11 @@ function ProductAwardInner() {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          // The complete split every time: the route replaces all rows for the
-          // style rather than merging, so a partial payload would delete the
-          // vendors it omits.
+          // THIS variation's complete split. The route replaces only this
+          // variation's rows; a status of READY_FOR_REVIEW or AWARDED then
+          // commits the whole product and is refused unless every variation
+          // is at 100 — the server names the ones that are not.
+          variationId: data.selectedVariationId,
           allocations: data.bids
             .map((b) => ({
               vendorId: b.vendorId,
@@ -297,6 +345,7 @@ function ProductAwardInner() {
       setEdits({});
       setCommentEdit(null);
       setConfirmAward(false);
+      setNotice(null);
       if (status === "AWARDED") router.push(backHref);
       else reload();
     } catch (err: unknown) {
@@ -306,7 +355,51 @@ function ProductAwardInner() {
     }
   }
 
-  if (loading) {
+  /**
+   * APPLY TO EVERY VARIATION — N3 (copy this split) and N5 (strategy).
+   *
+   * Server-side, so each variation is priced from ITS OWN bids and checked
+   * against 100 on its own. A built-in strategy is RE-COMPUTED per variation —
+   * "Lowest bid" picks each size's own cheapest vendor, which on U-BEDD-138
+   * is not the same vendor on every size. A split is copied as-is, and any
+   * variation it cannot apply to (a vendor who did not bid that size) is
+   * reported rather than silently skipped.
+   */
+  async function applyToAll(payload: {
+    allocations?: { vendorId: string; awardPct: number }[];
+    strategyKey?: string;
+  }) {
+    if (!data) return;
+    setSaving(true);
+    setSaveError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/styles/${data.style.id}/award`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ applyToAll: true, ...payload }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.message ?? "Could not apply");
+      setAllEdits({});
+      const skipped = (body.skipped ?? []) as { label: string; reason: string }[];
+      setNotice(
+        `Applied to ${body.applied.length} variation${body.applied.length === 1 ? "" : "s"}` +
+          (skipped.length
+            ? `. Not applied to ${skipped.map((x) => `${x.label} (${x.reason})`).join("; ")}.`
+            : "."),
+      );
+      reload();
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Skeleton on FIRST load only. Switching variation refetches, and blanking
+  // the whole page on every switch would read as the page reloading.
+  if (loading && !data) {
     return (
       <div className="pd-page">
         <div className="sk" style={{ blockSize: 160, marginBlockEnd: 24 }} />
@@ -351,6 +444,7 @@ function ProductAwardInner() {
           backHref={backHref}
           backLabel={backLabel}
           onOpenGallery={() => setGalleryOpen(true)}
+          onSelectVariation={selectVariation}
         />
 
         <div className="tabs pd-subtabs" role="tablist" aria-label="Product view">
@@ -424,6 +518,17 @@ function ProductAwardInner() {
               comment={comment}
               onPct={setPct}
               onComment={setCommentEdit}
+              busy={saving}
+              onCopyToAll={() =>
+                applyToAll({
+                  allocations: data.bids
+                    .map((b) => ({
+                      vendorId: b.vendorId,
+                      awardPct: Number(pct[b.vendorId] ?? 0) || 0,
+                    }))
+                    .filter((a) => a.awardPct > 0),
+                })
+              }
             />
           ) : null}
 
@@ -438,9 +543,30 @@ function ProductAwardInner() {
               savedBusy={savedBusy}
               savedError={savedError}
               onApply={applyStrategy}
+              onApplyToAll={
+                data.variations.length > 1
+                  ? (st) =>
+                      applyToAll(
+                        st.kind === "builtin"
+                          ? { strategyKey: st.key }
+                          : {
+                              allocations: Object.entries(st.split).map(
+                                ([vendorId, awardPct]) => ({ vendorId, awardPct }),
+                              ),
+                            },
+                      )
+                  : undefined
+              }
               onSave={saveStrategy}
               onDelete={deleteStrategy}
             />
+          ) : null}
+
+          {notice ? (
+            <div className="bar bar--success" style={{ marginBlockStart: "var(--space-md)" }}>
+              <Icon name="check_circle" />
+              <div>{notice}</div>
+            </div>
           ) : null}
 
           {saveError ? (

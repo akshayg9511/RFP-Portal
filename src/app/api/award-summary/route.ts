@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { handle, num, numOr } from "@/lib/api";
 import { savingsPotential, styleStatus } from "@/domain/award";
 import { resolveBestCost } from "@/lib/bestCost";
+import { awardGroups, VARIATION_SELECT } from "@/lib/variationGroups";
 import { loadRateBook } from "@/lib/rateBook";
 
 /**
@@ -51,11 +52,13 @@ export function GET(request: Request) {
             take: 1,
             select: { url: true },
           },
+          variations: VARIATION_SELECT,
           quotes: {
             where: { status: "SUBMITTED" },
             select: {
               fob: true,
               vendorId: true,
+              variationKey: true,
               ddpWest: true,
               ddpCentral: true,
               ddpEast: true,
@@ -69,6 +72,8 @@ export function GET(request: Request) {
           },
           awards: {
             select: {
+              variationKey: true,
+              awardedUnits: true,
               awardPct: true,
               status: true,
               awardedDollars: true,
@@ -93,25 +98,96 @@ export function GET(request: Request) {
         const baselineLanded = num(style.baselineLanded) ?? baselineFob;
         const planUnits = style.planUnits ?? 0;
 
-        // The real chain, per bid. A quote with no FOB resolves to null and is
-        // dropped rather than counted as free.
-        const bids = style.quotes
-          .map((q) => {
-            const cost = resolveBestCost(q, style, q.vendor, rates);
-            return cost
-              ? {
-                  vendorId: q.vendorId,
-                  vendorName: q.vendor.name,
-                  cooRegion: q.vendor.cooRegion,
-                  fob: num(q.fob),
-                  bestCost: cost.bestCost,
-                  bestCostBasis: cost.bestCostBasis,
-                }
-              : null;
-          })
-          .filter((b): b is NonNullable<typeof b> => b !== null);
+        /**
+         * PER VARIATION, then rolled up — decision N6, 5 Oct.
+         *
+         * Quotes and awards are per variation now. Read flat, a 5-size
+         * product counted each vendor five times in `bidCount`, listed each
+         * winner five times in `allocation` (which also made the by-vendor
+         * view count five "products"), and took the CHEAPEST size's bid as
+         * the product's best cost — then multiplied it by the WHOLE product's
+         * volume for the savings ceiling. Each group is computed on its own
+         * bids, volume and baseline, and only then summed.
+         *
+         * A STYLE-grained product is one group, so it is unchanged.
+         */
+        const groups = awardGroups(style);
+        const groupRows = groups.map((group) => {
+          // The real chain, per bid. A quote with no FOB resolves to null and
+          // is dropped rather than counted as free.
+          const bids = style.quotes
+            .filter((q) => q.variationKey === group.variationKey)
+            .map((q) => {
+              const cost = resolveBestCost(q, style, q.vendor, rates, group.size);
+              return cost
+                ? {
+                    vendorId: q.vendorId,
+                    vendorName: q.vendor.name,
+                    cooRegion: q.vendor.cooRegion,
+                    fob: num(q.fob),
+                    bestCost: cost.bestCost,
+                    bestCostBasis: cost.bestCostBasis,
+                  }
+                : null;
+            })
+            .filter((b): b is NonNullable<typeof b> => b !== null);
+          const costs = bids.map((b) => b.bestCost);
+          const awards = style.awards.filter(
+            (a) => a.variationKey === group.variationKey,
+          );
+          const allocatedPct = awards.reduce((t, a) => t + numOr(a.awardPct), 0);
+          return {
+            group,
+            bids,
+            lowest: costs.length ? Math.min(...costs) : null,
+            lowestBasis: costs.length
+              ? bids.reduce((lo, b) => (b.bestCost < lo.bestCost ? b : lo)).bestCostBasis
+              : null,
+            savingsPotential: savingsPotential(
+              group.planUnits,
+              group.baselineLanded,
+              costs,
+            ),
+            awards,
+            allocatedPct,
+            allocated: Math.abs(allocatedPct - 100) < 0.005,
+          };
+        });
 
-        const bestCosts = bids.map((b) => b.bestCost);
+        // Distinct vendors across every variation — a vendor bidding five
+        // sizes is ONE bidder on this product.
+        const bidderMap = new Map<
+          string,
+          { vendorId: string; vendorName: string; cooRegion: string | null; bestCost: number }
+        >();
+        for (const g of groupRows) {
+          for (const b of g.bids) {
+            const cur = bidderMap.get(b.vendorId);
+            if (!cur || b.bestCost < cur.bestCost) {
+              bidderMap.set(b.vendorId, {
+                vendorId: b.vendorId,
+                vendorName: b.vendorName,
+                cooRegion: b.cooRegion,
+                bestCost: b.bestCost,
+              });
+            }
+          }
+        }
+        const bids = [...bidderMap.values()];
+
+        /**
+         * The product's best available cost, UNITS-WEIGHTED across its
+         * variations' own lowest bids. Not the single cheapest size — Twin's
+         * price is not what Queen costs.
+         */
+        const pricedGroups = groupRows.filter((g) => g.lowest !== null);
+        const pricedUnits = pricedGroups.reduce((t, g) => t + g.group.planUnits, 0);
+        const bestAvailableCost = pricedGroups.length
+          ? pricedUnits
+            ? pricedGroups.reduce((t, g) => t + g.lowest! * g.group.planUnits, 0) /
+              pricedUnits
+            : pricedGroups[0]!.lowest
+          : null;
 
         const status = styleStatus(
           style.awards.map((a) => ({
@@ -119,6 +195,44 @@ export function GET(request: Request) {
             status: a.status,
           })),
         );
+
+        /**
+         * One allocation entry PER VENDOR for the product row. Dollars sum
+         * across variations; the percentage is the vendor's share of the
+         * product's AWARDED UNITS, which is what "Coimbatore has 60% of this
+         * product" means once sizes can be split differently.
+         */
+        const totalAwardedUnits = style.awards.reduce(
+          (t, a) => t + (a.awardedUnits ?? 0),
+          0,
+        );
+        const byVendor = new Map<
+          string,
+          {
+            vendorId: string;
+            vendorName: string;
+            cooRegion: string | null;
+            units: number;
+            awardedDollars: number;
+            savingsDollars: number;
+            bestCostBasis: string | null;
+          }
+        >();
+        for (const a of style.awards) {
+          const cur = byVendor.get(a.vendor.id) ?? {
+            vendorId: a.vendor.id,
+            vendorName: a.vendor.name,
+            cooRegion: a.vendor.cooRegion,
+            units: 0,
+            awardedDollars: 0,
+            savingsDollars: 0,
+            bestCostBasis: a.bestCostBasis,
+          };
+          cur.units += a.awardedUnits ?? 0;
+          cur.awardedDollars += numOr(a.awardedDollars);
+          cur.savingsDollars += numOr(a.savingsDollars);
+          byVendor.set(a.vendor.id, cur);
+        }
 
         return {
           id: style.id,
@@ -137,6 +251,29 @@ export function GET(request: Request) {
           baselineLanded,
 
           bidCount: bids.length,
+          variationCount: groups.length,
+          allocatedVariations: groupRows.filter((g) => g.allocated).length,
+          /** One row per variation, for the chevron (N6). */
+          variations:
+            groups.length > 1
+              ? groupRows.map((g) => ({
+                  variationId: g.group.variationId,
+                  label: g.group.label,
+                  planUnits: g.group.planUnits,
+                  bidCount: g.bids.length,
+                  bestAvailableCost: g.lowest,
+                  savingsPotential: g.savingsPotential,
+                  allocatedPct: g.allocatedPct,
+                  status: g.awards[0]?.status ?? "UNTOUCHED",
+                  awardedDollars: g.awards.reduce((t, a) => t + numOr(a.awardedDollars), 0),
+                  savingsDollars: g.awards.reduce((t, a) => t + numOr(a.savingsDollars), 0),
+                  allocation: g.awards.map((a) => ({
+                    vendorId: a.vendor.id,
+                    vendorName: a.vendor.name,
+                    awardPct: numOr(a.awardPct),
+                  })),
+                }))
+              : [],
           /**
            * EVERY vendor that bid, with their region — not just the ones that
            * won an allocation.
@@ -157,25 +294,24 @@ export function GET(request: Request) {
            * it is — the previous `lowestBidFob` was an FOB being read as though
            * it were comparable with a landed baseline.
            */
-          bestAvailableCost: bestCosts.length ? Math.min(...bestCosts) : null,
-          bestAvailableBasis: bestCosts.length
-            ? bids.reduce((lo, b) => (b.bestCost < lo.bestCost ? b : lo)).bestCostBasis
-            : null,
-          // The ceiling: lowest Best Cost at 100% against baseline, annualised.
-          savingsPotential: savingsPotential(planUnits, baselineLanded, bestCosts),
+          bestAvailableCost,
+          bestAvailableBasis: pricedGroups[0]?.lowestBasis ?? null,
+          // The ceiling, summed PER VARIATION: each size's lowest bid against
+          // that size's own baseline and volume.
+          savingsPotential: groupRows.reduce((t, g) => t + g.savingsPotential, 0),
 
           status,
-          allocation: style.awards.map((a) => ({
-            vendorId: a.vendor.id,
-            vendorName: a.vendor.name,
-            cooRegion: a.vendor.cooRegion,
-            awardPct: numOr(a.awardPct),
-            bestCost: num(a.bestCost),
-            // Two vendors' Best Cost can differ in KIND, and min() picks between
-            // them silently — the basis has to travel with the number.
-            bestCostBasis: a.bestCostBasis,
-            awardedDollars: num(a.awardedDollars),
-            savingsDollars: num(a.savingsDollars),
+          allocation: [...byVendor.values()].map((v) => ({
+            vendorId: v.vendorId,
+            vendorName: v.vendorName,
+            cooRegion: v.cooRegion,
+            awardPct: totalAwardedUnits
+              ? Math.round((v.units / totalAwardedUnits) * 1000) / 10
+              : 0,
+            bestCost: v.units ? v.awardedDollars / v.units : null,
+            bestCostBasis: v.bestCostBasis,
+            awardedDollars: v.awardedDollars,
+            savingsDollars: v.savingsDollars,
           })),
           awardedDollars: style.awards.reduce(
             (s, a) => s + numOr(a.awardedDollars),

@@ -1,6 +1,12 @@
 import type { PrismaClient, Template } from "@prisma/client";
-import { WHOLE_STYLE_KEY } from "../../src/domain/grain";
+import {
+  WHOLE_STYLE_KEY,
+  grainGroups,
+  variationKeyOf,
+  type Grain,
+} from "../../src/domain/grain";
 import { computeCost } from "../../src/domain/cost";
+import { weightedBaseline } from "../../src/domain/award";
 import { between, pick, round, step, type rng } from "./lib";
 import { buildLineItems, floorOverhead, type TemplateSpec } from "./lineItems";
 import type { StyleSeed } from "./styles";
@@ -41,6 +47,9 @@ export async function seedBids(
       dueDate: new Date("2026-10-15"),
     },
   });
+
+  /** Rotates the seeded bid statuses deterministically. */
+  let bidSeq = 0;
 
   // Choose bid styles: the largest by plan units, so award dollars are
   // meaningful, but spread across both categories.
@@ -83,8 +92,17 @@ export async function seedBids(
         instructions:
           "All lead times must assume Q1 shipping. Quote in USD only. " +
           "Where a size run applies, quote each size.",
-        sourcingPartner: "Tony Alvarez",
-        gm: "Jackie Chen",
+        /**
+         * OWNERS VARY BY CATEGORY (H5).
+         *
+         * Every seeded RFP carried the same pair, so the sourcing-partner
+         * and GM filters had exactly one option each and could not be
+         * demoed at all. Bedding and bottoms are genuinely different desks.
+         */
+        sourcingPartner: label.startsWith("Bedding")
+          ? "Tony Alvarez"
+          : "Priya Raman",
+        gm: label.startsWith("Bedding") ? "Jackie Chen" : "Marcus Webb",
         styles: {
           create: styleList.map((s) => ({ styleId: styleIds.get(s.styleNumber)! })),
         },
@@ -144,6 +162,64 @@ export async function seedBids(
 
     const styleId = styleIds.get(style.styleNumber)!;
     const baseline = style.baselineFob!;
+
+    /**
+     * BID AT THE PRODUCT'S OWN GRAIN.
+     *
+     * The seed used to nominate and quote every product WHOLE, on the
+     * reasoning that per-variation nomination is a buyer action. True, but
+     * it left 19 quote rows sitting style-level on SIZE-grain products — so
+     * the vendor form offered "quote this whole product" for a product
+     * Quince had configured to bid per size, and `pricedVariations` was
+     * empty on all 82 styles. Phase 2a has nothing to demo in that state.
+     *
+     * grainGroups() returns exactly ONE group at STYLE grain, so the
+     * style-level product is the degenerate case of this same code path
+     * rather than a branch.
+     */
+    const styleRow = await db.style.findUnique({
+      where: { id: styleId },
+      select: {
+        variationLevel: true,
+        variations: {
+          select: {
+            id: true,
+            size: true,
+            colour: true,
+            colourwayId: true,
+            sizeSortOrder: true,
+            baselineFob: true,
+          },
+          orderBy: [{ sizeSortOrder: "asc" }],
+        },
+      },
+    });
+
+    const groups = grainGroups(
+      (styleRow?.variationLevel ?? "STYLE") as Grain,
+      styleRow?.variations ?? [],
+    );
+
+    /**
+     * The FOB each group is quoted at, relative to the style baseline. Each
+     * group's own variations carry a real `baselineFob` (seeded per variation
+     * in 1.5a), so a King genuinely costs more than a Twin instead of
+     * carrying an invented offset. Weighted by nothing — the group's mean is
+     * right here because every variation in a size group is that one size.
+     */
+    const groupBaseline = new Map<string, number>();
+    for (const g of groups) {
+      const own = (styleRow?.variations ?? []).filter((v) =>
+        g.variationIds.includes(v.id),
+      );
+      const fobs = own
+        .map((v) => (v.baselineFob === null ? null : Number(v.baselineFob)))
+        .filter((n): n is number => n !== null && n > 0);
+      groupBaseline.set(
+        g.key,
+        fobs.length ? fobs.reduce((a, b) => a + b, 0) / fobs.length : baseline,
+      );
+    }
 
     // 3-6 bidders. Regions are weighted to reflect where sourcing actually
     // happens — an even shuffle gave Americas and EMEA the same footprint as
@@ -289,21 +365,82 @@ export async function seedBids(
         update: {},
       });
 
-      // Seeded nomination is WHOLE-PRODUCT: variationKey '@STYLE', the same
-      // thing every pre-1.6 row means. Per-variation nomination is a buyer
-      // action, so the seed should not pre-empt it.
-      await db.invitationStyle.upsert({
-        where: {
-          invitationId_styleId_variationKey: {
+      /**
+       * NOMINATE ONE ROW PER BID GROUP.
+       *
+       * At STYLE grain that is a single row keyed '@STYLE' — identical to
+       * what every pre-1.6 row means, so nothing about the style-level case
+       * changes. At SIZE grain it is one row per size, which is what makes
+       * the vendor form render a line per variant.
+       */
+      for (const g of groups) {
+        const variationId = g.key === WHOLE_STYLE_KEY ? null : g.variationIds[0]!;
+        /**
+         * The key is variationKeyOf(variationId) — the VARIATION ID, not the
+         * group's display key.
+         *
+         * grainGroups() keys groups by label ("Cal King") because that is
+         * what the UI groups on; every ROUTE keys storage by
+         * variationKeyOf(). Writing the label here made the quote route's
+         * upsert miss its own row and INSERT A DUPLICATE on first save —
+         * caught by a save landing a 6th row on a 5-size product.
+         */
+        const variationKey = variationKeyOf(variationId);
+        await db.invitationStyle.upsert({
+          where: {
+            invitationId_styleId_variationKey: {
+              invitationId: invitation.id,
+              styleId,
+              variationKey,
+            },
+          },
+          create: {
             invitationId: invitation.id,
             styleId,
-            variationKey: WHOLE_STYLE_KEY,
+            variationId,
+            variationKey,
           },
+          update: {},
+        });
+      }
+
+      /**
+       * THE BID STATUS. A handful of stages, not the whole ladder.
+       *
+       * Akshay: "don't over-engineer… don't spend so many tokens on giving
+       * the full ladder." So this rotates through six states that between
+       * them exercise every distinct shape the UI has to render: a vendor
+       * waiting on Quince, a vendor who owes work, a repeatable
+       * negotiation, a closed win and a closed loss.
+       *
+       * Deterministic by index, so a reseed produces the same demo.
+       */
+      const SEEDED_STATUSES = [
+        "INITIAL_IN_REVIEW",
+        "INITIAL_CLEARED",
+        "FULL_IN_REVIEW",
+        "IN_NEGOTIATION",
+        "BID_ACCEPTED",
+        "NOT_PROCEEDING",
+      ] as const;
+      const bidStatus = SEEDED_STATUSES[bidSeq % SEEDED_STATUSES.length];
+      bidSeq += 1;
+
+      await db.productBid.upsert({
+        where: {
+          invitationId_styleId: { invitationId: invitation.id, styleId },
         },
         create: {
           invitationId: invitation.id,
           styleId,
-          variationKey: WHOLE_STYLE_KEY,
+          status: bidStatus,
+          statusNote:
+            bidStatus === "IN_NEGOTIATION"
+              ? "Materials look high against our target — can you revisit?"
+              : bidStatus === "NOT_PROCEEDING"
+                ? "Thank you for quoting. We are not proceeding on this product."
+                : null,
+          statusChangedBy: "Tony Alvarez",
         },
         update: {},
       });
@@ -348,43 +485,105 @@ export async function seedBids(
         moq: Math.round(between(next, 500, 5000)),
       };
 
-      const quote = await db.quote.create({
-        data: {
-          invitationId: invitation.id,
-          styleId,
-          vendorId: vendor.id,
-          round: 1,
-          status: "SUBMITTED",
-          submittedAt: new Date("2026-09-20"),
-          values: {
-            ...line.values,
+      /**
+       * ONE QUOTE PER BID GROUP, each at its OWN price.
+       *
+       * The breakdown and the commercial terms are shared — labour rate and
+       * SAM do not change by size — but the FOB and the group's own buckets
+       * are scaled by that group's real baseline, so the five sizes come
+       * back as five different prices rather than the same number repeated.
+       * Repeating one price across variants is the bug that made the vendor
+       * form show "$21.98" five times in 1.6d.
+       *
+       * The row the rest of the seed reports on is the FIRST group's, which
+       * at STYLE grain is the only one.
+       */
+      const groupQuotes: { id: string; fob: number }[] = [];
+      for (const g of groups) {
+        /**
+         * A SMALL PER-VENDOR, PER-SIZE SPREAD (±4%).
+         *
+         * Scaling every vendor by the SAME size ratio meant a vendor's rank
+         * never changed between sizes: the cheapest on Twin was always the
+         * cheapest on King, so "apply Lowest bid to all variations" put one
+         * vendor on every size and N5's whole point — the cheapest on Twin
+         * need not be the cheapest on King — could never be seen. Real
+         * vendors price size runs differently (fabric width, cutting yield).
+         *
+         * Deterministic (the seeded RNG), and applied to FOB and every bucket
+         * by the same factor, so buckets still sum to FOB exactly. Seeded
+         * AWARDS are computed from the style-level split and are unaffected,
+         * so China share does not move.
+         */
+        // Derived from a HASH of vendor + size, NOT drawn from `next()`.
+        // Drawing from the shared RNG shifted every later draw, so different
+        // vendors bid downstream and the wave total moved $60.9M -> $59.2M.
+        // A hash leaves the main sequence — and every demo figure — untouched.
+        const spread =
+          g.key === WHOLE_STYLE_KEY ? 1 : 0.96 + 0.08 * hashUnit(`${vendor.vendorCode}|${styleId}|${g.key}`);
+        const scale = ((groupBaseline.get(g.key) ?? baseline) / baseline) * spread;
+        const gFob = round(line.fob * scale, 4);
+        const gBuckets = Object.fromEntries(
+          Object.entries(line.buckets).map(([k, v]) => [
+            k,
+            round((v as number) * scale, 4),
+          ]),
+        );
+        const variationId = g.key === WHOLE_STYLE_KEY ? null : g.variationIds[0]!;
+
+        const gq = await db.quote.create({
+          data: {
+            invitationId: invitation.id,
+            styleId,
+            vendorId: vendor.id,
+            variationId,
+            // variationKeyOf, not the group label — see the note above.
+            variationKey: variationKeyOf(variationId),
+            round: 1,
+            status: "SUBMITTED",
+            submittedAt: new Date("2026-09-20"),
+            values: {
+              ...line.values,
+              maxVolumeCapacity: terms.maxVolumeCapacity,
+              productionLeadTime: terms.productionLeadTime,
+              moq: terms.moq,
+            } as never,
+            bucketTotals: gBuckets as never,
+            fob: gFob,
+            // DDP is declared PER PRODUCT, so every group carries the same
+            // fees. The route's fan-out keeps them in step after an edit.
+            dutyType: quotesDdp ? "VDDP" : "QDDP",
+            // The unsuffixed trio is the OCEAN set (see schema comment).
+            ddpWest: ddpOceanByDest?.[0] ?? null,
+            ddpCentral: ddpOceanByDest?.[1] ?? null,
+            ddpEast: ddpOceanByDest?.[2] ?? null,
+            ddpWestAir: ddpAirByDest?.[0] ?? null,
+            ddpCentralAir: ddpAirByDest?.[1] ?? null,
+            ddpEastAir: ddpAirByDest?.[2] ?? null,
             maxVolumeCapacity: terms.maxVolumeCapacity,
             productionLeadTime: terms.productionLeadTime,
             moq: terms.moq,
-          } as never,
-          bucketTotals: line.buckets as never,
-          fob: round(line.fob, 4),
-          dutyType: quotesDdp ? "VDDP" : "QDDP",
-          // The unsuffixed trio is the OCEAN set (see schema comment).
-          ddpWest: ddpOceanByDest?.[0] ?? null,
-          ddpCentral: ddpOceanByDest?.[1] ?? null,
-          ddpEast: ddpOceanByDest?.[2] ?? null,
-          ddpWestAir: ddpAirByDest?.[0] ?? null,
-          ddpCentralAir: ddpAirByDest?.[1] ?? null,
-          ddpEastAir: ddpAirByDest?.[2] ?? null,
-          maxVolumeCapacity: terms.maxVolumeCapacity,
-          productionLeadTime: terms.productionLeadTime,
-          moq: terms.moq,
-        },
-      });
+          },
+        });
+        groupQuotes.push({ id: gq.id, fob: gFob });
+      }
 
+      /**
+       * The wave's arithmetic stays at STYLE level.
+       *
+       * `bids` feeds allocation, Best Cost and the guardrails, and those are
+       * style-level by decision (D2 puts 100% per variation, but Phase 3 is
+       * where award moves). Pushing one entry per GROUP here would multiply
+       * every wave total by the variation count — the row-vs-product bug
+       * that has already been found in seven places.
+       */
       bids.push({
         style,
         vendor,
         fob: round(line.fob, 4),
         bestCost: cost.bestCost,
         basis: cost.bestCostBasis,
-        quoteId: quote.id,
+        quoteId: groupQuotes[0]!.id,
       });
     }
   }
@@ -421,37 +620,132 @@ export async function seedBids(
     ALLOCATED: "Holding at this split until Yantai confirms capacity.",
   };
 
-  for (const a of allocations) {
-    const status = styleStatuses.get(a.styleId) ?? "AWARDED";
-    await db.award.create({
-      data: {
-        waveId: wave.id,
-        styleId: a.styleId,
-        vendorId: a.vendorId,
-        awardPct: a.pct,
-        bestCost: a.bestCost,
-        bestCostBasis: a.basis,
-        awardedUnits: a.units,
-        awardedDollars: a.dollars,
-        savingsDollars: a.savings,
-        status,
-        // Only a true award carries the stamp — the other two have not been
-        // awarded, and dating them would be a lie the UI would repeat.
-        ...(status === "AWARDED"
-          ? { awardedAt: new Date("2026-09-25"), awardedBy: "Jackie Chen" }
-          : {}),
-        comment: COMMENT[status],
+  /**
+   * AWARDS ARE PER VARIATION — decision N1, 5 Oct.
+   *
+   * The style-level split chosen above (tuned so China opens just under 30%)
+   * is applied to EVERY variation group of the style: same vendors, same
+   * percentages, so each group totals exactly 100 on its own (D2).
+   *
+   * What differs per group is VOLUME and PRICE:
+   *  - units are the group's own share of plan units, never the style's whole
+   *    volume. Handing every group `style.planUnits` is the double-count the
+   *    plan warns about — vendor spend would inflate ~5x straight through the
+   *    $20M cap;
+   *  - the cost is the style's Best Cost scaled by the group's own baseline,
+   *    the same ratio the per-variation quotes were seeded with, so a King
+   *    award costs more than a Twin one, as its quote does.
+   *
+   * A STYLE-grained product is one group with variationId null — the same
+   * path, not a branch.
+   */
+  const variationsByStyle = new Map<
+    string,
+    { grain: Grain; variations: { id: string; size: string | null; colour: string | null; colourwayId: string | null; sizeSortOrder: number | null; planUnits: number; baselineFob: number }[] }
+  >();
+  for (const styleId of new Set(allocations.map((a) => a.styleId))) {
+    const row = await db.style.findUnique({
+      where: { id: styleId },
+      select: {
+        variationLevel: true,
+        variations: {
+          select: {
+            id: true, size: true, colour: true, colourwayId: true,
+            sizeSortOrder: true, planUnits: true, baselineFob: true,
+          },
+          orderBy: [{ sizeSortOrder: "asc" }],
+        },
       },
+    });
+    variationsByStyle.set(styleId, {
+      grain: (row?.variationLevel ?? "STYLE") as Grain,
+      variations: (row?.variations ?? []).map((v) => ({
+        ...v,
+        planUnits: v.planUnits ?? 0,
+        baselineFob: v.baselineFob === null ? 0 : Number(v.baselineFob),
+      })),
     });
   }
 
-  const total = allocations.reduce((s, a) => s + a.dollars, 0);
-  const china = allocations
+  const awardRows: {
+    region: string | null;
+    dollars: number;
+  }[] = [];
+
+  for (const a of allocations) {
+    const status = styleStatuses.get(a.styleId) ?? "AWARDED";
+    const info = variationsByStyle.get(a.styleId)!;
+    const groups = grainGroups(info.grain, info.variations);
+
+    // The style's own reference baseline, weighted the same way the groups'
+    // are, so the scale factors average to 1 across the style's volume.
+    const styleBase = weightedBaseline(
+      info.variations.map((v) => ({ baseline: v.baselineFob, planUnits: v.planUnits })),
+    );
+    const styleUnits = info.variations.reduce((sum, v) => sum + v.planUnits, 0);
+
+    for (const g of groups) {
+      const own = info.variations.filter((v) => g.variationIds.includes(v.id));
+      const isWhole = g.key === WHOLE_STYLE_KEY;
+
+      // Whole product: keep the allocation exactly as computed, so a
+      // STYLE-grained style is byte-identical to before this change.
+      const groupUnits = isWhole
+        ? a.units
+        : Math.round(
+            a.units *
+              (styleUnits
+                ? own.reduce((sum, v) => sum + v.planUnits, 0) / styleUnits
+                : 0),
+          );
+      const groupBase = weightedBaseline(
+        own.map((v) => ({ baseline: v.baselineFob, planUnits: v.planUnits })),
+      );
+      const scale = !isWhole && styleBase > 0 && groupBase > 0 ? groupBase / styleBase : 1;
+      const bestCost = round(a.bestCost * scale, 4);
+      const dollars = isWhole ? a.dollars : round(groupUnits * bestCost, 2);
+      // Savings per unit is (baseline - bestCost); both sides scale by the
+      // same group ratio, so the per-unit saving scales with them.
+      const savingsPerUnit = a.units ? a.savings / a.units : 0;
+      const savings = isWhole
+        ? a.savings
+        : round(groupUnits * savingsPerUnit * scale, 2);
+
+      const variationId = isWhole ? null : g.variationIds[0]!;
+
+      await db.award.create({
+        data: {
+          waveId: wave.id,
+          styleId: a.styleId,
+          vendorId: a.vendorId,
+          variationId,
+          variationKey: variationKeyOf(variationId),
+          awardPct: a.pct,
+          bestCost,
+          bestCostBasis: a.basis,
+          awardedUnits: groupUnits,
+          awardedDollars: dollars,
+          savingsDollars: savings,
+          status,
+          // Only a true award carries the stamp — the other two have not been
+          // awarded, and dating them would be a lie the UI would repeat.
+          ...(status === "AWARDED"
+            ? { awardedAt: new Date("2026-09-25"), awardedBy: "Jackie Chen" }
+            : {}),
+          comment: COMMENT[status],
+        },
+      });
+      awardRows.push({ region: a.region, dollars });
+    }
+  }
+
+  const total = awardRows.reduce((s, a) => s + a.dollars, 0);
+  const china = awardRows
     .filter((a) => a.region === "CHINA")
     .reduce((s, a) => s + a.dollars, 0);
 
   step(
-    `${allocations.length} awards on ${toAllocate.length} styles · ` +
+    `${awardRows.length} award rows (${allocations.length} style splits) on ${toAllocate.length} styles · ` +
       `$${(total / 1e6).toFixed(1)}M placed · China ${((china / total) * 100).toFixed(1)}%`,
   );
 
@@ -473,7 +767,9 @@ export async function seedBids(
           instructions:
             "All lead times must assume Q1 shipping. Quote in USD only. " +
             "Where a size run applies, quote each size.",
-          sourcingPartner: "Tony Alvarez",
+          // A third desk, so the filters have a value that is neither of the
+          // issued RFPs' owners.
+          sourcingPartner: "Dana Kowalski",
           gm: "Jackie Chen",
           styles: {
             create: draftStyles.map((s) => ({
@@ -731,3 +1027,13 @@ function allocateForChinaTarget(
 }
 
 export { CHINA_TARGET_HIGH, CHINA_TARGET_LOW };
+
+/** A stable value in [0, 1) from a string — FNV-1a. Seed-only. */
+function hashUnit(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) / 2 ** 32;
+}

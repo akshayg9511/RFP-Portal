@@ -4,6 +4,8 @@ import { strategies } from "@/domain/strategies";
 import { bucketFlags } from "@/domain/scoring";
 import { resolveBestCost } from "@/lib/bestCost";
 import { loadRateBook } from "@/lib/rateBook";
+import { variationKeyOf } from "@/domain/grain";
+import { awardGroups, VARIATION_SELECT } from "@/lib/variationGroups";
 
 /**
  * @openapi
@@ -25,13 +27,27 @@ import { loadRateBook } from "@/lib/rateBook";
  *       404: { description: No such style }
  */
 export function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   return handle(async () => {
     const { id } = await params;
+    /**
+     * WHICH VARIATION — decisions N1 / N2, 5 Oct.
+     *
+     * Awarding is per variation, so this page compares and allocates ONE
+     * variation group at a time, chosen by a dropdown in the header. Omitted
+     * means the first group, so the page never opens on "pick one first".
+     *
+     * Before this, quotes were read with NO variation filter, so a 5-size
+     * product returned each vendor five times at five prices with nothing
+     * saying which size — 30 rows for 6 vendors, measured on U-BEDD-138.
+     */
+    const requestedVariation = new URL(request.url).searchParams.get(
+      "variationId",
+    );
 
-    const [rates, style, config, cleanSheetRows] = await Promise.all([
+    const [rates, style, config] = await Promise.all([
       loadRateBook(),
       db.style.findUnique({
         where: { id },
@@ -58,10 +74,12 @@ export function GET(
             where: { variationId: null },
             select: { vendorId: true },
           },
+          variations: VARIATION_SELECT,
           quotes: {
             where: { status: "SUBMITTED" },
             select: {
               id: true,
+              variationKey: true,
               fob: true,
               vendorId: true,
               dutyType: true,
@@ -109,6 +127,7 @@ export function GET(
           },
           awards: {
             select: {
+              variationKey: true,
               vendorId: true,
               awardPct: true,
               status: true,
@@ -127,21 +146,35 @@ export function GET(
           },
         },
       }),
-      /**
-       * The should-cost target, per bucket. INTERNAL ONLY — this route feeds
-       * the Playground, which is procurement's screen. The vendor-facing route
-       * takes the same data and reduces it to bands (Build Doc 8.2).
-       */
-      db.cleanSheet.findMany({
-        // variationId: null is the STYLE-LEVEL target. Without it this
-        // returns the style's rows PLUS every variation's, so every bucket
-        // is multiplied by the variation count.
-        where: { styleId: id, kind: "CLEAN_SHEET", variationId: null },
-        select: { bucket: true, amount: true },
-      }),
     ]);
 
     if (!style) return notFound(`Style ${id}`);
+
+    /**
+     * THE VARIATION GROUPS, at this product's grain — from the SAME helper
+     * the award save uses, so the readout and the stored award can never
+     * disagree about a group's volume or baseline.
+     */
+    const groups = awardGroups(style);
+
+    const selected =
+      groups.find((g) => g.variationId === requestedVariation) ?? groups[0]!;
+    const selectedKey = selected.variationKey;
+
+    /**
+     * The should-cost target, per bucket, FOR THIS VARIATION. INTERNAL ONLY —
+     * this route feeds procurement's screen; the vendor-facing route reduces
+     * the same data to bands (Build Doc 8.2). Per-variation clean sheets exist
+     * since 1.5a, so the target follows the dropdown exactly as the bids do.
+     */
+    const cleanSheetRows = await db.cleanSheet.findMany({
+      where: {
+        styleId: id,
+        kind: "CLEAN_SHEET",
+        variationId: selected.variationId,
+      },
+      select: { bucket: true, amount: true },
+    });
 
     const cfg = new Map(config.map((c) => [c.key, c.value]));
 
@@ -167,13 +200,23 @@ export function GET(
       typeof flagCfg.above === "number" ? flagCfg.above : 0.1;
     const supplierIds = new Set(style.currentSuppliers.map((c) => c.vendorId));
 
-    const bids = style.quotes
+    // ONE ROW PER VENDOR, for the selected variation only. This is the line
+    // that ends the 30-rows-for-6-vendors defect.
+    const quotesForGroup = style.quotes.filter(
+      (q) => q.variationKey === selectedKey,
+    );
+
+    const bids = quotesForGroup
       .map((q) => {
-        const cost = resolveBestCost(q, style, q.vendor, rates);
+        const cost = resolveBestCost(q, style, q.vendor, rates, selected.size);
         if (!cost) return null;
         return {
           quoteId: q.id,
           invitationId: q.invitationId,
+          // Every bid says which variation it is for, so a row can never
+          // again render without a size.
+          variationId: selected.variationId,
+          variationLabel: selected.label,
           vendorId: q.vendor.id,
           vendorName: q.vendor.name,
           vendorCode: q.vendor.vendorCode,
@@ -228,6 +271,8 @@ export function GET(
       style.quotes.find((q) => q.invitation?.rfp?.template)?.invitation?.rfp
         ?.template ?? null;
 
+
+
     const ratio = (cfg.get("scenarios.ratio") ?? {
       incumbent: 0.7,
       new: 0.3,
@@ -260,10 +305,25 @@ export function GET(
           name: c.name,
           images: c.images.map((i) => i.url),
         })),
-        planUnits: style.planUnits ?? 0,
-        baselineFob: num(style.baselineFob) ?? 0,
-        baselineLanded: num(style.baselineLanded),
+        variationLevel: style.variationLevel,
+        // The SELECTED variation's volume and baselines. Handing a group the
+        // style's whole plan is the double-count that inflates vendor spend
+        // ~5x through the $20M cap.
+        planUnits: selected.planUnits,
+        baselineFob: selected.baselineFob,
+        baselineLanded: num(style.baselineLanded) === null ? null : selected.baselineLanded,
       },
+
+      /** Every group of this product, for the header dropdown (N2). */
+      variations: groups.map((g) => ({
+        variationId: g.variationId,
+        label: g.label,
+        planUnits: g.planUnits,
+        allocatedPct: style.awards
+          .filter((a) => a.variationKey === variationKeyOf(g.variationId))
+          .reduce((sum, a) => sum + (numOr(a.awardPct) ?? 0), 0),
+      })),
+      selectedVariationId: selected.variationId,
 
       bids,
 
@@ -277,7 +337,9 @@ export function GET(
         : null,
 
       // The existing split, so reopening the drawer shows what was saved.
-      allocation: style.awards.map((a) => ({
+      allocation: style.awards
+        .filter((a) => a.variationKey === selectedKey)
+        .map((a) => ({
         vendorId: a.vendorId,
         awardPct: numOr(a.awardPct),
         status: a.status,

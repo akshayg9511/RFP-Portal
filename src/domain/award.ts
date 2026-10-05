@@ -213,3 +213,84 @@ function min(values: number[]): number | null {
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   VARIATION-LEVEL AWARDING — decisions N1 / N3, 5 Oct.
+
+   `allocate()` keeps its exact signature as the PER-GROUP primitive, so every
+   existing caller is unchanged. The fold below runs it once per variation and
+   decides validity across all of them.
+
+   The rule that keeps style-level safe: a STYLE-grained product is ONE group.
+   It is the degenerate case of this fold, never a branch beside it — any
+   `if (grain === "STYLE")` in a route is how 100% ends up checked at the wrong
+   scope (§traps #2).
+   ──────────────────────────────────────────────────────────────────────────── */
+
+export type GroupAllocation = StyleAllocation & {
+  /** null = the whole product. */
+  variationId: string | null;
+  label: string;
+};
+
+export type GroupedAllocationResult = {
+  groups: (AllocationResult & {
+    variationId: string | null;
+    label: string;
+  })[];
+  /**
+   * EVERY group at exactly 100. No partial saves: a 5-size product with one
+   * size at 99% is not 80% valid, it is invalid.
+   */
+  isValid: boolean;
+  /** The variations holding the save back, by label, so the UI can name them. */
+  invalid: string[];
+  totalAwardedDollars: number;
+  totalSavingsDollars: number;
+  /**
+   * Units-weighted across groups — NOT a mean of the groups' blended costs.
+   * A mean of means gives Cal King (thin volume) the same weight as Queen.
+   */
+  blendedCost: number;
+};
+
+export function allocateGrouped(
+  groups: GroupAllocation[],
+): GroupedAllocationResult {
+  const results = groups.map((g) => ({
+    ...allocate(g),
+    variationId: g.variationId,
+    label: g.label,
+  }));
+
+  const totalUnits = groups.reduce((s, g) => s + g.planUnits, 0);
+
+  return {
+    groups: results,
+    isValid: results.length > 0 && results.every((r) => r.isValid),
+    invalid: results.filter((r) => !r.isValid).map((r) => r.label),
+    totalAwardedDollars: results.reduce((s, r) => s + r.totalAwardedDollars, 0),
+    totalSavingsDollars: results.reduce((s, r) => s + r.totalSavingsDollars, 0),
+    blendedCost: totalUnits
+      ? results.reduce(
+          (s, r, i) => s + r.blendedCost * groups[i]!.planUnits,
+          0,
+        ) / totalUnits
+      : 0,
+  };
+}
+
+/**
+ * A group's baseline, from its variations — VOLUME-WEIGHTED.
+ *
+ * Never a plain mean. Bedding volume skews hard to Queen and King, so a flat
+ * average over five sizes is a baseline nobody pays, and it flows into savings
+ * and out to Wave Insights.
+ */
+export function weightedBaseline(
+  variations: { baseline: number; planUnits: number }[],
+): number {
+  const units = variations.reduce((s, v) => s + v.planUnits, 0);
+  if (!units) return 0;
+  return variations.reduce((s, v) => s + v.baseline * v.planUnits, 0) / units;
+}

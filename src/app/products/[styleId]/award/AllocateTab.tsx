@@ -27,6 +27,8 @@ export function AllocateTab({
   comment,
   onPct,
   onComment,
+  onCopyToAll,
+  busy,
 }: {
   data: ProductBids;
   pct: Record<string, string>;
@@ -39,6 +41,9 @@ export function AllocateTab({
   comment: string;
   onPct: (vendorId: string, value: string) => void;
   onComment: (value: string) => void;
+  /** N3 — copy this variation's split to every variation of the product. */
+  onCopyToAll?: () => void;
+  busy?: boolean;
 }) {
   const lineFor = (vendorId: string) =>
     result?.lines.find((l) => l.vendorId === vendorId);
@@ -55,6 +60,41 @@ export function AllocateTab({
           Filled from <strong>{applied}</strong>. Every percentage is still
           editable.
         </p>
+      ) : null}
+
+      {/* WHICH VARIATION, AND HOW MANY ARE DONE (N2/N3).
+
+          Each variation totals 100 on its own, so the buyer needs to see
+          both what they are allocating now and what is left. The product
+          cannot move to review until every one is done, and the server names
+          the ones that are not. */}
+      {data.variations.length > 1 ? (
+        <div className="pd-var-strip">
+          <span>
+            Allocating <strong>{data.bids[0]?.variationLabel ?? "this variation"}</strong>
+            {" · "}
+            {
+              data.variations.filter(
+                (v) => Math.abs(v.allocatedPct - 100) < 0.005,
+              ).length
+            }{" "}
+            of {data.variations.length} variations allocated
+          </span>
+          {onCopyToAll ? (
+            <button
+              className="btn btn--ghost btn--sm"
+              disabled={busy || !result?.isValid}
+              onClick={onCopyToAll}
+              title={
+                result?.isValid
+                  ? undefined
+                  : "Bring this variation to exactly 100% first"
+              }
+            >
+              Copy this split to all variations
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="pd-cols">

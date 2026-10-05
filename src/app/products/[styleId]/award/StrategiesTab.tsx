@@ -46,6 +46,7 @@ export function StrategiesTab({
   savedBusy,
   savedError,
   onApply,
+  onApplyToAll,
   onSave,
   onDelete,
 }: {
@@ -59,6 +60,14 @@ export function StrategiesTab({
   savedBusy: boolean;
   savedError: string | null;
   onApply: (key: string, split: Record<string, number>) => void;
+  /**
+   * N5 — apply to EVERY variation. A built-in rule is re-computed per
+   * variation (each size's own cheapest vendor); a saved strategy is a fixed
+   * split, so it is copied as-is. Absent on a single-variation product.
+   */
+  onApplyToAll?: (
+    strategy: { kind: "builtin"; key: string } | { kind: "saved"; split: Record<string, number> },
+  ) => void;
   onSave: (name: string, comment: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -192,15 +201,28 @@ export function StrategiesTab({
               <div className="pd-strat-n">{c.label}</div>
               <div className="pd-strat-r">{c.rule}</div>
             </div>
-            {c.unavailable ? null : currentId === c.key ? (
-              <span className="pd-chip-current">current</span>
-            ) : (
-              <button
-                className="btn btn--ghost btn--sm"
-                onClick={() => onApply(c.key, c.split)}
-              >
-                Apply
-              </button>
+            {c.unavailable ? null : (
+              <div className="pd-strat-acts">
+                {currentId === c.key ? (
+                  <span className="pd-chip-current">current</span>
+                ) : (
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => onApply(c.key, c.split)}
+                  >
+                    Apply
+                  </button>
+                )}
+                {onApplyToAll ? (
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => onApplyToAll({ kind: "builtin", key: c.key })}
+                    title="Worked out separately for every variation, from that variation's own bids"
+                  >
+                    Apply to all
+                  </button>
+                ) : null}
+              </div>
             )}
           </div>
 
@@ -243,16 +265,27 @@ export function StrategiesTab({
               )}
             </div>
 
-            {currentId === c.id ? (
-              <span className="pd-chip-current">current</span>
-            ) : (
-              <button
-                className="btn btn--ghost btn--sm"
-                onClick={() => onApply(c.id, c.split)}
-              >
-                Apply
-              </button>
-            )}
+            <div className="pd-strat-acts">
+              {currentId === c.id ? (
+                <span className="pd-chip-current">current</span>
+              ) : (
+                <button
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => onApply(c.id, c.split)}
+                >
+                  Apply
+                </button>
+              )}
+              {onApplyToAll ? (
+                <button
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => onApplyToAll({ kind: "saved", split: c.split })}
+                  title="Copies this exact split to every variation"
+                >
+                  Apply to all
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <StratNumbers

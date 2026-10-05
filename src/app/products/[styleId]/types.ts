@@ -30,6 +30,9 @@ export type Bid = {
   ddpBlend: number | null;
   bestCost: number;
   bestCostBasis: "QUINCE_BLEND" | "DDP_BLEND";
+  /** Which variation this bid is for — a row is never shown without one. */
+  variationId: string | null;
+  variationLabel: string;
 };
 
 /**
@@ -70,10 +73,24 @@ export type ProductBids = {
     heroImage: string | null;
     images: string[];
     colourways: { id: string; name: string; images: string[] }[];
+    variationLevel: string | null;
+    /** The SELECTED variation's volume and baselines (N2). */
     planUnits: number | null;
     baselineFob: number | null;
     baselineLanded: number | null;
   };
+  /**
+   * Every award group of the product, for the header dropdown. One entry,
+   * variationId null, for a STYLE-grained product.
+   */
+  variations: {
+    variationId: string | null;
+    label: string;
+    planUnits: number;
+    /** What is SAVED for this variation — 100 means done. */
+    allocatedPct: number;
+  }[];
+  selectedVariationId: string | null;
   bids: Bid[];
   cleanSheet: { buckets: Record<string, number>; fob: number } | null;
   allocation: {

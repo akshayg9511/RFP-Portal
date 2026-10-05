@@ -166,16 +166,55 @@ async function main() {
     `${(share * 100).toFixed(1)}% of $${(total / 1e6).toFixed(1)}M`,
   );
 
-  // 10 — award integrity: every allocated style totals exactly 100%
+  // 10 — award integrity: every VARIATION totals exactly 100%.
+  //
+  // Was grouped by styleId, which became wrong the moment awards went
+  // per variation (N1): a correctly-allocated 5-size product summed to 500%
+  // and read as broken. That is the D2 scope error in the GATE rather than
+  // the product — the fix is to check at the right scope, not to loosen it.
+  // A STYLE-grained product is one group keyed '@STYLE', so it is still
+  // checked exactly as before.
   const byStyle = await db.award.groupBy({
-    by: ["styleId"],
+    by: ["styleId", "variationKey"],
     _sum: { awardPct: true },
   });
   const bad = byStyle.filter((g) => Math.abs(Number(g._sum.awardPct) - 100) > 0.01);
   check(
-    "every allocated style totals exactly 100%",
+    "every allocated VARIATION totals exactly 100%",
     bad.length === 0,
-    `${byStyle.length} styles allocated${bad.length ? `, ${bad.length} wrong` : ""}`,
+    `${byStyle.length} variation groups allocated${bad.length ? `, ${bad.length} wrong` : ""}`,
+  );
+
+  /**
+   * 10b — NO DOUBLE-COUNTED VOLUME.
+   *
+   * Each variation's awardedUnits must be its OWN share of plan units. If a
+   * mapper hands every group the style's whole volume, awarded units for a
+   * 5-size product come to ~5x the plan — and vendor spend inflates the same
+   * 5x, straight through the $20M cap check. So: per style, awarded units
+   * across all its groups and vendors must not exceed the style's plan.
+   */
+  const unitRows = await db.award.groupBy({
+    by: ["styleId"],
+    _sum: { awardedUnits: true },
+  });
+  const plans = new Map(
+    (
+      await db.style.findMany({
+        where: { id: { in: unitRows.map((u) => u.styleId) } },
+        select: { id: true, planUnits: true },
+      })
+    ).map((p) => [p.id, p.planUnits ?? 0]),
+  );
+  // 1% tolerance: variation plan units are rounding dust off the style total
+  // (±9 on ~150,000), the reason coverage uses a tolerance, never equality.
+  const inflated = unitRows.filter(
+    (u) => (u._sum.awardedUnits ?? 0) > (plans.get(u.styleId) ?? 0) * 1.01,
+  );
+  check(
+    "awarded units never exceed a style's plan (no double-count)",
+    inflated.length === 0,
+    `${unitRows.length} styles · ${inflated.length} over plan`,
   );
 
   // Styles left open for the live demo.
@@ -297,6 +336,93 @@ async function main() {
     "all four grains present for the demo",
     ["STYLE", "COLOUR", "SIZE", "SKU"].every((g) => present.has(g)),
     grains.map((g) => `${g.variationLevel} ${g._count._all}`).join(" · "),
+  );
+
+  /**
+   * QUOTES SIT AT THE PRODUCT'S OWN GRAIN.
+   *
+   * The seed used to bid every product whole, which left 19 quote rows
+   * style-level on SIZE-grain products: the vendor form then offered "quote
+   * this product whole" for a product configured to bid per size, and
+   * `pricedVariations` was empty everywhere. Nothing failed — it just made
+   * Phase 2a undemoable. Asserted so it cannot drift back.
+   */
+  const quotesByGrain = await db.quote.findMany({
+    select: { variationId: true, style: { select: { variationLevel: true } } },
+  });
+  const misgrained = quotesByGrain.filter((q) =>
+    q.style.variationLevel === "STYLE"
+      ? q.variationId !== null
+      : q.variationId === null,
+  );
+  check(
+    "every quote sits at its product's own grain",
+    misgrained.length === 0,
+    `${quotesByGrain.length} quotes · ${misgrained.length} at the wrong grain`,
+  );
+
+  /**
+   * variationKey MUST BE variationKeyOf(variationId).
+   *
+   * The seed briefly wrote the GROUP LABEL ("Cal King") while every route
+   * keys on the variation id, so the quote route's upsert missed its own row
+   * and INSERTED A DUPLICATE on the vendor's first save — a 6th row on a
+   * 5-size product, with the real row left untouched. Nothing errored.
+   * This is the unique key the whole @STYLE sentinel exists to make bite, so
+   * a mismatch is asserted rather than trusted.
+   */
+  const keyRows = await db.quote.findMany({
+    select: { variationId: true, variationKey: true },
+  });
+  const badKeys = keyRows.filter(
+    (r) => r.variationKey !== (r.variationId ?? "@STYLE"),
+  );
+  check(
+    "every quote's variationKey matches variationKeyOf(variationId)",
+    badKeys.length === 0,
+    `${keyRows.length} quotes · ${badKeys.length} mismatched`,
+  );
+
+  /**
+   * DDP IS A PER-PRODUCT TERM, FOB IS PER VARIANT.
+   *
+   * One declaration has to reach every variant row or lib/bestCost.ts sees a
+   * product that is DDP for Twin and not for King — which changes Best Cost
+   * for some sizes and not others.
+   */
+  const ddpRows = await db.quote.findMany({
+    select: {
+      invitationId: true,
+      styleId: true,
+      dutyType: true,
+      ddpWest: true,
+      fob: true,
+    },
+  });
+  const byProduct = new Map<string, typeof ddpRows>();
+  for (const r of ddpRows) {
+    const k = `${r.invitationId}|${r.styleId}`;
+    byProduct.set(k, [...(byProduct.get(k) ?? []), r]);
+  }
+  const multi = [...byProduct.values()].filter((rows) => rows.length > 1);
+  const ddpSplit = multi.filter(
+    (rows) =>
+      new Set(rows.map((r) => r.dutyType)).size > 1 ||
+      new Set(rows.map((r) => String(r.ddpWest))).size > 1,
+  );
+  check(
+    "DDP terms are uniform across a product's variants",
+    ddpSplit.length === 0,
+    `${multi.length} multi-variant products · ${ddpSplit.length} with split DDP`,
+  );
+
+  const fobFlat = multi.filter(
+    (rows) => new Set(rows.map((r) => String(r.fob))).size === 1,
+  );
+  check(
+    "FOB genuinely differs between a product's variants",
+    fobFlat.length === 0,
+    `${multi.length} multi-variant products · ${fobFlat.length} quoting one price for every size`,
   );
 
   console.log(

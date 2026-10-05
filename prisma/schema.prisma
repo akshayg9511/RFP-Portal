@@ -125,6 +125,7 @@ model Variation {
   currentSuppliers CurrentSupplier[]
   invitationStyles InvitationStyle[]
   quotes           Quote[]
+  awards           Award[]
 
   @@index([styleId])
   @@index([sku])
@@ -679,15 +680,25 @@ model Award {
   // UNTOUCHED -> ALLOCATED -> READY_FOR_REVIEW -> AWARDED
   status String @default("ALLOCATED")
 
+  /// Awarding is VARIATION-LEVEL (N1, 5 Oct). NULL = the whole product,
+  /// which is what a STYLE-grained product means — one group through the same
+  /// path. Each variation totals exactly 100% on its own (D2).
+  variationId  String?
+  variation    Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  /// The @STYLE sentinel — MySQL treats NULLs as distinct in a unique index,
+  /// so without it two style-level awards to one vendor would both be legal.
+  variationKey String     @default("@STYLE")
+
   comment   String?   @db.Text
   awardedAt DateTime?
   awardedBy String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@unique([waveId, styleId, vendorId])
+  @@unique([waveId, styleId, variationKey, vendorId])
   @@index([styleId])
   @@index([vendorId])
+  @@index([variationId])
   @@index([status])
 }
 

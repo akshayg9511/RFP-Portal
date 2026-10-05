@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/ds/components";
 import { money, unitCost, units } from "@/lib/format";
 import type { ProductBids } from "./types";
+import { VariationSwitcher } from "@/components/VariationSwitcher";
 
 /**
  * The product's identity strip — who it is, what it costs today, and the tabs.
@@ -30,9 +31,16 @@ export function ProductHeader({
   backHref,
   backLabel,
   onOpenGallery,
+  onSelectVariation,
 }: {
   data: ProductBids;
   bidCount: number;
+  /**
+   * N2 — the one dropdown that drives all three tabs. Absent (no control at
+   * all) on a STYLE-grained product, because a one-item dropdown reads as
+   * broken.
+   */
+  onSelectVariation?: (variationId: string) => void;
   /**
    * Where the breadcrumb returns to, WITH the filters that were applied when
    * the user left. Award Summary keeps its filters in the URL, so this is that
@@ -79,7 +87,27 @@ export function ProductHeader({
           ) : null}
 
           <div className="pd-id-text">
-            <h1 className="pd-title">{s.name}</h1>
+            <div className="pd-title-row">
+              <h1 className="pd-title">{s.name}</h1>
+              {data.variations.length > 1 && onSelectVariation ? (
+                <VariationSwitcher
+                  axisLabel={GRAIN_AXIS[s.variationLevel ?? ""] ?? "Variation"}
+                  value={data.selectedVariationId}
+                  onChange={onSelectVariation}
+                  variations={data.variations
+                    .filter((v) => v.variationId !== null)
+                    .map((v) => ({
+                      id: v.variationId!,
+                      // Whether each size is DONE, in the list itself, so the
+                      // buyer can see which are left without opening each one.
+                      label:
+                        Math.abs(v.allocatedPct - 100) < 0.005
+                          ? `${v.label} · allocated`
+                          : `${v.label} · not yet`,
+                    }))}
+                />
+              ) : null}
+            </div>
             <div className="pd-meta">
               {[s.division, s.department, s.subDepartment]
                 .filter(Boolean)
@@ -125,3 +153,10 @@ export function ProductHeader({
     </div>
   );
 }
+
+/** Names the dropdown's axis, so it explains itself. */
+const GRAIN_AXIS: Record<string, string> = {
+  SIZE: "Size",
+  COLOUR: "Colour",
+  SKU: "Colour / size",
+};

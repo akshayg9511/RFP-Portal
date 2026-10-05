@@ -35,6 +35,22 @@ const STATES = {
    */
   "/products/award": [
     {
+      // N2 — the variation dropdown that drives all three tabs. Lint a
+      // SIZE-grained product so the control exists; on a STYLE-grained one
+      // it is absent by design.
+      name: "product · variation dropdown open",
+      open: async (page) => {
+        const btn = page.locator(".pd-title-row button").first();
+        if (!(await btn.count())) {
+          throw new Error(
+            "product page: no variation dropdown — lint a SIZE-grained product",
+          );
+        }
+        await btn.click();
+        await page.waitForTimeout(600);
+      },
+    },
+    {
       name: "product · compare bids, bucket expanded",
       open: async (page) => {
         await page.waitForSelector(".pd-subtabs", { timeout: 8000 });
@@ -225,11 +241,275 @@ const STATES = {
   ],
   "/insights": [
     {
+      // N8/N9 — filtered to a division: every block recomputes, region
+      // breaches become flags, and vendor bars show a wave-wide tick.
+      name: "wave insights · filtered to a division",
+      open: async (page) => {
+        await page.waitForSelector(".aw-filters select", { timeout: 8000 });
+        const sel = page.locator(".aw-filters select").first();
+        const options = await sel.locator("option").allTextContents();
+        if (options.length < 2) throw new Error("wave insights: no division to filter by");
+        await sel.selectOption({ index: 1 });
+        await page.waitForTimeout(3500);
+        const scoped = await page.locator(".bar--info strong").first().textContent();
+        if (!/Showing/.test(scoped ?? "")) {
+          throw new Error(`wave insights: the filter did not apply (${scoped})`);
+        }
+      },
+      cleanup: async (page) => {
+        // The filter lives in the URL; leave the page as the next state
+        // expects to find it — unfiltered.
+        await page.goto(page.url().split("?")[0], { waitUntil: "domcontentloaded" });
+        await page.waitForTimeout(3000);
+      },
+    },
+    {
       name: "vendor awards drawer open",
       open: async (page) => {
         await page.locator("tbody tr.vm-row").first().click();
         await page.waitForSelector(".drawer", { timeout: 5000 });
         await page.waitForTimeout(1500);
+      },
+    },
+  ],
+  /**
+   * The vendor bid list is behind Vendor View, which is CLIENT state — with no
+   * vendor picked the route renders "Pick a vendor first" and the flat product
+   * list goes unlinted. Two states have already passed in this harness while
+   * checking nothing, so this one ASSERTS the table arrived before linting.
+   */
+  "/vendor": [
+    {
+      name: "vendor bid list · flat product rows",
+      open: async (page) => {
+        /**
+         * The vendor is DISCOVERED, not hardcoded. A seed id baked in here
+         * went stale on the next reseed, so the state linted the empty
+         * "nothing to quote" view — the exact silent pass this harness
+         * exists to prevent.
+         */
+        const vendorId = await page.evaluate(async () => {
+          const r = await fetch("/api/vendors");
+          if (!r.ok) return null;
+          const d = await r.json();
+          const list = Array.isArray(d) ? d : (d.vendors ?? []);
+          for (const v of list) {
+            const inv = await fetch(`/api/vendor/${v.id}/invitations`);
+            if (!inv.ok) continue;
+            const rows = await inv.json();
+            const products = (Array.isArray(rows) ? rows : []).reduce(
+              (n, i) => n + (i.products?.length ?? 0),
+              0,
+            );
+            if (products >= 2) return v.id;
+          }
+          return null;
+        });
+        if (!vendorId) {
+          throw new Error("vendor bid list: no vendor with 2+ products");
+        }
+        await page.evaluate(
+          (v) =>
+            sessionStorage.setItem(
+              "procura.vendorView",
+              JSON.stringify({ id: v, name: "Vendor" }),
+            ),
+          vendorId,
+        );
+        await page.reload({ waitUntil: "domcontentloaded" });
+        try {
+          await page.waitForSelector(".data-grid tbody tr", { timeout: 8000 });
+        } catch {
+          throw new Error(
+            `vendor bid list never rendered. url=${page.url()} ` +
+              `title=${await page.title()} ` +
+              `body=${(await page.locator("body").innerText()).slice(0, 200).replace(/\n/g, " | ")}`,
+          );
+        }
+        const rows = await page.locator(".data-grid tbody tr").count();
+        if (rows < 2) {
+          throw new Error(
+            `vendor bid list: expected the flat list, got ${rows} row(s). ` +
+              `Either Vendor View did not take or the seed changed.`,
+          );
+        }
+        await page.waitForTimeout(600);
+      },
+      cleanup: async (page) => {
+        await page.evaluate(() =>
+          sessionStorage.removeItem("procura.vendorView"),
+        );
+      },
+    },
+  ],
+  /**
+   * The quote form, at a MULTI-VARIANT product with DDP open — the state
+   * that carries almost all of 2a.4: the variant selector, the light/full
+   * template split and the six DDP fees.
+   *
+   * The target is DISCOVERED from the vendor's own payload rather than
+   * hardcoded, because seed ids change on every reseed and a stale id would
+   * silently lint the empty state instead of the form.
+   */
+  "/vendor/quote": [
+    {
+      name: "quote form · variant selector + DDP open",
+      open: async (page) => {
+        /**
+         * The form reads the vendor from Vendor View, which is CLIENT state.
+         * Without it the page renders "Pick a vendor first" and every
+         * selector below finds nothing — so the vendor is taken from the
+         * invitation itself and set before the form is linted.
+         */
+        const vendorId = await page.evaluate(async () => {
+          const parts = location.pathname.split("/");
+          const r = await fetch(`/api/quotes/${parts[3]}/${parts[4]}`);
+          if (!r.ok) return null;
+          const d = await r.json();
+          return d?.vendor?.id ?? null;
+        });
+        if (!vendorId) throw new Error("quote form: no vendor on the payload");
+        await page.evaluate(
+          (v) =>
+            sessionStorage.setItem(
+              "procura.vendorView",
+              JSON.stringify({ id: v, name: "Vendor" }),
+            ),
+          vendorId,
+        );
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForSelector(".qv-tab, .quote-line", { timeout: 8000 });
+        const tabs = await page.locator(".qv-tab").count();
+        if (tabs < 2) {
+          throw new Error(
+            `quote form: expected a multi-variant product, got ${tabs} tab(s).`,
+          );
+        }
+        // Switch variant, so the selector is linted in both states.
+        await page.locator(".qv-tab").nth(1).click();
+        // Open the DDP block — six inputs that are otherwise never rendered.
+        const toggle = page.locator('.switch input[type="checkbox"]').first();
+        if (await toggle.isEnabled()) {
+          await toggle.check();
+          await page.waitForSelector('[id^="ddp-"]', { timeout: 5000 });
+        }
+        // And expand a folded line-item group where the stage is LIGHT.
+        const detail = page.locator(".qv-detail > summary").first();
+        if (await detail.count()) await detail.click();
+        await page.waitForTimeout(800);
+      },
+      cleanup: async (page) => {
+        await page.evaluate(() =>
+          sessionStorage.removeItem("procura.vendorView"),
+        );
+      },
+    },
+    {
+      // The conversation drawer (J3) is new UI on a route whose default
+      // state does not show it, so without its own entry it goes unlinted.
+      name: "quote form · withdraw modal",
+      open: async (page) => {
+        const vendorId = await page.evaluate(async () => {
+          const parts = location.pathname.split("/");
+          const r = await fetch(`/api/quotes/${parts[3]}/${parts[4]}`);
+          if (!r.ok) return null;
+          return (await r.json())?.vendor?.id ?? null;
+        });
+        if (!vendorId) throw new Error("withdraw: no vendor on the payload");
+        await page.evaluate(
+          (v) =>
+            sessionStorage.setItem(
+              "procura.vendorView",
+              JSON.stringify({ id: v, name: "Vendor" }),
+            ),
+          vendorId,
+        );
+        await page.reload({ waitUntil: "domcontentloaded" });
+        // Withdraw moved behind the "More" menu when the five-button row
+        // collapsed to two (L1), so the state reaches it that way now.
+        await page.waitForSelector('.page-hd button:has-text("More")', {
+          timeout: 8000,
+        });
+        await page.locator('.page-hd button:has-text("More")').click();
+        await page.waitForSelector(".qa-menu", { timeout: 5000 });
+        await page.locator('.qa-menu .menu-item:has-text("Withdraw")').click();
+        // Assert the form ARMED inside its modal. A click that missed would
+        // lint the page without it and still report a pass.
+        await page.waitForSelector(".bl-withdraw-form", { timeout: 5000 });
+        await page.waitForTimeout(500);
+      },
+      cleanup: async (page) => {
+        await page.evaluate(() =>
+          sessionStorage.removeItem("procura.vendorView"),
+        );
+      },
+    },
+    {
+      // The submit modal (L2) — pre-ticked variants and one commit. It is
+      // where the whole scope decision now lives, so it needs its own state.
+      name: "quote form · submit modal",
+      open: async (page) => {
+        const vendorId = await page.evaluate(async () => {
+          const parts = location.pathname.split("/");
+          const r = await fetch(`/api/quotes/${parts[3]}/${parts[4]}`);
+          if (!r.ok) return null;
+          return (await r.json())?.vendor?.id ?? null;
+        });
+        if (!vendorId) throw new Error("submit modal: no vendor on the payload");
+        await page.evaluate(
+          (v) =>
+            sessionStorage.setItem(
+              "procura.vendorView",
+              JSON.stringify({ id: v, name: "Vendor" }),
+            ),
+          vendorId,
+        );
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForSelector('.page-hd button:has-text("Submit quote")', {
+          timeout: 8000,
+        });
+        await page.locator('.page-hd button:has-text("Submit quote")').click();
+        await page.waitForSelector(".modal", { timeout: 5000 });
+        await page.waitForTimeout(500);
+      },
+      cleanup: async (page) => {
+        await page.evaluate(() =>
+          sessionStorage.removeItem("procura.vendorView"),
+        );
+      },
+    },
+    {
+      name: "quote form · comments drawer open",
+      open: async (page) => {
+        const vendorId = await page.evaluate(async () => {
+          const parts = location.pathname.split("/");
+          const r = await fetch(`/api/quotes/${parts[3]}/${parts[4]}`);
+          if (!r.ok) return null;
+          return (await r.json())?.vendor?.id ?? null;
+        });
+        if (!vendorId) throw new Error("comments: no vendor on the payload");
+        await page.evaluate(
+          (v) =>
+            sessionStorage.setItem(
+              "procura.vendorView",
+              JSON.stringify({ id: v, name: "Vendor" }),
+            ),
+          vendorId,
+        );
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForSelector(".bl-comments", { timeout: 8000 });
+        await page.locator(".bl-comments").click();
+        // Assert it actually OPENED — a click that silently misses would
+        // lint the page without the drawer and still report a pass.
+        await page.waitForSelector(".drawer .bt, .bt-panel", {
+          timeout: 5000,
+        });
+        await page.waitForTimeout(600);
+      },
+      cleanup: async (page) => {
+        await page.evaluate(() =>
+          sessionStorage.removeItem("procura.vendorView"),
+        );
       },
     },
   ],
@@ -250,6 +530,20 @@ const STATES = {
    * live under "/products/award" above, as real tabs on a real page.
    */
   "/award": [
+    {
+      // FIRST, because the state after it navigates away. N6 — a product
+      // row expands to one sibling row per variation.
+      name: "award summary · product expanded to variations",
+      open: async (page) => {
+        await page.waitForSelector(".aw-chev", { timeout: 8000 });
+        await page.locator(".aw-chev").first().click();
+        await page.waitForTimeout(600);
+        const n = await page.locator("tr.aw-var-row").count();
+        if (n < 2) {
+          throw new Error(`award summary: expected variation rows, got ${n}`);
+        }
+      },
+    },
     {
       name: "award summary · row navigates to the allocation page",
       open: async (page) => {
@@ -441,9 +735,17 @@ for (const route of routes) {
       Object.keys(STATES).find((key) => {
         const parts = key.split("/").filter(Boolean);
         if (parts.length < 2) return false;
-        // "/products/award" matches "/products/{anything}/award"
-        return new RegExp(`^/${parts[0]}/[^/]+/${parts.slice(1).join("/")}$`).test(
-          route,
+        // "/products/award" matches "/products/{anything}/award".
+        //
+        // Also allow a PREFIX key with any number of id segments after it, so
+        // "/vendor/quote" matches "/vendor/quote/{invitationId}/{styleId}" —
+        // two ids, which the single-{id} pattern above could never reach. A
+        // state registered against an unmatched key is a state that never
+        // runs, which is the same as no gate at all.
+        return (
+          new RegExp(`^/${parts[0]}/[^/]+/${parts.slice(1).join("/")}$`).test(
+            route,
+          ) || new RegExp(`^${key}(/[^/]+)+$`).test(route)
         );
       })
     ] ??
@@ -455,6 +757,9 @@ for (const route of routes) {
     } catch (err) {
       console.error(`    ✗ could not reach state "${state.name}": ${err.message}`);
       totalErrors++;
+      // Still clean up: a state that failed PART WAY may already have written
+      // the storage its cleanup exists to remove.
+      if (state.cleanup) await state.cleanup(page).catch(() => {});
       continue;
     }
 
@@ -491,6 +796,15 @@ for (const route of routes) {
         `    ${f.level === "error" ? "ERROR" : "warn "}  ${f.rule ?? ""} — ${f.message ?? ""}${f.selector ? `  [${f.selector}]` : ""}`,
       );
     }
+
+    /**
+     * A state that writes PERSISTENT browser storage must undo it. One
+     * browser context serves every route, so Vendor View left in
+     * sessionStorage put the whole app into impersonation and three later
+     * routes reported their tables missing — pages that were entirely fine.
+     * The failure looked like a product regression and was a harness leak.
+     */
+    if (state.cleanup) await state.cleanup(page);
   }
 }
 

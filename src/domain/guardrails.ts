@@ -38,6 +38,12 @@ export type AwardRow = {
   cooRegion: string | null;
   isNewToQuince: boolean;
   awardedDollars: number;
+  /**
+   * Does this vendor CURRENTLY supply this style? A property of the
+   * style x vendor PAIR, derived from CurrentSupplier and never stored
+   * (Build Doc 3.7). Optional so every pre-N14 caller is unchanged.
+   */
+  isIncumbent?: boolean;
 };
 
 export type CooStatus = {
@@ -120,6 +126,19 @@ export type VendorSpend = {
   cap: number;
   breached: boolean;
   headroom: number;
+  /**
+   * The bar's three colours — decision N14, 5 Oct.
+   *
+   * Akshay: "For the products they were already serving, those will come
+   * under incumbent, which is a subpart of existing, but it is still
+   * incumbent. The rest, where it was not serving, will be existing, and the
+   * remaining will be new."
+   *
+   * So an EXISTING vendor splits into incumbent + existing, and a NEW vendor
+   * is new only — a vendor new to Quince supplies nothing today and cannot be
+   * an incumbent. The three always sum to `dollars`.
+   */
+  split: { incumbent: number; existing: number; new: number };
 };
 
 /**
@@ -134,22 +153,32 @@ export function vendorSpend(rows: AwardRow[], caps: SpendCaps): VendorSpend[] {
   const byVendor = new Map<string, VendorSpend>();
 
   for (const row of rows) {
-    const existing = byVendor.get(row.vendorId);
-    if (existing) {
-      existing.dollars += row.awardedDollars;
-      continue;
+    let v = byVendor.get(row.vendorId);
+    if (!v) {
+      const cap = row.isNewToQuince ? caps.new : caps.incumbentOrExisting;
+      v = {
+        vendorId: row.vendorId,
+        vendorName: row.vendorName,
+        isNewToQuince: row.isNewToQuince,
+        dollars: 0,
+        cap,
+        breached: false,
+        headroom: cap,
+        split: { incumbent: 0, existing: 0, new: 0 },
+      };
+      byVendor.set(row.vendorId, v);
     }
 
-    const cap = row.isNewToQuince ? caps.new : caps.incumbentOrExisting;
-    byVendor.set(row.vendorId, {
-      vendorId: row.vendorId,
-      vendorName: row.vendorName,
-      isNewToQuince: row.isNewToQuince,
-      dollars: row.awardedDollars,
-      cap,
-      breached: false,
-      headroom: cap,
-    });
+    v.dollars += row.awardedDollars;
+    // New-to-Quince wins over incumbency: such a vendor supplies nothing
+    // today, so an `isIncumbent` flag on it would be a data error, not a
+    // reason to colour it as one.
+    const bucket = row.isNewToQuince
+      ? "new"
+      : row.isIncumbent
+        ? "incumbent"
+        : "existing";
+    v.split[bucket] += row.awardedDollars;
   }
 
   for (const v of byVendor.values()) {

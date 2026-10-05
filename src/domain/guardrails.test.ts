@@ -287,3 +287,47 @@ describe("coverage — progress is baseline-against-baseline", () => {
     expect(Number.isNaN(c.shareDecided)).toBe(false);
   });
 });
+
+/* N14 — the cap bar's three colours. */
+describe("vendorSpend splits each vendor into incumbent / existing / new", () => {
+  const caps = { incumbentOrExisting: 20_000_000, new: 5_000_000 };
+  const row = (vendorId: string, styleId: string, dollars: number, o: { isNew?: boolean; isIncumbent?: boolean } = {}) => ({
+    styleId, vendorId, vendorName: vendorId, cooRegion: "ISC",
+    isNewToQuince: o.isNew ?? false, isIncumbent: o.isIncumbent ?? false,
+    awardedDollars: dollars,
+  });
+
+  it("splits an existing vendor by the styles it already supplies", () => {
+    // Akshay's example: 5 products, already serving 2.
+    const [v] = vendorSpend([
+      row("A", "s1", 100, { isIncumbent: true }),
+      row("A", "s2", 200, { isIncumbent: true }),
+      row("A", "s3", 50),
+      row("A", "s4", 50),
+      row("A", "s5", 100),
+    ], caps);
+    expect(v!.split).toEqual({ incumbent: 300, existing: 200, new: 0 });
+  });
+
+  it("puts a new vendor entirely in 'new', even if a row claims incumbency", () => {
+    const [v] = vendorSpend([row("B", "s1", 400, { isNew: true, isIncumbent: true })], caps);
+    expect(v!.split).toEqual({ incumbent: 0, existing: 0, new: 400 });
+  });
+
+  it("always sums the three parts to the vendor's total", () => {
+    const out = vendorSpend([
+      row("A", "s1", 120, { isIncumbent: true }),
+      row("A", "s2", 80),
+      row("B", "s1", 60, { isNew: true }),
+    ], caps);
+    for (const v of out) {
+      expect(v.split.incumbent + v.split.existing + v.split.new).toBeCloseTo(v.dollars, 6);
+    }
+  });
+
+  it("leaves pre-N14 callers unchanged — no isIncumbent means existing", () => {
+    const [v] = vendorSpend([{ styleId: "s", vendorId: "A", vendorName: "A", cooRegion: null, isNewToQuince: false, awardedDollars: 10 }], caps);
+    expect(v!.dollars).toBe(10);
+    expect(v!.split.existing).toBe(10);
+  });
+});

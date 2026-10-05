@@ -235,6 +235,78 @@ export function CapBar({
   );
 }
 
+/**
+ * The cap bar in THREE colours — decision N14, 5 Oct.
+ *
+ * One vendor's spend split by its relationship to each product it won:
+ * incumbent (it already supplies that product), existing (it does not, but
+ * it is not new to Quince) and new (new to Quince — so never incumbent).
+ *
+ * A breach is shown as a danger OUTLINE on the track, not by recolouring the
+ * fill: the fill now carries three categories, and painting it red would
+ * erase the split at exactly the moment it matters most. Status colour is
+ * reserved and always ships with text — the Headroom column says "over".
+ *
+ * Colours: incumbent cat-5, existing cat-2, new cat-4 — the last two match
+ * the vendor-type donut. Separation was COMPUTED in both modes (see the CSS).
+ *
+ * `wave` is the vendor's WAVE-WIDE total (N16). Shown as a tick when the page
+ * is filtered, because the cap belongs to the vendor, not the slice — a
+ * vendor under cap in Womens can be over it across the wave.
+ */
+export function SplitCapBar({
+  split,
+  cap,
+  breached,
+  wave,
+}: {
+  split: { incumbent: number; existing: number; new: number };
+  cap: number;
+  /** Judged on the WAVE-WIDE total, never the slice. */
+  breached: boolean;
+  /** Present only when filtered and different from the slice total. */
+  wave?: number;
+}) {
+  // The cap sits at 80% of the track, leaving room to show an overrun.
+  const pct = (n: number) => (cap ? Math.max(0, (n / cap) * 80) : 0);
+  const parts = [
+    { key: "incumbent", value: split.incumbent, label: "incumbent" },
+    { key: "existing", value: split.existing, label: "existing" },
+    { key: "new", value: split.new, label: "new" },
+  ].filter((p) => p.value > 0);
+  const total = parts.reduce((t, p) => t + p.value, 0);
+  const describe = parts
+    .map((p) => `${p.label} ${Math.round((p.value / (total || 1)) * 100)}%`)
+    .join(", ");
+
+  return (
+    <span
+      className={breached ? "chart-cap chart-cap--split is-over" : "chart-cap chart-cap--split"}
+      role="img"
+      aria-label={`${describe || "nothing placed"}${breached ? ", over cap" : ""}`}
+      title={describe}
+    >
+      <span className="chart-cap-mark" aria-hidden="true" />
+      {wave !== undefined ? (
+        <span
+          className="chart-cap-wave"
+          aria-hidden="true"
+          style={{ insetInlineStart: `${Math.min(100, pct(wave))}%` }}
+        />
+      ) : null}
+      <span className="chart-cap-stack" aria-hidden="true">
+        {parts.map((p) => (
+          <span
+            key={p.key}
+            className={`chart-cap-seg is-${p.key}`}
+            style={{ inlineSize: `${Math.min(100, pct(p.value))}%` }}
+          />
+        ))}
+      </span>
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * Coverage meter
  * ------------------------------------------------------------------ */
