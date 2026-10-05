@@ -1,0 +1,657 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Badge, Checkbox, Icon } from "@/ds/components";
+import { useApi } from "@/lib/useApi";
+import { money, unitCost, units } from "@/lib/format";
+import { FacetSelect, facetsOf } from "@/components/FacetSelect";
+import type { BidGroup, BidSummary, FlatRow } from "./types";
+
+/**
+ * BID SUMMARY — Phase 3, 5 Oct.
+ *
+ * Every bid across every RFP, one row per product x variant x vendor, grouped
+ * under a header per product x variant (U1). Replaces the "flat grid inside
+ * the RFP page" of the old plan: Akshay wanted ONE place to see bids across
+ * every division and act on them.
+ *
+ * The business works from the Wave 1 "Bid Inputs" sheet (~3,000 rows), so the
+ * price columns are the sheet's (U2) — Quince-paid ocean / air / blend and DDP
+ * ocean / air / blend — made legible: grouped under two-tier headers, the
+ * basis in use emphasised and the other receding, the variant's lowest
+ * blended cost marked.
+ */
+
+type View = "review" | "notbid" | "unallocated" | "all";
+
+const VIEWS: { key: View; label: string }[] = [
+  // U4 — the default, and a removable filter. "Awaiting review" is the Quince
+  // side of the vendor's "With Quince": the same moment, named from each seat.
+  { key: "review", label: "Awaiting review" },
+  { key: "notbid", label: "Not bid" },
+  { key: "unallocated", label: "Unallocated variants" },
+];
+
+const FREIGHT_LABEL = { QUINCE_BLEND: "Quince-paid", DDP_BLEND: "DDP" } as const;
+
+export default function BidSummaryPage() {
+  // useSearchParams() needs a Suspense boundary to prerender (A17).
+  return (
+    <React.Suspense fallback={<div className="sk" style={{ blockSize: 320 }} />}>
+      <BidSummaryInner />
+    </React.Suspense>
+  );
+}
+
+function BidSummaryInner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const { data, loading, error, reload } = useApi<BidSummary>("/api/bid-summary");
+
+  // ── filters, all in the URL (P12) ───────────────────────────────────────
+  const view = (params.get("view") as View | null) ?? "review";
+  const get = (k: string) => params.get(k) ?? "";
+  const f = {
+    q: get("q"),
+    division: get("division"),
+    department: get("department"),
+    subDepartment: get("subDepartment"),
+    material: get("material"),
+    colour: get("colour"),
+    vendor: get("vendor"),
+    country: get("country"),
+    gm: get("gm"),
+    partner: get("partner"),
+    stage: get("stage"),
+    freight: get("freight"),
+  };
+  function setParam(key: string, value: string) {
+    const next = new URLSearchParams(params.toString());
+    if (value) next.set(key, value);
+    else next.delete(key);
+    const qs = next.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
+  }
+  // "all" is explicit in the URL, because the DEFAULT is "review" — clearing
+  // the chip must not snap straight back to it.
+  const setView = (v: View) => setParam("view", v === "review" ? "" : v);
+
+  const flat: FlatRow[] = React.useMemo(
+    () =>
+      (data?.groups ?? []).flatMap((group) =>
+        group.rows.map((r) => ({ ...r, group, rowKey: `${group.key}|${r.invitationId}` })),
+      ),
+    [data],
+  );
+
+  const freightOf = (r: FlatRow) =>
+    !r.price ? null : r.price.overridden ? "Overridden" : FREIGHT_LABEL[r.price.basis];
+
+  /** Every filter except `skip` — so a facet never zeroes its own options. */
+  const matches = React.useCallback(
+    (r: FlatRow, skip?: string) => {
+      const g = r.group;
+      const q = f.q.trim().toLowerCase();
+      return (
+        (skip === "q" || !q ||
+          `${g.styleNumber} ${g.name} ${r.vendor.name}`.toLowerCase().includes(q)) &&
+        (skip === "division" || !f.division || g.division === f.division) &&
+        (skip === "department" || !f.department || g.department === f.department) &&
+        (skip === "subDepartment" || !f.subDepartment || g.subDepartment === f.subDepartment) &&
+        (skip === "material" || !f.material || g.material === f.material) &&
+        (skip === "colour" || !f.colour || g.colours.includes(f.colour)) &&
+        (skip === "vendor" || !f.vendor || r.vendor.name === f.vendor) &&
+        (skip === "country" || !f.country || r.vendor.countryIso === f.country) &&
+        (skip === "gm" || !f.gm || r.rfp.gm === f.gm) &&
+        (skip === "partner" || !f.partner || r.rfp.sourcingPartner === f.partner) &&
+        (skip === "stage" || !f.stage || r.stage.quinceLabel === f.stage) &&
+        (skip === "freight" || !f.freight || freightOf(r) === f.freight)
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [params],
+  );
+
+  const inView = React.useCallback(
+    (r: FlatRow) =>
+      view === "all"
+        ? true
+        : view === "review"
+          ? r.hasBid && r.stage.awaitingReview
+          : view === "notbid"
+            ? !r.hasBid
+            : // Unallocated is a VARIANT property: show every row of a variant
+              // that has bids but is not yet at 100%.
+              !r.group.allocated && r.group.rows.some((x) => x.hasBid),
+    [view],
+  );
+
+  const visible = React.useMemo(
+    () => flat.filter((r) => matches(r) && inView(r)),
+    [flat, matches, inView],
+  );
+
+  // Re-assemble groups from the visible rows, keeping server order.
+  const groups = React.useMemo(() => {
+    const byKey = new Map<string, { group: BidGroup; rows: FlatRow[] }>();
+    for (const r of visible) {
+      const cur = byKey.get(r.group.key) ?? { group: r.group, rows: [] };
+      cur.rows.push(r);
+      byKey.set(r.group.key, cur);
+    }
+    return [...byKey.values()];
+  }, [visible]);
+
+  const facets = React.useMemo(() => {
+    const pool = (dim: string) => flat.filter((r) => matches(r, dim) && inView(r));
+    return {
+      division: facetsOf(pool("division"), (r) => r.group.division),
+      department: facetsOf(pool("department"), (r) => r.group.department),
+      subDepartment: facetsOf(pool("subDepartment"), (r) => r.group.subDepartment),
+      material: facetsOf(pool("material"), (r) => r.group.material),
+      colour: facetsOf(pool("colour"), (r) => r.group.colours),
+      vendor: facetsOf(pool("vendor"), (r) => r.vendor.name),
+      country: facetsOf(pool("country"), (r) => r.vendor.countryIso),
+      gm: facetsOf(pool("gm"), (r) => r.rfp.gm),
+      partner: facetsOf(pool("partner"), (r) => r.rfp.sourcingPartner),
+      stage: facetsOf(pool("stage"), (r) => r.stage.quinceLabel),
+      freight: facetsOf(pool("freight"), (r) => freightOf(r)),
+    };
+  }, [flat, matches, inView]);
+
+  // Counts for the quick views, under every OTHER filter. "Unallocated" is a
+  // VARIANT property, so it counts variants — counting their rows would read
+  // as "21 unallocated" for 5 sizes with four vendors each.
+  const viewCount = (v: View) =>
+    v === "unallocated"
+      ? new Set(
+          flat
+            .filter((r) => matches(r) && !r.group.allocated && r.group.rows.some((x) => x.hasBid))
+            .map((r) => r.group.key),
+        ).size
+      : flat.filter(
+      (r) =>
+        matches(r) &&
+        (v === "review"
+          ? r.hasBid && r.stage.awaitingReview
+          : v === "notbid"
+            ? !r.hasBid
+            : !r.group.allocated && r.group.rows.some((x) => x.hasBid)),
+    ).length;
+
+  // ── collapse + selection ────────────────────────────────────────────────
+  const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const toggleCollapse = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const toggleRow = (key: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const anyFilter = Object.entries(f).some(([, v]) => v);
+  const hiddenActive = [f.material, f.colour, f.country, f.gm, f.partner, f.freight].filter(Boolean).length;
+  // Open by default when one of its filters is already applied (e.g. a shared
+  // link), so an active filter is never hidden on arrival.
+  const [moreOpen, setMoreOpen] = React.useState(hiddenActive > 0);
+
+  if (loading && !data) {
+    return (
+      <>
+        <div className="page-hd"><h1>Bid summary</h1></div>
+        <div className="sk" style={{ blockSize: 360 }} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="page-hd">
+        <h1>Bid summary</h1>
+      </div>
+
+      {error ? (
+        <div className="bar bar--danger">
+          <Icon name="alert_triangle" />
+          <div><strong>Bids could not be loaded.</strong> {error}</div>
+        </div>
+      ) : null}
+
+      {data ? (
+        <>
+          {/* QUICK VIEWS (U4). Awaiting review is the default and a removable
+              chip — clearing it shows every bid. */}
+          <div className="bs-views" role="group" aria-label="Quick views">
+            {VIEWS.map((v) => {
+              const on = view === v.key;
+              return (
+                <button
+                  key={v.key}
+                  type="button"
+                  className={on ? "bs-view on" : "bs-view"}
+                  aria-pressed={on}
+                  onClick={() => setView(on ? "all" : v.key)}
+                >
+                  {v.label}
+                  <span className="ct">{viewCount(v.key)}</span>
+                  {on ? <Icon name="close" size="sm" /> : null}
+                </button>
+              );
+            })}
+            <span className="bs-views-total">
+              {view === "all"
+                ? `All ${flat.filter((r) => matches(r)).length} bids`
+                : `${visible.length} shown`}
+            </span>
+          </div>
+
+          <div className="aw-filters bs-filters">
+            <div className="control search sm aw-search">
+              <Icon name="search" size="sm" />
+              <input
+                placeholder="Search product or vendor"
+                aria-label="Search product or vendor"
+                value={f.q}
+                onChange={(e) => setParam("q", e.target.value)}
+              />
+            </div>
+            <FacetSelect label="Division" value={f.division} onChange={(v) => setParam("division", v)} options={facets.division} />
+            <FacetSelect label="Department" value={f.department} onChange={(v) => setParam("department", v)} options={facets.department} />
+            <FacetSelect label="Sub-department" value={f.subDepartment} onChange={(v) => setParam("subDepartment", v)} options={facets.subDepartment} />
+            <FacetSelect label="Vendor" value={f.vendor} onChange={(v) => setParam("vendor", v)} options={facets.vendor} />
+            <FacetSelect label="Stage" value={f.stage} onChange={(v) => setParam("stage", v)} options={facets.stage} />
+            {/* Twelve filters took three rows before a single bid was
+                visible. The six used most stay out; the rest sit behind
+                "More filters", which COUNTS how many of them are applied —
+                a filter you cannot see must never silently narrow the list. */}
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              <Icon name="filter" size="sm" />
+              More filters{hiddenActive ? ` (${hiddenActive})` : ""}
+            </button>
+            {moreOpen ? (
+              <>
+                <FacetSelect label="Material" value={f.material} onChange={(v) => setParam("material", v)} options={facets.material} />
+                <FacetSelect label="Colour" value={f.colour} onChange={(v) => setParam("colour", v)} options={facets.colour} />
+                <FacetSelect label="Country" allLabel="All countries" value={f.country} onChange={(v) => setParam("country", v)} options={facets.country} />
+                <FacetSelect label="GM" value={f.gm} onChange={(v) => setParam("gm", v)} options={facets.gm} />
+                <FacetSelect label="Sourcing partner" value={f.partner} onChange={(v) => setParam("partner", v)} options={facets.partner} />
+                <FacetSelect label="Freight" allLabel="Any freight" value={f.freight} onChange={(v) => setParam("freight", v)} options={facets.freight} />
+              </>
+            ) : null}
+            {anyFilter ? (
+              <button
+                className="btn btn--ghost btn--sm"
+                onClick={() => {
+                  const next = new URLSearchParams();
+                  if (params.get("view")) next.set("view", params.get("view")!);
+                  router.replace(next.toString() ? `?${next}` : "?", { scroll: false });
+                }}
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+
+          {groups.length === 0 ? (
+            <div className="card">
+              <div className="card-b">
+                <div className="empty">
+                  <span className="glyph"><Icon name="check_circle" size="lg" /></span>
+                  <div className="ttl">
+                    {view === "review" && !anyFilter ? "Nothing awaiting review" : "No bids match"}
+                  </div>
+                  <div className="desc">
+                    {view === "review" && !anyFilter
+                      ? "Every submitted bid has been acted on. Clear the view to see all bids."
+                      : "Try clearing a filter or the quick view."}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="data-grid-surface bs-scroll">
+              <table className="data-grid bs-grid">
+                <thead>
+                  <tr>
+                    <th rowSpan={2} className="bs-sticky bs-c-check" aria-label="Select" />
+                    <th rowSpan={2} className="bs-sticky bs-c-vendor">Vendor</th>
+                    <th rowSpan={2}>COO</th>
+                    <th rowSpan={2} className="num">FOB</th>
+                    <th colSpan={3} className="bs-band">Quince-paid landed</th>
+                    <th colSpan={3} className="bs-band">DDP landed (highest dest.)</th>
+                    <th rowSpan={2} className="num">vs current</th>
+                    <th rowSpan={2} className="num">Savings / yr</th>
+                    <th rowSpan={2} className="num">Award</th>
+                    <th rowSpan={2}>Stage</th>
+                    <th rowSpan={2} className="num">Lead time</th>
+                    <th rowSpan={2} className="num">Capacity</th>
+                    <th rowSpan={2} className="num">MOQ</th>
+                  </tr>
+                  <tr>
+                    <th className="num bs-sub">Ocean</th>
+                    <th className="num bs-sub">Air</th>
+                    <th className="num bs-sub">Blend</th>
+                    <th className="num bs-sub">Ocean</th>
+                    <th className="num bs-sub">Air</th>
+                    <th className="num bs-sub">Blend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map(({ group, rows }) => (
+                    <GroupRows
+                      key={group.key}
+                      group={group}
+                      rows={rows}
+                      collapsed={collapsed.has(group.key)}
+                      onToggle={() => toggleCollapse(group.key)}
+                      selected={selected}
+                      onSelect={toggleRow}
+                      onChanged={reload}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+const COLS = 17;
+
+function GroupRows({
+  group,
+  rows,
+  collapsed,
+  onToggle,
+  selected,
+  onSelect,
+  onChanged,
+}: {
+  group: BidGroup;
+  rows: FlatRow[];
+  collapsed: boolean;
+  onToggle: () => void;
+  selected: Set<string>;
+  onSelect: (key: string) => void;
+  /** Refetch after a write — never a full page reload, which loses scroll. */
+  onChanged: () => void;
+}) {
+  const bids = rows.filter((r) => r.hasBid).length;
+  const awaiting = rows.filter((r) => r.hasBid && r.stage.awaitingReview).length;
+
+  return (
+    <>
+      {/* THE VARIANT HEADER (U1) — what every vendor beneath it shares. */}
+      <tr className="bs-group">
+        <td colSpan={COLS}>
+          <div className="bs-group-in">
+            <button
+              type="button"
+              className="aw-chev"
+              aria-expanded={!collapsed}
+              aria-label={`${collapsed ? "Show" : "Hide"} vendors for ${group.styleNumber} ${group.variationLabel}`}
+              onClick={onToggle}
+            >
+              <Icon name={collapsed ? "chevron_right" : "chevron_down"} size="sm" />
+            </button>
+            <span className="bs-group-id">
+              <span className="id">{group.styleNumber}</span>
+              <span className="bs-group-name">{group.name}</span>
+              <span className="bs-group-var">{group.variationLabel}</span>
+            </span>
+            <span className="bs-fact">
+              Current landed <strong>{unitCost(group.currentLanded)}</strong>
+            </span>
+            <span className="bs-fact">{units(group.planUnits)} u/yr</span>
+            <SplitEditor group={group} onSaved={onChanged} />
+            {collapsed ? (
+              <span className="bs-fact">
+                {bids} bid{bids === 1 ? "" : "s"}
+                {awaiting ? ` · ${awaiting} awaiting review` : ""}
+              </span>
+            ) : null}
+            <span className="bs-group-alloc">
+              <Badge tone={group.allocated ? "success" : undefined}>
+                {group.allocated ? "Allocated" : `${Math.round(group.allocatedPct)}% allocated`}
+              </Badge>
+              {/* P8 — allocation happens in ONE place, opened on this size. */}
+              <Link
+                className="btn btn--ghost btn--sm"
+                href={`/products/${group.styleId}/award${group.variationId ? `?v=${group.variationId}` : ""}`}
+              >
+                Allocate
+                <Icon name="external" size="sm" />
+              </Link>
+            </span>
+          </div>
+        </td>
+      </tr>
+
+      {collapsed
+        ? null
+        : rows.map((r) => (
+            <BidRowView
+              key={r.rowKey}
+              row={r}
+              lowest={group.lowestBestCost}
+              checked={selected.has(r.rowKey)}
+              onCheck={() => onSelect(r.rowKey)}
+            />
+          ))}
+    </>
+  );
+}
+
+function BidRowView({
+  row,
+  lowest,
+  checked,
+  onCheck,
+}: {
+  row: FlatRow;
+  lowest: number | null;
+  checked: boolean;
+  onCheck: () => void;
+}) {
+  const p = row.price;
+  const usingDdp = p?.basis === "DDP_BLEND";
+  const isLowest = p !== null && lowest !== null && Math.abs(p.bestCost - lowest) < 1e-9;
+  // The basis NOT in use recedes, so "which price are we using" reads at a
+  // glance without hiding the sheet's columns (U2).
+  const qpCls = (extra = "") => `num ${p && usingDdp ? "bs-muted" : ""} ${extra}`.trim();
+  const ddpCls = (extra = "") => `num ${p && !usingDdp ? "bs-muted" : ""} ${extra}`.trim();
+
+  return (
+    <tr className={row.hasBid ? "bs-row" : "bs-row is-nobid"}>
+      <td className="bs-sticky bs-c-check" onClick={(e) => e.stopPropagation()}>
+        <Checkbox checked={checked} onChange={onCheck} aria-label={`Select ${row.vendor.name}`} />
+      </td>
+      <td className="bs-sticky bs-c-vendor">
+        <span className="bs-vendor">{row.vendor.name}</span>
+        <span className="bs-vendor-meta">
+          {row.vendor.type === "NEW" ? "New" : row.vendor.type === "INCUMBENT" ? "Incumbent" : "Existing"}
+        </span>
+      </td>
+      <td>
+        {row.vendor.countryIso ?? "—"}
+        <span className="bs-vendor-meta">{row.vendor.cooRegion}</span>
+      </td>
+
+      {p ? (
+        <>
+          <td className="num">{unitCost(p.fob)}</td>
+          <td className={qpCls()}>{unitCost(p.quincePaid.ocean)}</td>
+          <td className={qpCls()}>{unitCost(p.quincePaid.air)}</td>
+          <td className={qpCls(usingDdp ? "" : "bs-used")}>
+            {unitCost(p.quincePaid.blend)}
+            {!usingDdp ? <BasisMark lowest={isLowest} overridden={p.overridden} /> : null}
+          </td>
+          <td className={ddpCls()}>{p.ddp ? unitCost(p.ddp.ocean) : "—"}</td>
+          <td className={ddpCls()}>{p.ddp ? unitCost(p.ddp.air) : "—"}</td>
+          <td className={ddpCls(usingDdp ? "bs-used" : "")}>
+            {p.ddp ? unitCost(p.ddp.blend) : "—"}
+            {usingDdp ? <BasisMark lowest={isLowest} overridden={p.overridden} /> : null}
+          </td>
+          <td className="num">
+            {p.deltaPct === null ? "—" : (
+              <span className={p.deltaPct > 0 ? "aw-neg" : "aw-pos"}>
+                {p.deltaPct > 0 ? "+" : ""}
+                {(p.deltaPct * 100).toFixed(1)}%
+              </span>
+            )}
+          </td>
+          <td className="num">
+            <span className={p.annualSavings < 0 ? "aw-neg" : undefined}>{money(p.annualSavings)}</span>
+          </td>
+        </>
+      ) : (
+        <td colSpan={8} className="bs-nobid-cell">
+          {row.notIssued
+            ? "Not issued yet — the RFP is still a draft"
+            : row.cannotBid
+              ? "Not able to quote"
+              : "Not bid yet"}
+        </td>
+      )}
+
+      <td className="num">
+        {row.award ? (
+          <>
+            {Math.round(row.award.pct)}%
+            <span className="bs-vendor-meta">{money(row.award.dollars)}</span>
+          </>
+        ) : "—"}
+      </td>
+      <td>
+        {/* Quince's turn carries the only emphasis — it is what this
+            screen exists to surface. */}
+        <Badge tone={row.stage.awaitingReview ? "warning" : row.stage.status === "BID_ACCEPTED" ? "success" : undefined}>
+          {row.stage.quinceLabel}
+        </Badge>
+      </td>
+      <td className="num">{row.terms?.leadTimeDays ? `${row.terms.leadTimeDays}d` : "—"}</td>
+      <td className="num">{row.terms?.capacity ? units(row.terms.capacity) : "—"}</td>
+      <td className="num">{row.terms?.moq ? units(row.terms.moq) : "—"}</td>
+    </tr>
+  );
+}
+
+/** ◆ = the variant's lowest blended cost · * = Quince overrode the basis. */
+function BasisMark({ lowest, overridden }: { lowest: boolean; overridden: boolean }) {
+  if (!lowest && !overridden) return null;
+  return (
+    <span className="bs-mark" title={[lowest ? "Lowest on this variant" : "", overridden ? "Quince overrode the automatic freight basis" : ""].filter(Boolean).join(" · ")}>
+      {lowest ? "◆" : ""}
+      {overridden ? "*" : ""}
+    </span>
+  );
+}
+
+/**
+ * The variant's air / ocean split — U3. A ✎ on the header opens a small
+ * editor; every vendor beneath recomputes on save. Per VARIANT, so all of a
+ * size's bids stay on one freight assumption (P5).
+ */
+function SplitEditor({ group, onSaved }: { group: BidGroup; onSaved: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [air, setAir] = React.useState(String(group.split.airPct));
+  const [busy, setBusy] = React.useState(false);
+  const wrap = React.useRef<HTMLSpanElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  async function save(airPct: number | null) {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/styles/${group.styleId}/freight-split`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ variationId: group.variationId, airPct }),
+      });
+      if (r.ok) {
+        setOpen(false);
+        onSaved();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const value = Number(air);
+  const valid = air.trim() !== "" && Number.isFinite(value) && value >= 0 && value <= 100;
+
+  return (
+    <span className="bs-split" ref={wrap}>
+      <button
+        type="button"
+        className={group.split.set ? "bs-split-btn" : "bs-split-btn is-default"}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        title={group.split.set ? "Air / ocean split for every vendor on this variant" : "Wave default split — click to set one for this variant"}
+      >
+        Air {group.split.airPct} / Ocean {100 - group.split.airPct}
+        <Icon name="edit" size="sm" />
+      </button>
+      {open ? (
+        <span className="bs-split-pop" role="dialog" aria-label="Air and ocean split">
+          <label className="bs-split-l" htmlFor={`split-${group.key}`}>
+            Air %, applied to every vendor on this variant
+          </label>
+          <span className="bs-split-row">
+            <span className="control sm">
+              <input
+                id={`split-${group.key}`}
+                type="number"
+                min={0}
+                max={100}
+                value={air}
+                onChange={(e) => setAir(e.target.value)}
+              />
+            </span>
+            <span className="bs-split-ocean">Ocean {valid ? 100 - value : "—"}%</span>
+          </span>
+          <span className="bs-split-acts">
+            {group.split.set ? (
+              <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => save(null)}>
+                Reset to 70 / 30
+              </button>
+            ) : null}
+            <button className="btn btn--secondary btn--sm" disabled={busy || !valid} onClick={() => save(value)}>
+              Apply
+            </button>
+          </span>
+        </span>
+      ) : null}
+    </span>
+  );
+}

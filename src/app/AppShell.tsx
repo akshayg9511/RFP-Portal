@@ -27,6 +27,8 @@ const MAIN: Dest[] = [
 ];
 
 const AWARD: Dest[] = [
+  // P11 — bids, then award, then insights: the order the work happens in.
+  { href: "/bid-summary", label: "Bid summary", icon: "grid" },
   { href: "/award", label: "Award summary", icon: "list" },
   { href: "/insights", label: "Wave insights", icon: "chart_bar" },
 ];

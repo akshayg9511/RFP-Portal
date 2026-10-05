@@ -5828,3 +5828,196 @@ body > .drawer-frame .drawer {
   line-height: var(--type-caption-line);
   color: var(--color-fg-muted);
 }
+
+/* ─ Bid summary (Phase 3) ──────────────────────────────────────────────────
+   The business's Bid Inputs sheet, made legible: one header per product x
+   variant (U1), the sheet's price columns grouped by freight basis (U2), and
+   only Quince's turn carrying emphasis. */
+
+/* Quick views (U4) — removable filter chips, not tabs: they narrow the same
+   list, and clearing one shows everything. */
+.bs-views {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+.bs-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-surface);
+  color: var(--color-fg-default);
+  cursor: pointer;
+}
+.bs-view:hover { background: var(--color-bg-hover); }
+.bs-view.on {
+  border-color: var(--color-border-selected-surface);
+  background: var(--color-bg-muted);
+  font-weight: var(--type-emphasis-weight);
+}
+.bs-view .ct {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.bs-views-total {
+  margin-inline-start: auto;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+
+/* 17 columns do not fit at 1440 (U5): the grid scrolls sideways inside its
+   surface, with the checkbox and vendor pinned. Product and variant are on
+   the group header, so nothing identifying scrolls away. */
+.bs-scroll {
+  overflow-x: auto;
+  /* So the variant header can size to the VISIBLE width (cqi), not a guess. */
+  container-type: inline-size;
+}
+.bs-grid {
+  min-inline-size: 1500px;
+}
+.bs-grid th,
+.bs-grid td {
+  white-space: nowrap;
+}
+/* Pinned columns are OPAQUE — a sticky surface without a fill lets the
+   scrolled columns show through (A15, and the DS lint rule). */
+.bs-sticky {
+  position: sticky;
+  /* The named layer, not a bare 1 — pinned chrome orders against dropdowns
+     and overlays by name (DS lint). */
+  z-index: var(--z-sticky);
+  background: var(--color-bg-surface);
+}
+thead .bs-sticky { background: var(--color-bg-table-head); }
+.bs-c-check { inset-inline-start: 0; inline-size: 40px; }
+.bs-c-vendor {
+  inset-inline-start: 40px;
+  min-inline-size: 200px;
+  box-shadow: inset -1px 0 0 var(--color-border-default);
+}
+/* The two-tier header: the band names the freight basis its three columns
+   belong to. */
+.bs-band {
+  text-align: center;
+  border-block-end: 1px solid var(--color-border-default);
+}
+.bs-sub { font-weight: var(--type-body-weight); }
+
+/* The variant header row (U1). */
+.bs-group > td {
+  background: var(--color-bg-muted);
+  padding-block: var(--space-sm);
+}
+.bs-group-in {
+  /* Pinned with the left columns, so the header stays readable while the
+     price columns scroll beneath it. */
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: var(--z-sticky);
+  /* Opaque, like every sticky surface: without a fill the price columns
+     scroll visibly through the header (A15; caught by the DS lint). */
+  background: var(--color-bg-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  /* The scroll container's visible width — a viewport-based guess wrapped
+     the header onto two lines. */
+  max-inline-size: calc(100cqi - 2 * var(--space-md));
+  gap: var(--space-xs) var(--space-md);
+}
+.bs-group-id {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+.bs-group-name { font-weight: var(--type-emphasis-weight); }
+.bs-group-var {
+  padding: 1px var(--space-sm);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface);
+  font-size: var(--type-caption-size);
+}
+.bs-fact {
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+}
+.bs-fact strong { color: var(--color-fg-default); }
+.bs-group-alloc {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-inline-start: auto;
+}
+
+/* Vendor rows. */
+.bs-vendor { display: block; font-weight: var(--type-emphasis-weight); }
+.bs-vendor-meta {
+  display: block;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+/* The basis NOT in use recedes (U2); the blend in use is the one figure
+   that carries weight in the price block. */
+.bs-muted { color: var(--color-fg-muted); }
+.bs-used { font-weight: var(--type-emphasis-weight); }
+.bs-mark {
+  margin-inline-start: 4px;
+  color: var(--color-fg-accent);
+}
+.bs-row.is-nobid > td { color: var(--color-fg-muted); }
+.bs-nobid-cell { font-style: italic; }
+
+/* The split editor (U3). */
+.bs-split { position: relative; display: inline-flex; }
+.bs-split-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-inner);
+  background: transparent;
+  font-size: var(--type-caption-size);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.bs-split-btn:hover { background: var(--color-bg-hover); color: var(--color-fg-default); }
+.bs-split-pop {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-start: 0;
+  z-index: var(--z-popover);
+  display: grid;
+  gap: var(--space-sm);
+  inline-size: 260px;
+  padding: var(--space-md);
+  background: var(--color-bg-surface-raised);
+  border-radius: var(--radius-container);
+  box-shadow: var(--elevation-overlay);
+  white-space: normal;
+}
+.bs-split-l {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-fg-muted);
+}
+.bs-split-row { display: flex; align-items: center; gap: var(--space-sm); }
+.bs-split-row .control { inline-size: 90px; }
+.bs-split-ocean { font-size: var(--type-caption-size); color: var(--color-fg-muted); }
+.bs-split-acts { display: flex; justify-content: flex-end; gap: var(--space-sm); }
+
+/* Filters size to their content here, not the leftover line — "All Vendors"
+   stretched to 330px and pushed the rest onto another row. */
+.bs-filters select.control { flex: 0 1 auto; inline-size: auto; max-inline-size: 220px; }
+/* An unset split is the wave default: shown muted rather than labelled. */
+.bs-split-btn.is-default { color: var(--color-fg-muted); }
+.bs-split-btn:not(.is-default) { color: var(--color-fg-default); font-weight: var(--type-emphasis-weight); }
