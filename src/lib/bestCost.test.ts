@@ -54,20 +54,41 @@ describe("Build Doc 11.4 — the worked example, through the read path", () => {
   });
 });
 
-describe("DDP collapses to one number per mode — the HIGHEST destination", () => {
-  it("takes the dearest destination in each mode, not the cheapest", () => {
+describe("DDP collapses to one number per mode — FOB + the HIGHEST destination fee", () => {
+  it("takes the dearest destination fee in each mode, added to FOB", () => {
     const { ddpOcean, ddpAir } = ddpByMode({
       fob: 10,
-      ddpWest: 9.0,
-      ddpCentral: 9.2,
-      ddpEast: 9.45,
-      ddpWestAir: 12.0,
-      ddpCentralAir: 12.3,
-      ddpEastAir: 12.6,
+      ddpWest: 0.9,
+      ddpCentral: 1.2,
+      ddpEast: 1.45,
+      ddpWestAir: 2.0,
+      ddpCentralAir: 2.3,
+      ddpEastAir: 2.6,
     });
 
-    expect(ddpOcean).toBe(9.45);
-    expect(ddpAir).toBe(12.6);
+    expect(ddpOcean).toBeCloseTo(11.45, 6);
+    expect(ddpAir).toBeCloseTo(12.6, 6);
+  });
+
+  it("can never put a DDP price below FOB — the fee bug", () => {
+    // The 2a.4 form wrote a $0.42 FEE into these columns, and they were read
+    // as a $0.42 DELIVERED price, which Best Cost then picked as the cheapest
+    // bid. Read as a fee, the delivered price is FOB + 0.42.
+    const { ddpOcean, ddpAir } = ddpByMode({
+      fob: 20, ddpWest: 0.42, ddpCentral: 0.42, ddpEast: 0.42,
+      ddpWestAir: 0.42, ddpCentralAir: 0.42, ddpEastAir: 0.42,
+    });
+    expect(ddpOcean).toBeGreaterThan(20);
+    expect(ddpAir).toBeGreaterThan(20);
+  });
+
+  it("Akshay's example: FOB $20, air fee $12, ocean fee $6", () => {
+    const { ddpOcean, ddpAir } = ddpByMode({
+      fob: 20, ddpWest: 6, ddpCentral: 6, ddpEast: 6,
+      ddpWestAir: 12, ddpCentralAir: 12, ddpEastAir: 12,
+    });
+    expect(ddpAir).toBe(32);
+    expect(ddpOcean).toBe(26);
   });
 
   it("a DDP bid that would win at its CHEAPEST destination still loses at its dearest", () => {
@@ -75,13 +96,15 @@ describe("DDP collapses to one number per mode — the HIGHEST destination", () 
     // West-only DDP (8.50 / 8.80) would beat that; the East pair does not.
     const result = resolveBestCost(
       {
+        // FEES on top of FOB 6.29 — delivered 8.50/8.90/9.60 ocean and
+        // 8.80/9.20/9.90 air, as before the fee fix.
         fob: 6.29,
-        ddpWest: 8.5,
-        ddpCentral: 8.9,
-        ddpEast: 9.6,
-        ddpWestAir: 8.8,
-        ddpCentralAir: 9.2,
-        ddpEastAir: 9.9,
+        ddpWest: 2.21,
+        ddpCentral: 2.61,
+        ddpEast: 3.31,
+        ddpWestAir: 2.51,
+        ddpCentralAir: 2.91,
+        ddpEastAir: 3.61,
       },
       style,
       vendor,
@@ -97,13 +120,15 @@ describe("DDP collapses to one number per mode — the HIGHEST destination", () 
   it("DDP wins when it beats the Quince blend even at its dearest destination", () => {
     const result = resolveBestCost(
       {
+        // FEES on top of FOB 6.29 — delivered 7.90/8.00/8.10 ocean and
+        // 8.20/8.30/8.40 air.
         fob: 6.29,
-        ddpWest: 7.9,
-        ddpCentral: 8.0,
-        ddpEast: 8.1,
-        ddpWestAir: 8.2,
-        ddpCentralAir: 8.3,
-        ddpEastAir: 8.4,
+        ddpWest: 1.61,
+        ddpCentral: 1.71,
+        ddpEast: 1.81,
+        ddpWestAir: 1.91,
+        ddpCentralAir: 2.01,
+        ddpEastAir: 2.11,
       },
       style,
       vendor,

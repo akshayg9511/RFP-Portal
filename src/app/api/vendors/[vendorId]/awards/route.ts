@@ -104,15 +104,17 @@ export function GET(
             (v) => v !== null,
           )
           ? {
+              // The columns hold FEES; this drawer shows DELIVERED DDP, so
+              // add FOB back (lib/bestCost.ddpByMode, fixed 5 Oct).
               ocean: {
-                west: num(q.ddpWest),
-                central: num(q.ddpCentral),
-                east: num(q.ddpEast),
+                west: delivered(q.fob, q.ddpWest),
+                central: delivered(q.fob, q.ddpCentral),
+                east: delivered(q.fob, q.ddpEast),
               },
               air: {
-                west: num(q.ddpWestAir),
-                central: num(q.ddpCentralAir),
-                east: num(q.ddpEastAir),
+                west: delivered(q.fob, q.ddpWestAir),
+                central: delivered(q.fob, q.ddpCentralAir),
+                east: delivered(q.fob, q.ddpEastAir),
               },
             }
           : null,
@@ -129,4 +131,14 @@ export function GET(
       awards: rows,
     };
   });
+}
+
+/** FOB + the vendor's DDP fee, or null where either is missing. */
+function delivered(
+  fob: Parameters<typeof num>[0],
+  fee: Parameters<typeof num>[0],
+): number | null {
+  const f = num(fob);
+  const d = num(fee);
+  return f === null || d === null ? null : f + d;
 }

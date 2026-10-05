@@ -425,6 +425,29 @@ async function main() {
     `${multi.length} multi-variant products · ${fobFlat.length} quoting one price for every size`,
   );
 
+  /**
+   * DDP IS NEVER BELOW FOB — the fee fix, 5 Oct.
+   *
+   * The columns hold the vendor's FEE on top of FOB. A negative fee would mean
+   * a delivered DDP price under FOB, which Akshay ruled out ("DDP is always FOB
+   * plus their logistics cost") — and which is exactly how the 2a.4 bug read.
+   */
+  const ddpFees = await db.quote.findMany({
+    where: { dutyType: "VDDP" },
+    select: {
+      ddpWest: true, ddpCentral: true, ddpEast: true,
+      ddpWestAir: true, ddpCentralAir: true, ddpEastAir: true,
+    },
+  });
+  const negative = ddpFees.filter((q) =>
+    Object.values(q).some((v) => v !== null && Number(v) < 0),
+  );
+  check(
+    "DDP fees are never negative (delivered DDP >= FOB)",
+    ddpFees.length > 0 && negative.length === 0,
+    `${ddpFees.length} DDP quotes · ${negative.length} below FOB`,
+  );
+
   console.log(
     `\n${failures === 0 ? "PASS" : "FAIL"} — ${failures} failing check${failures === 1 ? "" : "s"}\n`,
   );

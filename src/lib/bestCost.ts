@@ -44,25 +44,34 @@ export type RateBook = {
  * DDP is quoted per MODE (air / ocean); the three US destinations are a second
  * axis WITHIN each mode. So a full DDP quote is six numbers, not three.
  *
- * We take the HIGHEST destination in each mode. That is deliberate and
- * conservative: DDP then wins on Best Cost only if it beats the Quince blend
- * even at its most expensive destination, so the system never flatters a DDP
- * bid by pricing a whole year's units as if everything shipped to the cheapest
- * warehouse. Surfaced in the UI as "DDP (highest dest.)" — never just "DDP".
+ * THE COLUMNS HOLD THE VENDOR'S FEE, not a delivered price — fixed 5 Oct.
+ * The vendor form asks for "the additional charge for DDP into LAX" (the real
+ * Radnik template's wording), and the delivered DDP price is FOB + that fee:
+ * Akshay, "DDP is always FOB plus their logistics cost". The columns used to
+ * be read as delivered totals while the form wrote fees into them, so a $0.42
+ * fee read as a $0.42 delivered price and Best Cost picked it as the cheapest
+ * bid. Reading it as a fee also means each VARIANT's DDP total follows its own
+ * FOB, since the fee is a per-product term.
  *
- * Returns null for a mode unless at least one destination carries a price;
- * `computeCost` then leaves ddpBlend null and the basis stays QUINCE_BLEND,
- * which is the right answer for a partial quote.
+ * We take the HIGHEST destination fee in each mode. Deliberate and
+ * conservative: DDP then wins on Best Cost only if it beats the Quince blend
+ * even at its most expensive destination. Surfaced as "DDP (highest dest.)".
+ *
+ * Returns null for a mode unless at least one destination carries a fee, and
+ * null for both when there is no FOB to add it to; `computeCost` then leaves
+ * ddpBlend null and the basis stays QUINCE_BLEND. Both modes are required for
+ * DDP to count at all (decided 5 Oct — a one-mode quote is not DDP-eligible).
  */
 export function ddpByMode(quote: QuoteCostFields): {
   ddpOcean: number | null;
   ddpAir: number | null;
 } {
+  const fob = num(quote.fob);
   const highest = (...values: (Prisma.Decimal | number | null)[]) => {
     const present = values
       .map((v) => num(v))
       .filter((v): v is number => v !== null);
-    return present.length ? Math.max(...present) : null;
+    return present.length && fob !== null ? fob + Math.max(...present) : null;
   };
 
   return {

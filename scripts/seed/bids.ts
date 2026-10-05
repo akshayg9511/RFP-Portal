@@ -553,13 +553,17 @@ export async function seedBids(
             // DDP is declared PER PRODUCT, so every group carries the same
             // fees. The route's fan-out keeps them in step after an edit.
             dutyType: quotesDdp ? "VDDP" : "QDDP",
+            // FEES, not delivered prices (fixed 5 Oct): the columns hold what
+            // the vendor adds on top of FOB, and lib/bestCost reads
+            // delivered DDP as FOB + fee. Stored as (style-level delivered −
+            // style-level FOB), so each variant's DDP follows its own FOB.
             // The unsuffixed trio is the OCEAN set (see schema comment).
-            ddpWest: ddpOceanByDest?.[0] ?? null,
-            ddpCentral: ddpOceanByDest?.[1] ?? null,
-            ddpEast: ddpOceanByDest?.[2] ?? null,
-            ddpWestAir: ddpAirByDest?.[0] ?? null,
-            ddpCentralAir: ddpAirByDest?.[1] ?? null,
-            ddpEastAir: ddpAirByDest?.[2] ?? null,
+            ddpWest: ddpFee(ddpOceanByDest?.[0], line.fob),
+            ddpCentral: ddpFee(ddpOceanByDest?.[1], line.fob),
+            ddpEast: ddpFee(ddpOceanByDest?.[2], line.fob),
+            ddpWestAir: ddpFee(ddpAirByDest?.[0], line.fob),
+            ddpCentralAir: ddpFee(ddpAirByDest?.[1], line.fob),
+            ddpEastAir: ddpFee(ddpAirByDest?.[2], line.fob),
             maxVolumeCapacity: terms.maxVolumeCapacity,
             productionLeadTime: terms.productionLeadTime,
             moq: terms.moq,
@@ -1036,4 +1040,9 @@ function hashUnit(text: string): number {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0) / 2 ** 32;
+}
+
+/** A delivered DDP price → the fee the vendor adds on top of FOB. */
+function ddpFee(delivered: number | undefined, fob: number): number | null {
+  return delivered === undefined ? null : round(delivered - fob, 4);
 }
