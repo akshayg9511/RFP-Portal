@@ -20,6 +20,7 @@
 #
 # Box: procura-dev  i-084e7f909db5aef50  ap-south-1  10.1.13.115
 set -euo pipefail
+export AWS_PAGER=""   # never stop in `less` mid-deploy
 
 IID="i-084e7f909db5aef50"
 REGION="ap-south-1"
@@ -31,12 +32,19 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 WORK="$(mktemp -d /tmp/procura-deploy.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 
+# A copy of everything printed, so a failed run can be diagnosed afterwards.
+LOG="$HERE/.deploy-aws-last.log"
+exec > >(tee "$LOG") 2>&1
+
 say()  { printf '\n\033[1m▸ %s\033[0m\n' "$*"; }
 die()  { printf '\n\033[31m✖ %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ── 1. VPN ────────────────────────────────────────────────────────────────────
 say "Checking the VPN reaches $HOST_IP"
-nc -z -G 5 "$HOST_IP" 80 >/dev/null 2>&1 || die "Cannot reach $HOST_IP. Turn on the VPN and run again."
+until nc -z -G 5 "$HOST_IP" 80 >/dev/null 2>&1; do
+  echo "  Cannot reach $HOST_IP — the VPN is off or has dropped."
+  read -r -p "  Connect the VPN, then press Enter to retry (Ctrl-C to stop)… " _
+done
 echo "  reachable."
 
 # ── 2. AWS credentials ───────────────────────────────────────────────────────
@@ -51,9 +59,10 @@ if ! aws sts get-caller-identity --query Arn --output text >/dev/null 2>&1; then
     || die "Still no valid AWS session. Check the keys you pasted and run again."
 fi
 echo "  signed in as $(aws sts get-caller-identity --query Arn --output text)"
-aws ssm describe-instance-information --region "$REGION" \
+PING=$(aws ssm describe-instance-information --region "$REGION" \
   --filters "Key=InstanceIds,Values=$IID" --query 'InstanceInformationList[0].PingStatus' \
-  --output text | grep -q Online || die "SSM agent on $IID is not online."
+  --output text 2>/dev/null || true)
+[ "$PING" = "Online" ] || die "SSM agent on $IID is not online (got: ${PING:-nothing})."
 
 # Run a script on the box; print its output; fail if it fails.
 remote() {
@@ -86,7 +95,9 @@ say "Dumping local database ($DB_CONTAINER/$DB_NAME)"
 docker exec "$DB_CONTAINER" sh -c \
   "mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" --single-transaction --routines --no-tablespaces --databases $DB_NAME 2>/dev/null" \
   | gzip > "$WORK/db.sql.gz"
-gunzip -c "$WORK/db.sql.gz" | grep -q "CREATE TABLE" || die "The database dump is empty."
+# zgrep, not `gunzip | grep -q`: grep -q exits on the first match, gunzip then
+# dies of SIGPIPE, and pipefail turns a good dump into a "failure".
+zgrep -q "CREATE TABLE" "$WORK/db.sql.gz" || die "The database dump is empty."
 echo "  database: $(du -h "$WORK/db.sql.gz" | cut -f1)"
 
 # ── 4a. Get the two files onto the box ────────────────────────────────────────
@@ -157,7 +168,8 @@ echo "app: $APP (owner $OWNER)"
 as_owner() { sudo -u "$OWNER" -H bash -lc "cd '$APP' && $*"; }
 
 # DB connection from the box's own .env.
-DBURL=$(grep -E '^DATABASE_URL=' "$APP/.env" | head -1 | cut -d= -f2- | tr -d '"'"'")
+DBURL=$(grep -m1 -E '^DATABASE_URL=' "$APP/.env" | cut -d= -f2- | tr -d '"'"'" || true)
+[ -n "$DBURL" ] || { echo "No DATABASE_URL in $APP/.env"; exit 1; }
 read -r DBUSER DBPASS DBHOST DBPORT DBN < <(python3 - "$DBURL" <<'PY'
 import sys, urllib.parse as u
 p=u.urlparse(sys.argv[1]); print(u.unquote(p.username or ""), u.unquote(p.password or "") or "-", p.hostname or "localhost", p.port or 3306, (p.path or "/").lstrip("/").split("?")[0])
@@ -168,7 +180,7 @@ export MYSQL_PWD="$DBPASS"
 MYSQL="mysql -h $DBHOST -P $DBPORT -u $DBUSER"; DUMP="mysqldump -h $DBHOST -P $DBPORT -u $DBUSER"
 if ! command -v mysql >/dev/null; then
   # MySQL in Docker on the box.
-  C=$(docker ps --format '{{.Names}} {{.Image}}' | awk '/mysql/{print $1; exit}')
+  C=$(docker ps --format '{{.Names}} {{.Image}}' | awk '/mysql/{print $1}' | sed -n 1p || true)
   [ -n "$C" ] || { echo "No mysql client and no mysql container on the box."; exit 1; }
   MYSQL="docker exec -i -e MYSQL_PWD $C mysql -u $DBUSER"; DUMP="docker exec -e MYSQL_PWD $C mysqldump -u $DBUSER"
 fi
@@ -209,14 +221,15 @@ for p in json.load(sys.stdin):
   if [ -n "$NAME" ]; then sudo -u "$OWNER" -H bash -lc "pm2 restart '$NAME' --update-env && pm2 save" >/dev/null; RESTARTED="pm2:$NAME"; fi
 fi
 if [ -z "$RESTARTED" ]; then
-  UNIT=$(systemctl list-units --type=service --no-legend | awk '{print $1}' | grep -i -E 'procura|next' | head -1 || true)
+  UNIT=$(systemctl list-units --type=service --no-legend | awk '{print $1}' | grep -i -E 'procura|next' | sed -n 1p || true)
   if [ -n "$UNIT" ]; then systemctl restart "$UNIT"; RESTARTED="systemd:$UNIT"; fi
 fi
 [ -n "$RESTARTED" ] || { echo "Built, but found no pm2 process or systemd unit to restart."; exit 1; }
 echo "restarted: $RESTARTED"
 
 # 6) Health.
-PORT=$(grep -rhoE 'proxy_pass http://(127\.0\.0\.1|localhost):[0-9]+' /etc/nginx/sites-enabled/ 2>/dev/null | head -1 | grep -oE '[0-9]+$' || echo 3000)
+PORT=$(grep -rhoE 'proxy_pass http://(127\.0\.0\.1|localhost):[0-9]+' /etc/nginx/sites-enabled/ 2>/dev/null | sed -n 1p | grep -oE '[0-9]+$' || true)
+PORT=${PORT:-3000}
 for i in $(seq 1 40); do curl -sf -o /dev/null "http://127.0.0.1:$PORT/api/health" && { echo "healthy on :$PORT"; break; }; sleep 3; done
 curl -sf -o /dev/null "http://127.0.0.1:$PORT/api/health" || { echo "Not healthy after restart."; exit 1; }
 rm -rf "$IN"
