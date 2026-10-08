@@ -6658,3 +6658,38 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   position: relative;
   z-index: var(--z-popover);
 }
+/* Wave insights region bars (D10): neutral by default, status colour only
+   outside the range. */
+.chart-bar-fill {
+  background: var(--color-fg-muted);
+}
+.chart-bar-fill.is-under {
+  background: var(--color-feedback-warning-solid);
+}
+/* Wave insights (C46-C51). */
+.wi-head-filters {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.wi-progress {
+  margin-block-end: var(--space-lg);
+}
+.wi-progress .card-b {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.wi-progress .k {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size);
+}
+.wi-caveat {
+  margin-block-end: var(--space-lg);
+}
+.wi-show-all {
+  justify-self: start;
+  margin-block-start: var(--space-sm);
+}

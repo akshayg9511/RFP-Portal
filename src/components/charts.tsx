@@ -1,5 +1,7 @@
 "use client";
 
+import { Progress } from "@/ds/components";
+
 import * as React from "react";
 
 /**
@@ -69,13 +71,8 @@ export function RangeBars({ data }: { data: RangeBarDatum[] }) {
       {data.map((d) => (
         <div className="chart-bar-row" key={d.label}>
           <span className="chart-bar-label">
-            {/* The swatch carries identity; the label repeats it in text, so
-                colour is never the only channel. */}
-            <span
-              className="chart-swatch"
-              style={{ background: regionColor(d.label) }}
-              aria-hidden="true"
-            />
+            {/* No per-region colour (Aravind C50, decision D10): the label
+                names the region; colour is spent only on a breach. */}
             {d.label}
           </span>
 
@@ -90,16 +87,17 @@ export function RangeBars({ data }: { data: RangeBarDatum[] }) {
               }}
               aria-hidden="true"
             />
+            {/* Neutral fill; status colour only outside the range — danger
+                over the cap, warning under the floor. */}
             <span
               className={
-                d.overMax || d.underMin
+                d.overMax
                   ? "chart-bar-fill is-outside"
-                  : "chart-bar-fill"
+                  : d.underMin
+                    ? "chart-bar-fill is-under"
+                    : "chart-bar-fill"
               }
-              style={{
-                inlineSize: pct(d.value),
-                background: d.overMax || d.underMin ? undefined : regionColor(d.label),
-              }}
+              style={{ inlineSize: pct(d.value) }}
             />
           </span>
 
@@ -312,14 +310,7 @@ export function SplitCapBar({
  * ------------------------------------------------------------------ */
 
 export function CoverageMeter({ share }: { share: number }) {
+  // The design system's Progress, not a bespoke meter (Aravind, C48/C50).
   const pct = Math.max(0, Math.min(1, share)) * 100;
-  return (
-    <span
-      className="chart-meter"
-      role="img"
-      aria-label={`${pct.toFixed(1)} percent of potential dollars placed`}
-    >
-      <span className="chart-meter-fill" style={{ inlineSize: `${pct}%` }} />
-    </span>
-  );
+  return <Progress value={pct} label={`${pct.toFixed(1)} percent of biddable value decided`} />;
 }

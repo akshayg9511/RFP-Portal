@@ -21,6 +21,7 @@ import {
   RangeBars,
   REGION_ORDER,
 } from "@/components/charts";
+import { SummaryStrip } from "@/components/SummaryStrip";
 
 /**
  * S8 — Wave Insights. The rollup.
@@ -190,6 +191,7 @@ function InsightsInner() {
   const vendorBreaches = (data?.guardrails.vendors ?? []).filter((v) => v.waveBreached);
 
   const [vendorQuery, setVendorQuery] = React.useState("");
+  const [showAllIncreases, setShowAllIncreases] = React.useState(false);
   const [openVendorId, setOpenVendorId] = React.useState<string | null>(null);
 
   /**
@@ -216,40 +218,41 @@ function InsightsInner() {
 
   return (
     <>
+      {/* The filters sit on the title's line, trailing (Aravind, C46). */}
       <div className="page-hd">
-        <h1>Wave insights</h1>
-      </div>
-
-      {data ? (
-        <div className="aw-filters">
-          <FacetSelect
-            label="Division"
-            value={division}
-            onChange={(v) => setLevel("division", v)}
-            options={data.facets.division}
-          />
-          <FacetSelect
-            label="Department"
-            value={department}
-            onChange={(v) => setLevel("department", v)}
-            options={data.facets.department}
-          />
-          <FacetSelect
-            label="Sub-department"
-            value={subDepartment}
-            onChange={(v) => setLevel("subDepartment", v)}
-            options={data.facets.subDepartment}
-          />
-          {filtered ? (
-            <button
-              className="btn btn--ghost sm"
-              onClick={() => router.replace("?", { scroll: false })}
-            >
-              Show the whole wave
-            </button>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">Wave insights</h1>
+          </div>
+          {data ? (
+            <div className="acts wi-head-filters">
+              <FacetSelect
+                label="Division"
+                value={division}
+                onChange={(v) => setLevel("division", v)}
+                options={data.facets.division}
+              />
+              <FacetSelect
+                label="Department"
+                value={department}
+                onChange={(v) => setLevel("department", v)}
+                options={data.facets.department}
+              />
+              <FacetSelect
+                label="Sub-department"
+                value={subDepartment}
+                onChange={(v) => setLevel("subDepartment", v)}
+                options={data.facets.subDepartment}
+              />
+              {filtered ? (
+                <button className="btn btn--ghost sm" onClick={() => router.replace("?", { scroll: false })}>
+                  Show the whole wave
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
-      ) : null}
+      </div>
 
       {/* N9 — the same thresholds below wave level, but as FLAGS. One
           department can be legitimately China-heavy while the wave stays
@@ -287,117 +290,94 @@ function InsightsInner() {
 
       {data && cov ? (
         <>
-          {/* 1 — COVERAGE FIRST. Everything below is read through this. */}
-          <div className="card raised wi-coverage">
+          {/* 1 — COVERAGE FIRST. Four flat cards of equal breadth (Aravind,
+              C47); progress and savings stay separate questions. */}
+          <SummaryStrip
+            items={[
+              {
+                label: "Wave progress",
+                value: percent(cov.shareDecided),
+                sub: `of biddable value decided · ${money(cov.baselineDecided)} of ${money(cov.baselineInPlay)}`,
+              },
+              {
+                label: "Committed spend",
+                value: money(cov.committedSpend),
+                sub: `for ${money(cov.baselineDecided)} of baseline`,
+              },
+              {
+                label: "Savings",
+                value: money(cov.savings),
+                sub: `${percent(cov.savingsPercent)} on decided products`,
+              },
+              {
+                label: filtered ? "Flags in this slice" : "Guardrails outside range",
+                value: breaches.length,
+                sub: `of ${coo.length} regions`,
+              },
+            ]}
+          />
+
+          {/* Progress in its own card, with room between it and the cards
+              above (C48), on the design system's Progress (C50). */}
+          <div className="card wi-progress">
             <div className="card-b">
-              <div className="wi-cov-grid">
-                <div className="wi-cov-main">
-                  {/* PROGRESS AND SAVINGS ARE DIFFERENT QUESTIONS and this card
-                      now answers them separately. The old single percentage
-                      divided committed spend by baseline value — it fell when we
-                      negotiated well, and two styles read over 100%. */}
-                  <span className="k">
-                    Wave progress
-                    <Tooltip
-                      tip="Share of biddable baseline value now decided — products with at least one submitted bid. Measured baseline against baseline, so it only rises as you decide more. Savings is shown separately below."
-                      placement="bottom"
-                    >
-                      <Icon name="info_circle" size="sm" />
-                    </Tooltip>
-                  </span>
-                  <span className="v">{percent(cov.shareDecided)}</span>
-                  <span className="s">
-                    of biddable value decided ·{" "}
-                    {money(cov.baselineDecided)} of {money(cov.baselineInPlay)}{" "}
-                    baseline
-                  </span>
-                  <CoverageMeter share={cov.shareDecided} />
-
-                  {/* The three frames that make the percentage legible. */}
-                  <dl className="wi-breakdown">
-                    <dt>Decided</dt>
-                    <dd>
-                      {cov.stylesDecided} of {cov.stylesInPlay} products ·{" "}
-                      {/* Abbreviated: "1,360,287 of 1,651,610" is a number you
-                          read rather than scan, and the precision buys nothing
-                          at this altitude. */}
-                      {compactUnits(cov.unitsDecided)} of{" "}
-                      {compactUnits(cov.unitsInPlay)} units
-                    </dd>
-                    <dt className="sub">
-                      <span className="dot is-on" aria-hidden="true" />
-                      Still to decide
-                    </dt>
-                    <dd className="sub">
-                      {cov.stylesInPlay - cov.stylesDecided} products ·{" "}
-                      {money(cov.baselineInPlay - cov.baselineDecided)}
-                    </dd>
-                    <dt className="sub">
-                      <span className="dot" aria-hidden="true" />
-                      Not yet out to bid
-                    </dt>
-                    <dd className="sub">
-                      {cov.notInPlayStyles} products ·{" "}
-                      {money(cov.notInPlayValue)}
-                    </dd>
-                  </dl>
-                </div>
-
-                <div className="wi-cov-side">
-                  {/* Savings is its OWN number, not a share of progress. */}
-                  <div className="wi-stat">
-                    <span className="k">Committed spend</span>
-                    <span className="v">{money(cov.committedSpend)}</span>
-                    <span className="s">
-                      for {money(cov.baselineDecided)} of baseline
-                    </span>
-                  </div>
-                  <div className="wi-stat">
-                    <span className="k">Savings</span>
-                    <span className="v">{money(cov.savings)}</span>
-                    <span className="s">
-                      {percent(cov.savingsPercent)} on decided products
-                    </span>
-                  </div>
-                  <div className="wi-stat">
-                    <span className="k">
-                      {filtered ? "Flags in this slice" : "Guardrails outside range"}
-                    </span>
-                    <span className={breaches.length ? "v is-warn" : "v"}>
-                      {breaches.length}
-                    </span>
-                    <span className="s">of {coo.length} regions</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Why progress leads: every guardrail below is a share of the
-                  dollars actually placed, so how much is placed decides how
-                  much those shares mean. */}
-              {cov.shareDecided < 0.95 || cov.notInPlayStyles > 0 ? (
-                <div className="bar bar--info wi-caveat">
-                  <Icon name="info_circle" />
-                  <div>
-                    <strong>
-                      Every guardrail below is a share of placed dollars only.
-                    </strong>{" "}
-                    {cov.shareDecided < 0.95 ? (
-                      <>
-                        {percent(1 - cov.shareDecided)} of biddable value is
-                        still undecided and can move them.{" "}
-                      </>
-                    ) : null}
-                    {cov.notInPlayStyles > 0 ? (
-                      <>
-                        Products not yet out to bid are excluded — they are not a
-                        decision anyone is withholding.
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
+              <span className="k">
+                Wave progress
+                <Tooltip
+                  tip="Share of biddable baseline value now decided — products with at least one submitted bid. Measured baseline against baseline, so it only rises as you decide more. Savings is shown separately above."
+                  placement="bottom"
+                >
+                  <Icon name="info_circle" size="sm" />
+                </Tooltip>
+              </span>
+              <CoverageMeter share={cov.shareDecided} />
+              <dl className="wi-breakdown">
+                <dt>Decided</dt>
+                <dd>
+                  {cov.stylesDecided} of {cov.stylesInPlay} products ·{" "}
+                  {compactUnits(cov.unitsDecided)} of {compactUnits(cov.unitsInPlay)} units
+                </dd>
+                <dt className="sub">
+                  <span className="dot is-on" aria-hidden="true" />
+                  Still to decide
+                </dt>
+                <dd className="sub">
+                  {cov.stylesInPlay - cov.stylesDecided} products ·{" "}
+                  {money(cov.baselineInPlay - cov.baselineDecided)}
+                </dd>
+                <dt className="sub">
+                  <span className="dot" aria-hidden="true" />
+                  Not yet out to bid
+                </dt>
+                <dd className="sub">
+                  {cov.notInPlayStyles} products · {money(cov.notInPlayValue)}
+                </dd>
+              </dl>
             </div>
           </div>
+
+          {/* The caveat as a message bar on the canvas (C49), not text inside
+              a card. */}
+          {cov.shareDecided < 0.95 || cov.notInPlayStyles > 0 ? (
+            <div className="bar bar--info wi-caveat">
+              <Icon name="info_circle" />
+              <div>
+                <strong>Every guardrail below is a share of placed dollars only.</strong>{" "}
+                {cov.shareDecided < 0.95 ? (
+                  <>
+                    {percent(1 - cov.shareDecided)} of biddable value is still
+                    undecided and can move them.{" "}
+                  </>
+                ) : null}
+                {cov.notInPlayStyles > 0 ? (
+                  <>
+                    Products not yet out to bid are excluded — they are not a
+                    decision anyone is withholding.
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {/* 2 — GUARDRAILS, breaches first and clickable. */}
           <div className="card">
@@ -538,8 +518,13 @@ function InsightsInner() {
               </div>
               <div className="card-b">
                 {data.stylesTakingIncrease.length ? (
-                  <div className="wi-increase-list wi-scroll">
-                    {data.stylesTakingIncrease.map((s) => (
+                  <div className="wi-increase-list">
+                    {/* Five, then "Show all" (Aravind C51, decision D10) — a
+                        list that scrolls inside a card hides its own length. */}
+                    {(showAllIncreases
+                      ? data.stylesTakingIncrease
+                      : data.stylesTakingIncrease.slice(0, 5)
+                    ).map((s) => (
                       <button
                         className="wi-increase"
                         key={s.styleId}
@@ -563,6 +548,17 @@ function InsightsInner() {
                         </span>
                       </button>
                     ))}
+                    {data.stylesTakingIncrease.length > 5 ? (
+                      <button
+                        type="button"
+                        className="btn btn--ghost sm wi-show-all"
+                        onClick={() => setShowAllIncreases((v) => !v)}
+                      >
+                        {showAllIncreases
+                          ? "Show fewer"
+                          : `Show all (${data.stylesTakingIncrease.length})`}
+                      </button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="empty compact">
