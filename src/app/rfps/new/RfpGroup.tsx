@@ -33,12 +33,10 @@ export type SplitGroup = {
 };
 
 /**
- * One resulting RFP, collapsed.
- *
- * The previous version showed every product of every RFP at once — two full
- * tables and two blocks of helper text before the user could see what they
- * were confirming. The face now carries the four facts that matter (name,
- * products, spend, readiness) and the products are one click away.
+ * One resulting RFP: its four headline facts (template, products, spend,
+ * readiness), its name and instructions, then the products it will send —
+ * visible, in a list that scrolls inside its own height so a long RFP does
+ * not push the commit off the page.
  */
 export function RfpGroup({
   group,
@@ -46,18 +44,14 @@ export function RfpGroup({
   onNameChange,
   instructions,
   onInstructionsChange,
-  defaultOpen,
   dropped,
   onToggleVariation,
-  children,
 }: {
-  children?: React.ReactNode;
   group: SplitGroup;
   name: string;
   onNameChange: (value: string) => void;
   instructions: string;
   onInstructionsChange: (value: string) => void;
-  defaultOpen?: boolean;
   /**
    * Variations the user has DESELECTED, by styleId. Tracking exclusions
    * rather than inclusions means a product arrives fully included by
@@ -67,7 +61,6 @@ export function RfpGroup({
   dropped: Record<string, string[]>;
   onToggleVariation: (styleId: string, variationId: string) => void;
 }) {
-  const [open, setOpen] = React.useState(defaultOpen ?? false);
   // One product expanded at a time, as on the catalog.
   const [openStyle, setOpenStyle] = React.useState<string | null>(null);
 
@@ -141,23 +134,18 @@ export function RfpGroup({
             />
           </div>
         </div>
-
-        {/* Nomination slot (UX v2): optional vendors for this RFP. */}
-        {children}
       </div>
 
-      <div className={open ? "acc-item open" : "acc-item"}>
-        <button
-          className="acc-h"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? "Hide" : "Show"} {group.styleCount} products
-          <Icon name="chevron_down" className="chev" />
-        </button>
+      {/* Always visible, and scrolls inside its own height (Akshay, 8 Oct:
+          "product list can be high, so make it scrollable"). The header row
+          stays put while the products scroll. */}
+      <div className="rfp-products">
+        <div className="rfp-products-h">
+          Products to bid on <span className="vl-count">{group.styleCount}</span>
+        </div>
 
-        <div className="acc-b">
-          <div className="data-grid-surface">
+        <div>
+          <div className="data-grid-surface rfp-scroll" tabIndex={0} aria-label="Products">
             <table className="data-grid">
               <thead>
                 <tr>

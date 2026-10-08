@@ -9,6 +9,7 @@ import { percent } from "@/lib/format";
 import { NewVendorDialog, type CreatedVendor } from "./NewVendorDialog";
 import { VendorPicker } from "./VendorPicker";
 import { ProductsSummary } from "./ProductsSummary";
+import { AddProductsDrawer } from "./AddProductsDrawer";
 import { VendorsTab } from "./VendorsTab";
 import { QuoteDrawer } from "./QuoteDrawer";
 import { PeoplePicker } from "@/components/PeoplePicker";
@@ -31,6 +32,7 @@ type RfpDetail = {
   gm: string | null;
   sourcingPartners?: string[];
   gms?: string[];
+  templateId?: string;
   templateName: string;
   styles: {
     id: string;
@@ -129,6 +131,7 @@ export default function RfpDetailPage() {
   const [removed, setRemoved] = React.useState<Set<string>>(new Set());
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [productsOpen, setProductsOpen] = React.useState(false);
   // Ownership is a SETTING, not the subject. Three input fields used to occupy
   // the top of the page.
   const [ownerOpen, setOwnerOpen] = React.useState(false);
@@ -392,6 +395,32 @@ export default function RfpDetailPage() {
       say("ok", `${n} vendor${n === 1 ? "" : "s"} added and issued to.`);
     } catch (err: unknown) {
       say("error", err instanceof Error ? err.message : String(err));
+    }
+    setBusy(false);
+  }
+
+  /** Take a product off a draft — and off every vendor nominated for it. */
+  async function removeProduct(styleId: string) {
+    setBusy(true);
+    setNote(null);
+    try {
+      const r = await fetch(`/api/rfps/${id}/styles?styleId=${encodeURIComponent(styleId)}`, {
+        method: "DELETE",
+      });
+      const b = await r.json();
+      if (!r.ok) throw new Error(b?.message ?? "Could not remove that product");
+      // Unsaved nomination edits may still hold it; drop it from them too.
+      setAdded((prev) => {
+        const next = new Map<string, Set<string>>();
+        for (const [vid, keys] of prev) {
+          next.set(vid, new Set([...keys].filter((k) => k.split("|")[0] !== styleId)));
+        }
+        return next;
+      });
+      reload();
+      say("ok", "Product removed from this RFP.");
+    } catch (e) {
+      say("error", e instanceof Error ? e.message : String(e));
     }
     setBusy(false);
   }
@@ -713,6 +742,10 @@ export default function RfpDetailPage() {
             styles={data.styles}
             invitations={data.invitations}
             issued={issued}
+            draft={data.status === "DRAFT"}
+            busy={busy}
+            onAdd={() => setProductsOpen(true)}
+            onRemove={removeProduct}
           />
 
           <section className="card rd-vendors" aria-labelledby="rd-vendors-h">
@@ -806,6 +839,22 @@ export default function RfpDetailPage() {
         initialTab={openQuote?.tab ?? "details"}
         onClose={() => setOpenQuote(null)}
         onChanged={reload}
+      />
+
+      <AddProductsDrawer
+        open={productsOpen}
+        rfpId={id}
+        templateId={data?.templateId}
+        onRfp={allStyleIds}
+        onClose={() => setProductsOpen(false)}
+        onAdded={({ added, skipped }) => {
+          reload();
+          const parts = [
+            `${added.length} product${added.length === 1 ? "" : "s"} added.`,
+            ...skipped.map((s) => `${s.styleNumber} not added: ${s.reason}.`),
+          ];
+          say(skipped.length ? "error" : "ok", parts.join(" "));
+        }}
       />
 
       <NewVendorDialog

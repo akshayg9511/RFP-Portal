@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { badRequest, handle, num } from "@/lib/api";
 import { grainGroups, type Grain } from "@/domain/grain";
+import { resolveTemplate } from "@/lib/templates";
 
 /**
  * @openapi
@@ -167,44 +168,4 @@ export async function POST(request: Request) {
       })),
     };
   });
-}
-
-/**
- * Resolution: sub-department first, then department, then division. A template
- * with a null level matches any value at that level, which is how two seeded
- * templates cover every sub-department beneath them.
- */
-function resolveTemplate(
-  style: { division: string; department: string; subDepartment: string },
-  templates: {
-    id: string;
-    name: string;
-    division: string | null;
-    department: string | null;
-    subDepartment: string | null;
-  }[],
-) {
-  const matches = templates.filter(
-    (t) =>
-      (!t.division || t.division === style.division) &&
-      (!t.department || t.department === style.department) &&
-      (!t.subDepartment || t.subDepartment === style.subDepartment),
-  );
-
-  if (!matches.length) return null;
-
-  // Most specific wins.
-  return matches.sort(
-    (a, b) => specificity(b) - specificity(a),
-  )[0];
-}
-
-function specificity(t: {
-  division: string | null;
-  department: string | null;
-  subDepartment: string | null;
-}): number {
-  return (
-    (t.division ? 1 : 0) + (t.department ? 1 : 0) + (t.subDepartment ? 1 : 0)
-  );
 }

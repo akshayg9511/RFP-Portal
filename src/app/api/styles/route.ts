@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { resolveTemplate } from "@/lib/templates";
 import { handle, num } from "@/lib/api";
 
 /**
@@ -47,6 +48,9 @@ export function GET(request: Request) {
   const material = url.searchParams.get("material");
   const minRevenue = Number(url.searchParams.get("minRevenue")) || 0;
   const inSet = url.searchParams.get("inSet");
+  // Only products that resolve to this quotation template (UX v2: "Add
+  // products" on a draft RFP offers only what that RFP can carry).
+  const templateId = url.searchParams.get("templateId");
 
   return handle(async () => {
     const styles = await db.style.findMany({
@@ -102,7 +106,14 @@ export function GET(request: Request) {
       revenue: (s.planUnits ?? 0) * (num(s.retailPrice) ?? 0),
     }));
 
-    const rows = withRevenue.filter((r) => r.revenue >= minRevenue);
+    const templates = templateId
+      ? await db.template.findMany({ where: { published: true } })
+      : [];
+    const rows = withRevenue.filter(
+      (r) =>
+        r.revenue >= minRevenue &&
+        (!templateId || resolveTemplate(r.style, templates)?.id === templateId),
+    );
 
     /**
      * Facet counts from the FILTERED set, so a filter that would return

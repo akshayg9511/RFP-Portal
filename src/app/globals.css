@@ -6410,3 +6410,75 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   color: var(--color-fg-default);
   font-weight: var(--type-label-weight);
 }
+
+/* ── LONG PRODUCT LISTS SCROLL IN PLACE (UX v2) ───────────────────────────── */
+.rd-products-h {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.rd-products-h > .ttl {
+  margin-inline-end: auto;
+}
+.rd-psearch {
+  inline-size: 240px;
+}
+.rd-plist {
+  max-block-size: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.rd-plist:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.rd-prow {
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+}
+.rd-pempty {
+  padding: var(--space-lg);
+  color: var(--color-fg-muted);
+}
+.rfp-products {
+  border-block-start: var(--border-width-default) solid var(--color-border-muted);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.rfp-products-h {
+  font-weight: var(--type-label-weight);
+}
+.rfp-scroll {
+  max-block-size: 360px;
+  overflow-y: auto;
+}
+.rfp-scroll thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+}
+/* Add products drawer */
+.ap-search {
+  margin-block-end: var(--space-md);
+}
+.ap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ap-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+  border-block-end: var(--border-width-default) solid var(--color-border-muted);
+}
+.ap-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  cursor: pointer;
+  min-inline-size: 0;
+}

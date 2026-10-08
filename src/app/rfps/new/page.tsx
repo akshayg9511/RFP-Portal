@@ -37,21 +37,15 @@ export default function NewRfpPage() {
 
   /**
    * UX v2 create form. Akshay, 8 Oct: creating an RFP should ask for the
-   * owners, due date, instructions and nomination up front and land on the
-   * draft — not bounce to the RFP list and make the buyer find it again.
-   * Owners and due date are shared by every RFP this create makes; name,
-   * instructions and vendors are per RFP.
+   * owners, due date and instructions up front and land on the draft — not bounce to the RFP list and make the buyer find it again.
+   * Owners and due date are shared by every RFP this create makes; name and
+   * instructions are per RFP. Vendors are added on the RFP page itself.
    */
   const owners = useApi<{ sourcingPartners: string[]; gms: string[] }>("/api/rfps/owners");
-  const vendorList = useApi<{ id: string; name: string; vendorCode: string }[]>("/api/vendors");
   const [partners, setPartners] = React.useState<string[]>([]);
   const [gms, setGms] = React.useState<string[]>([]);
   const [dueDate, setDueDate] = React.useState("");
-  const [nominees, setNominees] = React.useState<Record<string, string[]>>({});
-  const vendorName = React.useMemo(
-    () => new Map((vendorList.data ?? []).map((v) => [v.id, `${v.name} · ${v.vendorCode}`])),
-    [vendorList.data],
-  );
+
   /**
    * Variations DESELECTED on this screen, by styleId.
    *
@@ -196,41 +190,15 @@ export default function NewRfpPage() {
 
       const created = (body.created ?? []) as { id: string; name: string }[];
 
-      /**
-       * Nomination is optional and saved after create, through the same
-       * invitations route the RFP page uses — so the clash rules (a vendor
-       * already bidding a product in another RFP) apply here too. Every
-       * product in the RFP goes to every nominee; per-vendor narrowing stays
-       * on the RFP page. The RFP stays a DRAFT until someone issues it.
-       */
-      const held: string[] = [];
-      for (const [i, rfp] of created.entries()) {
-        const group = preview.groups[i];
-        const vendorIds = group ? nominees[group.templateId] ?? [] : [];
-        if (!vendorIds.length) continue;
-        const res = await fetch(`/api/rfps/${rfp.id}/invitations`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            invitations: vendorIds.map((vendorId) => ({
-              vendorId,
-              styleIds: group.styles.map((s) => s.id),
-            })),
-          }),
-        });
-        const inv = await res.json().catch(() => ({}));
-        if (!res.ok) held.push(`${rfp.name}: ${inv?.message ?? "vendors not saved"}`);
-        else if (inv?.heldBack?.length) held.push(`${rfp.name}: ${inv.heldBack.length} vendor(s) held back`);
-      }
-
       selection.clear();
       // One RFP → straight to its draft. Several → the list, where the buyer
       // completes each one in turn (Akshay, 8 Oct).
-      const notice = held.length ? `&notice=${encodeURIComponent(held.join(" · "))}` : "";
+      // Vendors are added on the RFP page — one way to add them, not two
+      // (Akshay, 8 Oct: "why do you have two UX?").
       if (created.length === 1) {
-        router.push(`/rfps/${created[0].id}${notice ? `?${notice.slice(1)}` : ""}`);
+        router.push(`/rfps/${created[0].id}`);
       } else {
-        router.push(`/rfps?created=${created.map((c) => c.id).join(",")}${notice}`);
+        router.push(`/rfps?created=${created.map((c) => c.id).join(",")}`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -276,7 +244,6 @@ export default function NewRfpPage() {
     gms.length ? null : "a GM",
     dueDate ? null : "a due date",
   ].filter(Boolean) as string[];
-  const vendorIds = (vendorList.data ?? []).map((v) => v.id);
 
   return (
     <>
@@ -397,7 +364,7 @@ export default function NewRfpPage() {
             ) : null}
           </div>
 
-          {preview.groups.map((group, i) => (
+          {preview.groups.map((group) => (
             <RfpGroup
               key={group.templateId}
               group={group}
@@ -412,25 +379,9 @@ export default function NewRfpPage() {
                   [group.templateId]: value,
                 }))
               }
-              // The first is open so the screen is not a wall of closed rows;
-              // the rest stay shut so the page reads at a glance.
-              defaultOpen={i === 0}
             dropped={effectiveDropped}
             onToggleVariation={toggleVariation}
-            >
-              <PeoplePicker
-                id={`vendors-${group.templateId}`}
-                label="Nominate vendors (optional)"
-                addLabel="Add vendor"
-                options={vendorIds}
-                format={(v) => vendorName.get(v) ?? v}
-                value={nominees[group.templateId] ?? []}
-                onChange={(next) =>
-                  setNominees((prev) => ({ ...prev, [group.templateId]: next }))
-                }
-                hint="Every product in this RFP goes to each vendor. You can add or narrow vendors later — the RFP stays a draft until you issue it."
-              />
-            </RfpGroup>
+            />
           ))}
 
           <div className="page-actions">

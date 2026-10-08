@@ -138,6 +138,7 @@ export async function GET(
       gm: rfp.gm,
       sourcingPartners: ownerList(rfp.sourcingPartners, rfp.sourcingPartner),
       gms: ownerList(rfp.gms, rfp.gm),
+      templateId: rfp.templateId,
       templateName: rfp.template.name,
       waveName: rfp.wave.name,
 
