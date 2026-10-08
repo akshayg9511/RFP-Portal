@@ -6127,3 +6127,48 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   margin-block-start: var(--space-xl);
   box-shadow: none;
 }
+
+/* ── FILTER BAR (src/components/FilterBar.tsx) ──────────────────────────────
+   Only what the system's .filter-bar does not already own: anchoring the More
+   filters popover to its trigger, and the checkbox groups inside it. */
+.fb-more {
+  position: relative;
+}
+.fb-more > .popover {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-start: 0;
+  z-index: var(--z-popover);
+  box-shadow: var(--elevation-overlay);
+}
+.fb-more > .popover.cols {
+  inline-size: 520px;
+}
+.fb-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.fb-group > legend {
+  padding: 0;
+  margin-block-end: var(--space-sm);
+  font-weight: var(--type-label-weight);
+  color: var(--color-fg-default);
+}
+.fb-group .fb-n {
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fb-none {
+  margin: 0;
+  color: var(--color-fg-muted);
+}
+/* A facet that lands unset reads in the placeholder tone, so "I chose this"
+   and "this was chosen for me" are distinguishable at a glance. */
+.filter-bar select.fb-ph {
+  color: var(--color-fg-subtle);
+}

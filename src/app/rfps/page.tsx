@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { percent, units } from "@/lib/format";
-import { FacetSelect, facetsOf } from "@/components/FacetSelect";
+import { facetsOf } from "@/components/FacetSelect";
+import { FilterBar } from "@/components/FilterBar";
+import { SortTh, sortRows, type SortState } from "@/components/SortTh";
 import * as React from "react";
 
 type RfpRow = {
@@ -23,6 +25,9 @@ type RfpRow = {
   lowestVsBaseline: number | null;
   sourcingPartner: string | null;
   gm: string | null;
+  /** Owners as lists (ux/rfp-2). Absent on older API responses. */
+  sourcingPartners?: string[];
+  gms?: string[];
 };
 
 /**
@@ -36,29 +41,87 @@ const STATUS_TONE: Record<string, "success" | "info" | "warning" | undefined> = 
   CLOSED: "info",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Draft",
+  ISSUED: "Issued",
+  CLOSED: "Closed",
+};
+
+/**
+ * Status sorts by STATE, not spelling: done → on track → needs work, so a
+ * descending sort gathers the drafts that still need finishing at the top.
+ */
+const STATUS_RANK: Record<string, number> = { CLOSED: 0, ISSUED: 1, DRAFT: 2 };
+
+type SortKey = "name" | "status" | "products" | "vendors" | "bids" | "lowest";
+
+function partnersOf(r: RfpRow): string[] {
+  if (r.sourcingPartners?.length) return r.sourcingPartners;
+  return r.sourcingPartner ? [r.sourcingPartner] : [];
+}
+
+function gmsOf(r: RfpRow): string[] {
+  if (r.gms?.length) return r.gms;
+  return r.gm ? [r.gm] : [];
+}
+
 export default function RfpsPage() {
   const { data, loading, error } = useApi<RfpRow[]>("/api/rfps");
 
   /**
-   * FILTER BY OWNER (H5).
-   *
-   * Akshay: "The RFP screen should have a filter by sourcing partner or a
-   * filter by GM… so that sourcing partner and GM can function with
-   * clarity." This list had NO filters at all, so net-new but small —
-   * `FacetSelect` is already the convention on seven other call sites.
+   * FILTER & SORT (Aravind, C13). Search, ONE facet (Status), and More
+   * filters for Sourcing partner and GM — the owner filters Akshay asked for
+   * in H5, kept, but behind one trigger so the bar reads as a sentence
+   * rather than a rank of selects. Sort lives in the column headers.
    */
-  const [partner, setPartner] = React.useState("");
-  const [gm, setGm] = React.useState("");
+  const [query, setQuery] = React.useState("");
   const [status, setStatus] = React.useState("");
+  const [more, setMore] = React.useState<{ partner: string[]; gm: string[] }>({
+    partner: [],
+    gm: [],
+  });
+  const [sort, setSort] = React.useState<SortState<SortKey>>(null);
 
-  const rows = React.useMemo(() => {
-    return (data ?? []).filter(
-      (r) =>
-        (!partner || r.sourcingPartner === partner) &&
-        (!gm || r.gm === gm) &&
-        (!status || r.status === status),
-    );
-  }, [data, partner, gm, status]);
+  const matches = React.useCallback(
+    (r: RfpRow, skip?: "status" | "partner" | "gm") => {
+      const q = query.trim().toLowerCase();
+      if (q && !`${r.name} ${r.templateName}`.toLowerCase().includes(q)) return false;
+      if (skip !== "status" && status && r.status !== status) return false;
+      if (
+        skip !== "partner" &&
+        more.partner.length &&
+        !partnersOf(r).some((p) => more.partner.includes(p))
+      ) {
+        return false;
+      }
+      if (skip !== "gm" && more.gm.length && !gmsOf(r).some((g) => more.gm.includes(g))) {
+        return false;
+      }
+      return true;
+    },
+    [query, status, more],
+  );
+
+  const rows = React.useMemo(
+    () =>
+      sortRows((data ?? []).filter((r) => matches(r)), sort, (r, key) => {
+        switch (key) {
+          case "name":
+            return r.name.toLowerCase();
+          case "status":
+            return STATUS_RANK[r.status] ?? 9;
+          case "products":
+            return r.styleCount;
+          case "vendors":
+            return r.vendorCount;
+          case "bids":
+            return r.bidCount;
+          case "lowest":
+            return r.lowestVsBaseline;
+        }
+      }),
+    [data, matches, sort],
+  );
 
   /**
    * Facet counts EXCLUDE their own dimension, so picking one partner does
@@ -67,69 +130,65 @@ export default function RfpsPage() {
    */
   const facets = React.useMemo(() => {
     const all = data ?? [];
-    const without = (skip: "partner" | "gm" | "status") =>
-      all.filter(
-        (r) =>
-          (skip === "partner" || !partner || r.sourcingPartner === partner) &&
-          (skip === "gm" || !gm || r.gm === gm) &&
-          (skip === "status" || !status || r.status === status),
-      );
     return {
-      partner: facetsOf(without("partner"), (r) => r.sourcingPartner),
-      gm: facetsOf(without("gm"), (r) => r.gm),
-      status: facetsOf(without("status"), (r) => r.status),
+      status: facetsOf(all.filter((r) => matches(r, "status")), (r) => r.status),
+      partner: facetsOf(all.filter((r) => matches(r, "partner")), partnersOf),
+      gm: facetsOf(all.filter((r) => matches(r, "gm")), gmsOf),
     };
-  }, [data, partner, gm, status]);
+  }, [data, matches]);
 
-  const filtered = partner || gm || status;
+  const filtered = Boolean(query || status || more.partner.length || more.gm.length);
+
+  function clearFilters() {
+    setQuery("");
+    setStatus("");
+    setMore({ partner: [], gm: [] });
+  }
 
   return (
     <>
+      {/* The primary sits on the title's line, trailing (Aravind, C11). */}
       <div className="page-hd">
-        <h1>RFPs</h1>
-        <div className="acts">
-          <Link className="btn btn--primary" href="/style-sets">
-            <Icon name="plus" />
-            New RFP
-          </Link>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">RFPs</h1>
+          </div>
+          <div className="acts">
+            <Link className="btn btn--primary" href="/style-sets">
+              <Icon name="plus" />
+              New RFP
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* A utility strip, so these stay GHOST however close they sit to the
-          title row's primary. */}
-      <div className="aw-filters">
-        <FacetSelect
-          label="Sourcing partner"
-          value={partner}
-          onChange={setPartner}
-          options={facets.partner}
+      {data && data.length ? (
+        <FilterBar
+          search={{ value: query, onChange: setQuery, placeholder: "Search RFPs" }}
+          facet={{
+            label: "status",
+            placeholder: "Select status",
+            value: status,
+            onChange: setStatus,
+            options: facets.status,
+            format: (v) => STATUS_LABEL[v] ?? v,
+          }}
+          groups={[
+            {
+              key: "partner",
+              label: "Sourcing partner",
+              options: facets.partner,
+              selected: more.partner,
+            },
+            { key: "gm", label: "GM", options: facets.gm, selected: more.gm },
+          ]}
+          onGroupsChange={(next) =>
+            setMore({ partner: next.partner ?? [], gm: next.gm ?? [] })
+          }
+          // No pager here, so the count lives once, under the bar.
+          meta={`${rows.length} RFP${rows.length === 1 ? "" : "s"}`}
         />
-        <FacetSelect label="GM" value={gm} onChange={setGm} options={facets.gm} />
-        <FacetSelect
-          label="Status"
-          allLabel="Any status"
-          value={status}
-          onChange={setStatus}
-          options={facets.status}
-        />
-        {filtered ? (
-          <>
-            <span className="rl-count">
-              {rows.length} of {(data ?? []).length}
-            </span>
-            <button
-              className="btn btn--ghost sm"
-              onClick={() => {
-                setPartner("");
-                setGm("");
-                setStatus("");
-              }}
-            >
-              Clear
-            </button>
-          </>
-        ) : null}
-      </div>
+      ) : null}
 
       {error ? (
         <div className="bar bar--danger">
@@ -155,19 +214,19 @@ export default function RfpsPage() {
             <col style={{ width: "9%" }} />
             <col style={{ width: "9%" }} />
             <col style={{ width: "8%" }} />
-            {/* 15%, not 13% — "Lowest vs baseline" wrapped to two lines and
+            {/* 17%, not 13% — "Lowest vs baseline" wrapped to two lines and
                 made the header row taller than any body row. */}
             <col style={{ width: "17%" }} />
             <col style={{ width: "15%" }} />
           </colgroup>
           <thead>
             <tr>
-              <th>RFP</th>
-              <th>Status</th>
-              <th className="num">Products</th>
-              <th className="num">Vendors</th>
-              <th className="num">Bids</th>
-              <th className="num">Lowest vs baseline</th>
+              <SortTh sortKey="name" sort={sort} onSort={setSort}>RFP</SortTh>
+              <SortTh sortKey="status" sort={sort} onSort={setSort}>Status</SortTh>
+              <SortTh sortKey="products" sort={sort} onSort={setSort} num>Products</SortTh>
+              <SortTh sortKey="vendors" sort={sort} onSort={setSort} num>Vendors</SortTh>
+              <SortTh sortKey="bids" sort={sort} onSort={setSort} num>Bids</SortTh>
+              <SortTh sortKey="lowest" sort={sort} onSort={setSort} num>Lowest vs baseline</SortTh>
               <th>Responses</th>
             </tr>
           </thead>
@@ -202,7 +261,9 @@ export default function RfpsPage() {
                         </span>
                       </td>
                       <td>
-                        <Badge tone={STATUS_TONE[rfp.status]}>{rfp.status}</Badge>
+                        <Badge tone={STATUS_TONE[rfp.status]}>
+                          {STATUS_LABEL[rfp.status] ?? rfp.status}
+                        </Badge>
                       </td>
                       <td className="num">
                         {units(rfp.styleCount)}
@@ -253,6 +314,24 @@ export default function RfpsPage() {
                 })}
           </tbody>
         </table>
+
+        {/* Zero results is its own state: it names what excluded everything
+            and offers the way back, rather than reusing the empty-collection
+            message, which asks for data to be added. */}
+        {!loading && data && data.length > 0 && rows.length === 0 && filtered ? (
+          <div className="empty compact">
+            <span className="glyph">
+              <Icon name="search" size="lg" />
+            </span>
+            <div className="ttl">No RFPs match these filters</div>
+            <div className="desc">Clear a filter or search for a different name.</div>
+            <div className="acts">
+              <button type="button" className="btn btn--secondary" onClick={clearFilters}>
+                Clear filters
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {!loading && data && data.length === 0 ? (
           <div className="empty compact">
