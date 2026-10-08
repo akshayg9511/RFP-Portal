@@ -67,7 +67,13 @@ PING=$(aws ssm describe-instance-information --region "$REGION" \
 # Run a script on the box; print its output; fail if it fails.
 remote() {
   local file="$1" timeout="${2:-900}" params cid st
-  params=$(python3 -c 'import json,sys; print(json.dumps({"commands":[open(sys.argv[1]).read()],"executionTimeout":[sys.argv[2]]}))' "$file" "$timeout")
+  # SSM runs commands with /bin/sh (dash), which has no pipefail, arrays or
+  # process substitution — so write the script to a file and run it with bash.
+  params=$(python3 -c '
+import json, sys
+body = open(sys.argv[1]).read()
+wrapped = "cat > /tmp/procura-remote.sh <<'"'"'PROCURA_EOF'"'"'\n" + body + "\nPROCURA_EOF\nbash /tmp/procura-remote.sh; rc=$?; rm -f /tmp/procura-remote.sh; exit $rc\n"
+print(json.dumps({"commands": [wrapped], "executionTimeout": [sys.argv[2]]}))' "$file" "$timeout")
   cid=$(aws ssm send-command --region "$REGION" --instance-ids "$IID" \
     --document-name AWS-RunShellScript --parameters "$params" \
     --query Command.CommandId --output text)
