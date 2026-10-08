@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Icon, Menu, MenuItem } from "@/ds/components";
+import { SelBarMenu } from "@/components/SelBarMenu";
 import { money } from "@/lib/format";
 
 /**
@@ -44,24 +44,7 @@ export function SelectionTray({
   onReviewVariations?: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
-  const wrap = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   /**
    * Reserve room for the tray on the scroll container while it is up.
@@ -98,60 +81,26 @@ export function SelectionTray({
         ) : null}
       </span>
 
+      {/* Aravind's reworked bar: Clear selection, then ONE primary
+          menu holding every action on the selection. */}
       <div className="acts">
         <button className="btn btn--ghost" onClick={onClear}>
-          Clear
+          Clear selection
         </button>
-
-        <div className="sel-menu-wrap" ref={wrap}>
-          <button
-            className="btn btn--ghost"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-haspopup="menu"
-          >
-            With {count} selected
-            <Icon name={open ? "chevron_up" : "chevron_down"} size="sm" />
-          </button>
-
-          {open ? (
-            <Menu className="sel-menu" aria-label="Actions for the selection">
-              <MenuItem
-                icon={<Icon name="arrow_right" size="sm" />}
-                onClick={() => {
-                  setOpen(false);
-                  router.push("/rfps/new");
-                }}
-              >
-                Create RFP
-              </MenuItem>
-              {/* The path for "all of it except King". Create RFP above
-                  sends every variation; this one opens the review. */}
-              {onReviewVariations ? (
-                <MenuItem
-                  icon={<Icon name="list" size="sm" />}
-                  onClick={() => {
-                    setOpen(false);
-                    onReviewVariations();
-                  }}
-                >
-                  Review variation level
-                </MenuItem>
-              ) : null}
-              {onSaveAsSet ? (
-                <MenuItem
-                  icon={<Icon name="bedding" size="sm" />}
-                  onClick={() => {
-                    setOpen(false);
-                    onSaveAsSet();
-                  }}
-                >
-                  Save as style set
-                </MenuItem>
-              ) : null}
-            </Menu>
-          ) : null}
-        </div>
+        <SelBarMenu
+          label="Create"
+          items={[
+            { label: "Create RFP", icon: "arrow_right", onSelect: () => router.push("/rfps/new") },
+            // The path for "all of it except King": Create RFP sends every
+            // variation; this opens the review first.
+            ...(onReviewVariations
+              ? [{ label: "Review variation level", icon: "list" as const, onSelect: onReviewVariations }]
+              : []),
+            ...(onSaveAsSet
+              ? [{ label: "Save as style set", icon: "bedding" as const, onSelect: onSaveAsSet }]
+              : []),
+          ]}
+        />
       </div>
     </div>
   );

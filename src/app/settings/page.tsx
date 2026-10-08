@@ -3,7 +3,8 @@
 import * as React from "react";
 import { Badge, Checkbox, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
-import { FacetSelect } from "@/components/FacetSelect";
+import { FilterBar } from "@/components/FilterBar";
+import { SelBarMenu } from "@/components/SelBarMenu";
 import { units } from "@/lib/format";
 import {
   allowedForAll,
@@ -175,89 +176,55 @@ export default function VariationSetupPage() {
     }
   }
 
-  const filtered = Boolean(
-    query || division || department || subDepartment || grainFilter,
-  );
-
   return (
     <>
       <div className="page-hd">
-        <h1>Variation setup</h1>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">Variation setup</h1>
+          </div>
+        </div>
       </div>
 
-      <div className="card">
-        <div className="card-b">
-          <p className="vs-lede">
-            Which axis each product is bid, compared and awarded on. A grain
-            can move <strong>down</strong> the ladder — style to colour or
-            size, then to colour × size — but never back up or sideways, because
-            a bid already placed against a colour has nowhere to go.
-          </p>
+      {/* The rule, as a message bar on the canvas rather than paragraph text
+          inside the card (Aravind, C67). */}
+      <div className="bar bar--info vs-rule">
+        <Icon name="info_circle" />
+        <div>
+          Which axis each product is bid, compared and awarded on. A grain can
+          move <strong>down</strong> the ladder — style to colour or size, then to
+          colour × size — but never back up or sideways, because a bid already
+          placed against a colour has nowhere to go.
+        </div>
+      </div>
 
-          <div className="aw-filters">
-            <div className="control search sm aw-search">
-              <Icon name="search" size="sm" />
-              <input
-                placeholder="Search style number or name"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Search products"
-              />
-            </div>
-
-            <FacetSelect
-              label="division"
-              value={division}
-              onChange={setDivision}
-              options={data?.facets.division ?? []}
-            />
-            <FacetSelect
-              label="department"
-              value={department}
-              onChange={setDepartment}
-              options={data?.facets.department ?? []}
-            />
-            <FacetSelect
-              label="sub-department"
-              value={subDepartment}
-              onChange={setSubDepartment}
-              options={data?.facets.subDepartment ?? []}
-            />
-
-            <select
-              className="control sm"
-              aria-label="Filter by current grain"
-              value={grainFilter}
-              onChange={(e) => setGrainFilter(e.target.value)}
-            >
-              <option value="">All grains</option>
-              {GRAINS.map((g) => (
-                <option key={g} value={g}>
-                  {GRAIN_LABEL[g]} level
-                </option>
-              ))}
-            </select>
-
-            {filtered ? (
-              <button
-                className="btn btn--ghost sm"
-                onClick={() => {
-                  setQuery("");
-                  setDivision("");
-                  setDepartment("");
-                  setSubDepartment("");
-                  setGrainFilter("");
-                }}
-              >
-                Clear
-              </button>
-            ) : null}
-
-            <span className="aw-filter-count">
-              {rows.length} shown
-              {picked.size ? ` · ${picked.size} selected` : ""}
-            </span>
-          </div>
+      {/* Filters sit on the canvas, outside the surface (C66); only the table
+          is on a card (C68). */}
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: "Search style number or name" }}
+        facet={{
+          label: "grain",
+          placeholder: "Select grain",
+          value: grainFilter,
+          onChange: setGrainFilter,
+          options: GRAINS.map((g) => ({
+            value: g,
+            count: (data?.styles ?? []).filter((r) => r.variationLevel === g).length,
+          })),
+          format: (v) => `${GRAIN_LABEL[v as Grain]} level`,
+        }}
+        groups={[
+          { key: "division", label: "Division", single: true, options: data?.facets.division ?? [], selected: division ? [division] : [] },
+          { key: "department", label: "Department", single: true, options: data?.facets.department ?? [], selected: department ? [department] : [] },
+          { key: "subDepartment", label: "Sub-department", single: true, options: data?.facets.subDepartment ?? [], selected: subDepartment ? [subDepartment] : [] },
+        ]}
+        onGroupsChange={(next) => {
+          setDivision(next.division?.[0] ?? "");
+          setDepartment(next.department?.[0] ?? "");
+          setSubDepartment(next.subDepartment?.[0] ?? "");
+        }}
+        meta={`${rows.length} product${rows.length === 1 ? "" : "s"}${picked.size ? ` · ${picked.size} selected` : ""}`}
+      />
 
           {note ? (
             <div className={note.tone === "ok" ? "bar" : "bar bar--danger"}>
@@ -404,8 +371,6 @@ export default function VariationSetupPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
 
       {picked.size > 0 ? (
         <div className="sel-bar fixed">
@@ -422,31 +387,21 @@ export default function VariationSetupPage() {
             ) : null}
           </span>
           <div className="acts">
-            {bulkAllowed.length === 0 ? (
-              <span className="vs-leaf">
-                No grain is legal for every selected product
-              </span>
-            ) : (
-              <>
-                <span className="vs-bulk-label">Set grain to</span>
-                {bulkAllowed.map((g) => (
-                  <button
-                    key={g}
-                    className="btn btn--ghost sm"
-                    disabled={busy}
-                    onClick={() => setGrain([...picked], g)}
-                  >
-                    {GRAIN_LABEL[g]}
-                  </button>
-                ))}
-              </>
-            )}
-            <button
-              className="btn btn--ghost"
-              onClick={() => setPicked(new Set())}
-            >
-              Clear
+            <button className="btn btn--ghost" onClick={() => setPicked(new Set())}>
+              Clear selection
             </button>
+            {bulkAllowed.length === 0 ? (
+              <span className="vs-leaf">No grain is legal for every selected product</span>
+            ) : (
+              <SelBarMenu
+                label="Set grain"
+                busy={busy}
+                items={bulkAllowed.map((g) => ({
+                  label: `${GRAIN_LABEL[g]} level`,
+                  onSelect: () => setGrain([...picked], g),
+                }))}
+              />
+            )}
           </div>
         </div>
       ) : null}

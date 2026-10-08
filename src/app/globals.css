@@ -6527,3 +6527,6 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   font-size: var(--type-body-sm-size);
   color: var(--color-fg-muted);
 }
+.vs-rule {
+  margin-block-end: 0;
+}
