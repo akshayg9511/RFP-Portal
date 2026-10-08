@@ -6646,3 +6646,15 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   gap: var(--space-sm);
   justify-content: flex-start;
 }
+/* Air/ocean popover fell BEHIND the next rows (C30): their sticky cells sit
+   on --z-sticky, so lift the cell — and its row — that holds an open popover
+   above them. */
+.bs-grid td:has(.bs-split-pop),
+.bs-grid th:has(.bs-split-pop) {
+  position: relative;
+  z-index: var(--z-popover);
+}
+.bs-grid tr:has(.bs-split-pop) {
+  position: relative;
+  z-index: var(--z-popover);
+}

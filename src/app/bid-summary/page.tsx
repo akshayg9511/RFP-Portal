@@ -748,7 +748,11 @@ function SplitEditor({ group, onSaved }: { group: BidGroup; onSaved: () => void 
                 Reset to 70 / 30
               </button>
             ) : null}
-            <button className="btn btn--secondary sm" disabled={busy || !valid} onClick={() => save(value)}>
+            {/* Cancel + a primary Apply (Aravind, C30). */}
+            <button className="btn btn--secondary sm" disabled={busy} onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+            <button className="btn btn--primary sm" disabled={busy || !valid} onClick={() => save(value)}>
               Apply
             </button>
           </span>
