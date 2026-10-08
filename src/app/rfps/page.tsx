@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { percent, units } from "@/lib/format";
@@ -66,7 +67,28 @@ function gmsOf(r: RfpRow): string[] {
 }
 
 export default function RfpsPage() {
+  // useSearchParams() needs a Suspense boundary to prerender (A17).
+  return (
+    <React.Suspense fallback={<div className="sk" style={{ blockSize: 320 }} />}>
+      <RfpsList />
+    </React.Suspense>
+  );
+}
+
+function RfpsList() {
   const { data, loading, error } = useApi<RfpRow[]>("/api/rfps");
+
+  /**
+   * Arriving from Create with several drafts (one per quotation template):
+   * say so, and mark them, so the buyer can complete each one in turn.
+   */
+  const params = useSearchParams();
+  const createdIds = React.useMemo(
+    () => new Set((params.get("created") ?? "").split(",").filter(Boolean)),
+    [params],
+  );
+  const notice = params.get("notice");
+  const [bannerOpen, setBannerOpen] = React.useState(true);
 
   /**
    * FILTER & SORT (Aravind, C13). Search, ONE facet (Status), and More
@@ -162,6 +184,28 @@ export default function RfpsPage() {
         </div>
       </div>
 
+      {createdIds.size && bannerOpen ? (
+        <div className="bar bar--info rl-created">
+          <Icon name="info_circle" />
+          <div>
+            <strong>
+              {createdIds.size} draft RFP{createdIds.size === 1 ? "" : "s"} created.
+            </strong>{" "}
+            The products use different quotation templates, so each became its own
+            RFP. Open each one to add vendors and issue it.
+            {notice ? <div className="rl-created-note">{notice}</div> : null}
+          </div>
+          <button
+            type="button"
+            className="btn btn--ghost sm icon"
+            aria-label="Dismiss"
+            onClick={() => setBannerOpen(false)}
+          >
+            <Icon name="close" size="sm" />
+          </button>
+        </div>
+      ) : null}
+
       {data && data.length ? (
         <FilterBar
           search={{ value: query, onChange: setQuery, placeholder: "Search RFPs" }}
@@ -252,6 +296,9 @@ export default function RfpsPage() {
                         <Link className="rl-name" href={`/rfps/${rfp.id}`}>
                           {rfp.name}
                         </Link>
+                        {createdIds.has(rfp.id) ? (
+                          <Badge tone="info" className="rl-new">New</Badge>
+                        ) : null}
                         <span className="rl-sub">
                           {/* No round. Rounds were replaced by the status
                               ladder (H1) — negotiation is repeatable, so a

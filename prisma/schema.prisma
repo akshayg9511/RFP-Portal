@@ -338,6 +338,12 @@ model Rfp {
   sourcingPartner String?
   gm              String?
 
+  /// Owners as lists (UX v2: an RFP can have several sourcing partners and
+  /// several GMs). JSON string arrays. The single columns above are kept and
+  /// dual-written with the first entry, so code that reads them keeps working.
+  sourcingPartners Json?
+  gms              Json?
+
   comment   String?   @db.Text
   issuedAt  DateTime?
   createdAt DateTime  @default(now())

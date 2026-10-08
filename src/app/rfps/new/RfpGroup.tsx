@@ -49,7 +49,9 @@ export function RfpGroup({
   defaultOpen,
   dropped,
   onToggleVariation,
+  children,
 }: {
+  children?: React.ReactNode;
   group: SplitGroup;
   name: string;
   onNameChange: (value: string) => void;
@@ -139,6 +141,9 @@ export function RfpGroup({
             />
           </div>
         </div>
+
+        {/* Nomination slot (UX v2): optional vendors for this RFP. */}
+        {children}
       </div>
 
       <div className={open ? "acc-item open" : "acc-item"}>

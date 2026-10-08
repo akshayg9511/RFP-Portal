@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/ds/components";
 import { useSelection } from "@/lib/selection";
+import { useApi } from "@/lib/useApi";
+import { PeoplePicker } from "@/components/PeoplePicker";
 import { RfpGroup, type SplitGroup } from "./RfpGroup";
 
 /**
@@ -32,6 +34,24 @@ export default function NewRfpPage() {
   const [names, setNames] = React.useState<Record<string, string>>({});
   const [instructions, setInstructions] = React.useState<Record<string, string>>({});
   const [creating, setCreating] = React.useState(false);
+
+  /**
+   * UX v2 create form. Akshay, 8 Oct: creating an RFP should ask for the
+   * owners, due date, instructions and nomination up front and land on the
+   * draft — not bounce to the RFP list and make the buyer find it again.
+   * Owners and due date are shared by every RFP this create makes; name,
+   * instructions and vendors are per RFP.
+   */
+  const owners = useApi<{ sourcingPartners: string[]; gms: string[] }>("/api/rfps/owners");
+  const vendorList = useApi<{ id: string; name: string; vendorCode: string }[]>("/api/vendors");
+  const [partners, setPartners] = React.useState<string[]>([]);
+  const [gms, setGms] = React.useState<string[]>([]);
+  const [dueDate, setDueDate] = React.useState("");
+  const [nominees, setNominees] = React.useState<Record<string, string[]>>({});
+  const vendorName = React.useMemo(
+    () => new Map((vendorList.data ?? []).map((v) => [v.id, `${v.name} · ${v.vendorCode}`])),
+    [vendorList.data],
+  );
   /**
    * Variations DESELECTED on this screen, by styleId.
    *
@@ -165,14 +185,53 @@ export default function NewRfpPage() {
                 .filter(([, picked]) => picked.length > 0),
             ),
           })),
+          sourcingPartners: partners,
+          gms,
+          dueDate: dueDate || null,
         }),
       });
 
       const body = await response.json();
       if (!response.ok) throw new Error(body?.message ?? "Could not create");
 
+      const created = (body.created ?? []) as { id: string; name: string }[];
+
+      /**
+       * Nomination is optional and saved after create, through the same
+       * invitations route the RFP page uses — so the clash rules (a vendor
+       * already bidding a product in another RFP) apply here too. Every
+       * product in the RFP goes to every nominee; per-vendor narrowing stays
+       * on the RFP page. The RFP stays a DRAFT until someone issues it.
+       */
+      const held: string[] = [];
+      for (const [i, rfp] of created.entries()) {
+        const group = preview.groups[i];
+        const vendorIds = group ? nominees[group.templateId] ?? [] : [];
+        if (!vendorIds.length) continue;
+        const res = await fetch(`/api/rfps/${rfp.id}/invitations`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            invitations: vendorIds.map((vendorId) => ({
+              vendorId,
+              styleIds: group.styles.map((s) => s.id),
+            })),
+          }),
+        });
+        const inv = await res.json().catch(() => ({}));
+        if (!res.ok) held.push(`${rfp.name}: ${inv?.message ?? "vendors not saved"}`);
+        else if (inv?.heldBack?.length) held.push(`${rfp.name}: ${inv.heldBack.length} vendor(s) held back`);
+      }
+
       selection.clear();
-      router.push("/rfps");
+      // One RFP → straight to its draft. Several → the list, where the buyer
+      // completes each one in turn (Akshay, 8 Oct).
+      const notice = held.length ? `&notice=${encodeURIComponent(held.join(" · "))}` : "";
+      if (created.length === 1) {
+        router.push(`/rfps/${created[0].id}${notice ? `?${notice.slice(1)}` : ""}`);
+      } else {
+        router.push(`/rfps?created=${created.map((c) => c.id).join(",")}${notice}`);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
       setCreating(false);
@@ -209,6 +268,15 @@ export default function NewRfpPage() {
   }
 
   const missingName = preview?.groups.some((g) => !names[g.templateId]?.trim());
+  // What still blocks Create, said in words beside the button rather than
+  // only as a disabled state.
+  const missing = [
+    missingName ? "a name for every RFP" : null,
+    partners.length ? null : "a sourcing partner",
+    gms.length ? null : "a GM",
+    dueDate ? null : "a due date",
+  ].filter(Boolean) as string[];
+  const vendorIds = (vendorList.data ?? []).map((v) => v.id);
 
   return (
     <>
@@ -286,6 +354,49 @@ export default function NewRfpPage() {
             </div>
           ) : null}
 
+          <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
+            <div className="card-h">
+              <div className="ttl">Owners and due date</div>
+            </div>
+            <div className="card-b rfp-create-owners">
+              <PeoplePicker
+                id="rfp-partners"
+                label="Sourcing partners"
+                addLabel="Add sourcing partner"
+                options={owners.data?.sourcingPartners ?? []}
+                value={partners}
+                onChange={setPartners}
+              />
+              <PeoplePicker
+                id="rfp-gms"
+                label="GMs"
+                addLabel="Add GM"
+                options={owners.data?.gms ?? []}
+                value={gms}
+                onChange={setGms}
+              />
+              <div className="field">
+                <label className="lbl" htmlFor="rfp-due">
+                  Due date
+                </label>
+                <div className="control">
+                  <input
+                    id="rfp-due"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+            {preview.rfpCount > 1 ? (
+              <div className="card-b rfp-create-note">
+                These apply to all {preview.rfpCount} RFPs. You can change them on
+                each RFP afterwards.
+              </div>
+            ) : null}
+          </div>
+
           {preview.groups.map((group, i) => (
             <RfpGroup
               key={group.templateId}
@@ -306,28 +417,43 @@ export default function NewRfpPage() {
               defaultOpen={i === 0}
             dropped={effectiveDropped}
             onToggleVariation={toggleVariation}
-            />
+            >
+              <PeoplePicker
+                id={`vendors-${group.templateId}`}
+                label="Nominate vendors (optional)"
+                addLabel="Add vendor"
+                options={vendorIds}
+                format={(v) => vendorName.get(v) ?? v}
+                value={nominees[group.templateId] ?? []}
+                onChange={(next) =>
+                  setNominees((prev) => ({ ...prev, [group.templateId]: next }))
+                }
+                hint="Every product in this RFP goes to each vendor. You can add or narrow vendors later — the RFP stays a draft until you issue it."
+              />
+            </RfpGroup>
           ))}
 
           <div className="page-actions">
             <Link className="btn btn--secondary" href="/style-sets">
               Back to selection
             </Link>
+            {missing.length ? (
+              <span className="rfp-create-missing">Add {missing.join(", ")}</span>
+            ) : null}
             <button
               className="btn btn--primary"
               onClick={create}
-              disabled={creating || missingName}
+              disabled={creating || missing.length > 0}
             >
               {creating ? (
                 <>
                   <span className="spinner" aria-hidden />
                   Creating…
                 </>
+              ) : preview.rfpCount === 1 ? (
+                "Create draft"
               ) : (
-                <>
-                  Create {preview.rfpCount}{" "}
-                  {preview.rfpCount === 1 ? "RFP" : "RFPs"}
-                </>
+                `Create ${preview.rfpCount} drafts`
               )}
             </button>
           </div>

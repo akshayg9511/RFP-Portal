@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { badRequest, handle, num, ok } from "@/lib/api";
 import { variationKeyOf, WHOLE_STYLE_KEY } from "@/domain/grain";
+import { cleanOwners, ownerList, ownersData } from "@/lib/owners";
 /**
  * @openapi
  * /api/rfps:
@@ -92,6 +93,8 @@ export function GET() {
          */
         sourcingPartner: r.sourcingPartner,
         gm: r.gm,
+        sourcingPartners: ownerList(r.sourcingPartners, r.sourcingPartner),
+        gms: ownerList(r.gms, r.gm),
         createdAt: r.createdAt,
       };
     });
@@ -113,6 +116,14 @@ type CreateBody = {
     variationsByStyle?: Record<string, string[]>;
   }[];
   comment?: string;
+  /**
+   * Shared across every RFP this create makes (UX v2 create form). Each RFP
+   * can still be edited on its own afterwards.
+   */
+  sourcingPartners?: string[];
+  gms?: string[];
+  /** ISO date. Absent falls back to the wave's due date, as before. */
+  dueDate?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -145,7 +156,8 @@ export async function POST(request: Request) {
           instructions: group.instructions?.trim() || null,
           comment: body.comment?.trim() || null,
           status: "DRAFT",
-          dueDate: wave.dueDate,
+          dueDate: body.dueDate ? new Date(body.dueDate) : wave.dueDate,
+          ...ownersData(cleanOwners(body.sourcingPartners), cleanOwners(body.gms)),
           styles: { create: rfpStyleRows(group) },
         },
         // Rows, not products — a style out to bid on 3 sizes makes 3 rows.

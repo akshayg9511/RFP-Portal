@@ -11,6 +11,7 @@ import { VendorPicker } from "./VendorPicker";
 import { ProductsTab } from "./ProductsTab";
 import { VendorsTab } from "./VendorsTab";
 import { QuoteDrawer } from "./QuoteDrawer";
+import { PeoplePicker } from "@/components/PeoplePicker";
 
 /**
  * S3 — vendor nomination and issue.
@@ -28,6 +29,8 @@ type RfpDetail = {
   dueDate: string | null;
   sourcingPartner: string | null;
   gm: string | null;
+  sourcingPartners?: string[];
+  gms?: string[];
   templateName: string;
   styles: {
     id: string;
@@ -100,12 +103,6 @@ function nominationMessage(body: {
   return parts.join(" ");
 }
 
-const QUINCE_PEOPLE = [
-  "Tony Alvarez",
-  "Jeremiah Cole",
-  "Jackie Chen",
-  "Priya Raman",
-];
 
 export default function RfpDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -178,6 +175,28 @@ export default function RfpDetailPage() {
   } | null>(null);
 
   const issued = data?.status === "ISSUED";
+
+  /**
+   * Owners as lists (UX v2). Same rule as nomination: the saved value comes
+   * from `data` at read time and a local edit overrides it, so a reload
+   * mid-edit cannot wipe what was just picked.
+   */
+  const owners = useApi<{ sourcingPartners: string[]; gms: string[] }>("/api/rfps/owners");
+  const [partnerEdit, setPartnersNow] = React.useState<string[] | null>(null);
+  const [gmEdit, setGmsNow] = React.useState<string[] | null>(null);
+  const partnersNow =
+    partnerEdit ?? data?.sourcingPartners ?? (data?.sourcingPartner ? [data.sourcingPartner] : []);
+  const gmsNow = gmEdit ?? data?.gms ?? (data?.gm ? [data.gm] : []);
+
+  // A create that nominated vendors may report some held back (clash with
+  // another RFP); the create page passes that along in the URL once.
+  React.useEffect(() => {
+    const notice = new URLSearchParams(window.location.search).get("notice");
+    if (!notice) return;
+    // Deferred: the URL is an external system read once after mount.
+    const t = setTimeout(() => setNote({ tone: "error", text: notice }), 0);
+    return () => clearTimeout(t);
+  }, []);
 
   const allStyleIds = React.useMemo(
     () => (data?.styles ?? []).map((s) => s.id),
@@ -376,6 +395,15 @@ export default function RfpDetailPage() {
     });
   }
 
+  async function patchOwners(body: { sourcingPartners?: string[]; gms?: string[] }) {
+    const res = await fetch(`/api/rfps/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) say("error", "Owners could not be saved. Try again.");
+  }
+
   const candidates = data?.candidates ?? [];
 
   /**
@@ -561,8 +589,7 @@ export default function RfpDetailPage() {
                     : "—"}
                 </span>
                 <span className="s">
-                  {[data.sourcingPartner, data.gm].filter(Boolean).join(" · ") ||
-                    "unassigned"}
+                  {[...partnersNow, ...gmsNow].join(" · ") || "unassigned"}
                 </span>
               </span>
 
@@ -584,33 +611,30 @@ export default function RfpDetailPage() {
               <div className="card-h"><div className="ttl">Ownership</div></div>
               <div className="card-b">
                 <div className="owner-grid">
-                  <div className="field">
-                    <label className="lbl" htmlFor="sp">Sourcing partner</label>
-                    <div className="control control-select">
-                      <select
-                        id="sp"
-                        defaultValue={data.sourcingPartner ?? ""}
-                        onChange={(e) => patch("sourcingPartner", e.target.value)}
-                      >
-                        <option value="">Unassigned</option>
-                        {QUINCE_PEOPLE.map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                  </div>
+                  {/* Lists, not one each (UX v2). Saved on every change. */}
+                  <PeoplePicker
+                    id="sp"
+                    label="Sourcing partners"
+                    addLabel="Add sourcing partner"
+                    options={owners.data?.sourcingPartners ?? []}
+                    value={partnersNow}
+                    onChange={(next) => {
+                      setPartnersNow(next);
+                      patchOwners({ sourcingPartners: next });
+                    }}
+                  />
 
-                  <div className="field">
-                    <label className="lbl" htmlFor="gm">GM</label>
-                    <div className="control control-select">
-                      <select
-                        id="gm"
-                        defaultValue={data.gm ?? ""}
-                        onChange={(e) => patch("gm", e.target.value)}
-                      >
-                        <option value="">Unassigned</option>
-                        {QUINCE_PEOPLE.map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                  </div>
+                  <PeoplePicker
+                    id="gm"
+                    label="GMs"
+                    addLabel="Add GM"
+                    options={owners.data?.gms ?? []}
+                    value={gmsNow}
+                    onChange={(next) => {
+                      setGmsNow(next);
+                      patchOwners({ gms: next });
+                    }}
+                  />
 
                   <div className="field">
                     <label className="lbl" htmlFor="due">Due date</label>

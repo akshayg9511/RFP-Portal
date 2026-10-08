@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Checkbox, Icon } from "@/ds/components";
+import { Checkbox, Icon, Token } from "@/ds/components";
 import type { Facet } from "@/components/FacetSelect";
 
 /**
@@ -126,18 +126,14 @@ export function FilterBar({
       {applied.length ? (
         <div className="filter-applied">
           {applied.map(({ group, value }) => (
-            <span className="token" key={`${group.key}:${value}`}>
-              <span className="key">{group.label}</span>
+            <Token
+              key={`${group.key}:${value}`}
+              qualifier={group.label}
+              onDismiss={() => remove(group.key, value)}
+              dismissLabel={`Remove ${group.label} ${value}`}
+            >
               {value}
-              <button
-                type="button"
-                className="x"
-                aria-label={`Remove ${group.label} ${value}`}
-                onClick={() => remove(group.key, value)}
-              >
-                <Icon name="close" size="sm" />
-              </button>
-            </span>
+            </Token>
           ))}
           <button type="button" className="btn btn--ghost sm" onClick={clearAll}>
             Clear all

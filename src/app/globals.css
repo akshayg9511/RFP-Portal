@@ -6172,3 +6172,50 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .filter-bar select.fb-ph {
   color: var(--color-fg-subtle);
 }
+
+/* ── PEOPLE PICKER + CREATE FORM (UX v2) ──────────────────────────────────── */
+.pp-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.pp-add {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--color-fg-muted);
+  min-inline-size: 160px;
+  flex: 1 1 160px;
+  padding-block: var(--space-2xs);
+  cursor: pointer;
+}
+.pp-add:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-element);
+}
+.rfp-create-owners {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}
+.rfp-create-note {
+  padding-block-start: 0;
+  color: var(--color-fg-muted);
+}
+.rfp-create-missing {
+  color: var(--color-fg-muted);
+  margin-inline-end: var(--space-sm);
+}
+.rl-new {
+  margin-inline-start: var(--space-sm);
+}
+.rl-created {
+  margin-block-end: var(--space-lg);
+}
+.rl-created-note {
+  margin-block-start: var(--space-xs);
+  color: var(--color-fg-muted);
+}

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { grainGroups, type Grain } from "@/domain/grain";
 import { notFound, num, ok } from "@/lib/api";
+import { cleanOwners, ownerList, ownersData } from "@/lib/owners";
 
 /**
  * @openapi
@@ -126,6 +127,8 @@ export async function GET(
       dueDate: rfp.dueDate,
       sourcingPartner: rfp.sourcingPartner,
       gm: rfp.gm,
+      sourcingPartners: ownerList(rfp.sourcingPartners, rfp.sourcingPartner),
+      gms: ownerList(rfp.gms, rfp.gm),
       templateName: rfp.template.name,
       waveName: rfp.wave.name,
 
@@ -257,12 +260,19 @@ export async function PATCH(
     dueDate?: string | null;
     sourcingPartner?: string | null;
     gm?: string | null;
+    /** Lists win over the single fields when both are sent. */
+    sourcingPartners?: string[];
+    gms?: string[];
   };
 
   try {
     const rfp = await db.rfp.update({
       where: { id },
       data: {
+        ...ownersData(
+          body.sourcingPartners !== undefined ? cleanOwners(body.sourcingPartners) : undefined,
+          body.gms !== undefined ? cleanOwners(body.gms) : undefined,
+        ),
         ...(body.name !== undefined ? { name: body.name.trim() } : {}),
         ...(body.instructions !== undefined
           ? { instructions: body.instructions.trim() || null }
@@ -270,10 +280,15 @@ export async function PATCH(
         ...(body.dueDate !== undefined
           ? { dueDate: body.dueDate ? new Date(body.dueDate) : null }
           : {}),
-        ...(body.sourcingPartner !== undefined
-          ? { sourcingPartner: body.sourcingPartner }
+        ...(body.sourcingPartner !== undefined && body.sourcingPartners === undefined
+          ? {
+              sourcingPartner: body.sourcingPartner,
+              sourcingPartners: body.sourcingPartner ? [body.sourcingPartner] : [],
+            }
           : {}),
-        ...(body.gm !== undefined ? { gm: body.gm } : {}),
+        ...(body.gm !== undefined && body.gms === undefined
+          ? { gm: body.gm, gms: body.gm ? [body.gm] : [] }
+          : {}),
       },
     });
 
