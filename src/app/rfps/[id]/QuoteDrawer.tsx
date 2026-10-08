@@ -119,11 +119,13 @@ function DrawerContent({
   loading: boolean;
   onChanged?: () => void;
 }) {
-  const [open, setOpen] = React.useState<Set<string>>(new Set());
+  // EVERYTHING, open by default (Akshay, 8 Oct: "show all the cost
+  // breakdowns"). A bucket can still be folded away; `closed` holds those.
+  const [closed, setClosed] = React.useState<Set<string>>(new Set());
   const values = data?.quote?.values ?? {};
 
   function toggle(sectionKey: string) {
-    setOpen((prev) => {
+    setClosed((prev) => {
       const next = new Set(prev);
       if (next.has(sectionKey)) next.delete(sectionKey);
       else next.add(sectionKey);
@@ -175,15 +177,10 @@ function DrawerContent({
           <div className="section">
             <div className="hd">Cost breakdown</div>
             {data.template.definition.sections.map((section) => {
-              const lines = section.lines.filter(
-                (l) =>
-                  !l.derived &&
-                  values[l.key] !== undefined &&
-                  values[l.key] !== "" &&
-                  values[l.key] !== null,
-              );
-              if (!lines.length) return null;
-              const isOpen = open.has(section.key);
+              // Every line of every bucket — blanks read "—" rather than
+              // vanishing, so the reader can see what the vendor left empty.
+              const lines = section.lines;
+              const isOpen = !closed.has(section.key);
               const total = Number(data.quote?.bucketTotals?.[section.key] ?? 0);
               return (
                 <div className="bid-bucket" key={section.key}>
@@ -202,7 +199,13 @@ function DrawerContent({
                         <Row
                           key={line.key}
                           k={line.label}
-                          v={line.unit === "USD" ? unitCost(Number(values[line.key])) : String(values[line.key])}
+                          v={
+                            values[line.key] === undefined || values[line.key] === null || values[line.key] === ""
+                              ? "—"
+                              : line.unit === "USD"
+                                ? unitCost(Number(values[line.key]))
+                                : `${values[line.key]}${line.unit && line.unit !== "USD" ? ` ${line.unit}` : ""}`
+                          }
                         />
                       ))}
                     </dl>

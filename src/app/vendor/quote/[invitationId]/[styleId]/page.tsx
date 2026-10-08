@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { ProductGallery, type Colourway } from "@/components/ProductGallery";
-import { BidStatusInfo } from "@/components/BidStatusInfo";
+import { BidStatusPanel } from "@/components/BidStatusPanel";
 import { BidThread, type ThreadMessage } from "@/components/BidThread";
 import { computeQuote, missingInputs, type QuoteValues } from "@/domain/quote";
 import {
@@ -352,11 +352,29 @@ export default function QuotePage() {
 
   /** The two modal surfaces the collapsed action row opens (L1/L2). */
   const [submitOpen, setSubmitOpen] = React.useState(false);
-  // UX v2: Bid details · Comments, with Quince's latest note as a bar.
+  // Measure the sticky header so the summary column can stick just below it.
+  // A callback ref: it runs when the header mounts (after loading) and
+  // unmounts, which an effect with no stable dependency could not.
+  const observer = React.useRef<ResizeObserver | null>(null);
+  const stickyRef = React.useCallback((el: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    const root = (el?.closest(".ct") ?? document.querySelector(".shell > .ct")) as HTMLElement | null;
+    if (!el) {
+      root?.classList.remove("vq-page");
+      root?.style.removeProperty("--vq-sticky-h");
+      return;
+    }
+    root?.classList.add("vq-page");
+    const write = () => root?.style.setProperty("--vq-sticky-h", `${el.offsetHeight}px`);
+    write();
+    observer.current = new ResizeObserver(write);
+    observer.current.observe(el);
+  }, []);
+  // UX v2: Bid details · Comments, with Quince's latest note in the panel.
   const [tab, setTab] = React.useState<"details" | "comments">("details");
-  const [barDismissed, setBarDismissed] = React.useState(false);
   const [sending, setSending] = React.useState(false);
-  const bid = useApi<{ statusNote: string | null; comments: ThreadMessage[] }>(
+  const bid = useApi<{ statusNote: string | null; statusChangedAt: string | null; comments: ThreadMessage[] }>(
     `/api/bids/${invitationId}/${styleId}?side=VENDOR`,
   );
   async function sendMessage(body: string) {
@@ -688,7 +706,7 @@ export default function QuotePage() {
   return (
     <>
       {/* Header and variation selection stay put on scroll (C62). */}
-      <div className="vq-sticky">
+      <div className="vq-sticky" ref={stickyRef}>
       <div className="page-hd">
         {/* The vendor has no RFPs (H4), so the crumb goes back to the
             product list and the RFP name is nowhere on this page either. */}
@@ -702,7 +720,6 @@ export default function QuotePage() {
             <div className="vq-title">
               <h1 className="ttl">{data.style.name}</h1>
               <Badge tone={canEdit ? "warning" : undefined}>{vendorStatus(bidStatus)}</Badge>
-              <BidStatusInfo status={bidStatus} />
             </div>
             <p className="page-sub">
               {data.style.styleNumber} · quoting in USD ·{" "}
@@ -949,28 +966,30 @@ export default function QuotePage() {
         </div>
       ) : null}
 
-      {/* Quince's latest word, ONCE, as a dismissible message bar between
-          the header and the tabs — not a card (Aravind C59, walkthrough
-          8 Oct). View jumps to the conversation. */}
-      {bid.data?.statusNote && !barDismissed ? (
-        <div className={turnOf(bidStatus) === "VENDOR" ? "bar bar--warning vq-bar" : "bar bar--info vq-bar"}>
-          <Icon name="chat" />
-          <div>
-            <strong>
-              {turnOf(bidStatus) === "VENDOR" ? "Quince needs something from you." : "Quince's latest note."}
-            </strong>{" "}
-            {bid.data.statusNote}{" "}
-            {tab !== "comments" ? (
-              <button type="button" className="qd-link" onClick={() => setTab("comments")}>
-                View comments
-              </button>
-            ) : null}
-          </div>
-          <button type="button" className="x" aria-label="Dismiss" onClick={() => setBarDismissed(true)}>
-            <Icon name="close" />
-          </button>
-        </div>
-      ) : null}
+      {/* Where this bid stands — the same panel Quince sees, in the
+          vendor's words: status, step N of M (opens the lifecycle in place),
+          and Quince's latest note as a quote with the way to the
+          conversation. No action here: Submit and More own the vendor's
+          moves. */}
+      <BidStatusPanel
+        status={bidStatus}
+        label={vendorStatus(bidStatus)}
+        changedAt={bid.data?.statusChangedAt ?? null}
+        note={
+          bid.data?.statusNote
+            ? {
+                body: bid.data.statusNote,
+                author: "Quince",
+                at:
+                  [...(bid.data.comments ?? [])].reverse().find((c) => c.statusChange)?.createdAt ??
+                  bid.data.statusChangedAt ??
+                  null,
+              }
+            : null
+        }
+        tone={turnOf(bidStatus) === "VENDOR" ? "attention" : "neutral"}
+        onViewConversation={tab !== "comments" ? () => setTab("comments") : undefined}
+      />
 
       {/* Two tabs, the same as Quince's side (decision D5; no Activity, D3). */}
       <div className="tabs vq-tabs" role="tablist" aria-label="This product">

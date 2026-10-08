@@ -6690,14 +6690,25 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 
 /* ── VENDOR QUOTE PAGE (UX v2: C56-C62) ──────────────────────────────────── */
-/* Header + variation selector held at the top while the form scrolls. */
+/* Header + variation selector held at the top while the form scrolls.
+   Pinned FLUSH to the scroller's edge — pulled up over the content area's
+   own top inset and padded back down — so nothing scrolls visibly through the
+   gap above it (Akshay, 8 Oct: "sticky data is overflowed when you scroll"). */
 .vq-sticky {
   position: sticky;
-  inset-block-start: 0;
+  inset-block-start: calc(-1 * var(--page-inset));
+  margin-block-start: calc(-1 * var(--page-inset));
+  padding-block-start: var(--page-inset);
   z-index: var(--z-sticky);
   background: var(--color-bg-canvas);
   padding-block-end: var(--space-sm);
   margin-block-end: var(--space-md);
+  box-shadow: 0 var(--space-sm) var(--space-sm) calc(-1 * var(--space-sm)) var(--color-bg-canvas);
+}
+/* The summary column sticks BELOW that header, never under it. The header's
+   live height is written to --vq-sticky-h by the page. */
+.vq-page .quote-side {
+  inset-block-start: calc(var(--vq-sticky-h, 0px) - var(--page-inset) + var(--space-md));
 }
 .vq-sticky > .page-hd {
   margin-block-end: var(--space-sm);
@@ -6747,3 +6758,157 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .vd-instructions { margin-block-end: var(--space-lg); }
 .bl-withdraw-err { margin: var(--space-2xs) 0 0; color: var(--color-feedback-danger-fg); font-size: var(--type-body-sm-size); }
+
+/* ── BID STATUS PANEL (src/components/BidStatusPanel.tsx) ─────────────────── */
+.bsp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  margin-block-end: var(--space-md);
+  background: var(--color-bg-surface-sunken);
+  border-radius: var(--radius-container);
+  border-inline-start: 3px solid var(--color-border-strong);
+}
+.bsp--attention { border-inline-start-color: var(--color-feedback-warning-solid); }
+.bsp--closed { border-inline-start-color: var(--color-border-default); }
+.bsp-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.bsp-state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+  margin-inline-end: auto;
+}
+.bsp-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-fg-muted);
+  flex: 0 0 auto;
+}
+.bsp--attention .bsp-dot { background: var(--color-feedback-warning-solid); }
+.bsp-label {
+  font-size: var(--type-body-lg-size);
+  font-weight: var(--type-label-weight);
+  color: var(--color-fg-default);
+}
+.bsp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-md);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+.bsp-steps-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--color-fg-default);
+  cursor: pointer;
+}
+.bsp-steps-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-element);
+}
+.bsp-other strong { color: var(--color-fg-default); font-weight: var(--type-label-weight); }
+/* The lifecycle, in place: a vertical stepper. */
+.bsp-steps {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-xs) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+.bsp-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.bsp-step-mark {
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--radius-full);
+  border: var(--border-width-default) solid var(--color-border-strong);
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: var(--color-bg-surface);
+}
+.bsp-steps li.is-done { color: var(--color-fg-default); }
+.bsp-steps li.is-done .bsp-step-mark {
+  background: var(--color-fg-default);
+  border-color: var(--color-fg-default);
+  color: var(--color-bg-surface);
+}
+.bsp-steps li.is-here { color: var(--color-fg-default); font-weight: var(--type-label-weight); }
+.bsp-steps li.is-here .bsp-step-mark {
+  border-width: 5px;
+  border-color: var(--color-fg-default);
+}
+/* The latest note, as a quotation. */
+.bsp-note {
+  margin: 0;
+  padding-block-start: var(--space-sm);
+  border-block-start: var(--border-width-default) solid var(--color-border-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.bsp-note blockquote {
+  margin: 0;
+  color: var(--color-fg-default);
+}
+.bsp-note blockquote::before { content: "\201C"; }
+.bsp-note blockquote::after { content: "\201D"; }
+.bsp-note figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+.bsp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--color-fg-link);
+  cursor: pointer;
+}
+
+/* Drawer bodies are flex columns: nothing in them may be squeezed. This is
+   what "submerged" the Bid details / Comments tabs under the product image. */
+.drawer-b > * {
+  flex-shrink: 0;
+}
+/* The bid drawer's product image is a banner that confirms which product,
+   not a 1:1 square that pushes the numbers off screen. */
+.drawer-b > .detail-hero {
+  aspect-ratio: auto;
+  block-size: 180px;
+}
+/* Taller than what is left below the header, so it scrolls within itself
+   rather than hiding its bottom until the page ends. */
+.vq-page .quote-side {
+  max-block-size: calc(100vh - var(--vq-sticky-h, 0px) - 96px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

@@ -1,20 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { BidMoveMenu } from "@/components/BidMoveMenu";
-import { BidStatusInfo } from "@/components/BidStatusInfo";
+import { BidStatusPanel, type PanelNote } from "@/components/BidStatusPanel";
 import { BidThread, type ThreadMessage } from "@/components/BidThread";
-import type { BidStatus } from "@/domain/bidStatus";
+import { turnOf, type BidStatus } from "@/domain/bidStatus";
 
 /**
  * The body of every Quince bid drawer — the RFP page's and Bid summary's —
  * so the two cannot drift (UX v2: Aravind C16–C18 / C31–C33, walkthrough
  * 8 Oct, decisions D2 + D3):
  *
- *   status badge · ⓘ lifecycle tooltip · "Move this bid ▾" at the trailing edge
- *   → the latest note as a dismissible message bar, with View
+ *   BidStatusPanel — status + "Move this bid ▾", step N of M (opens the
+ *   lifecycle in place), what the vendor sees, the latest note as a quote
  *   → two tabs: Bid details (the caller's content) · Comments (n)
  *
  * No Activity tab for now (D3).
@@ -25,8 +24,22 @@ type BidView = {
   quinceLabel: string;
   vendorLabel: string;
   statusNote: string | null;
+  statusChangedAt: string | null;
   comments: ThreadMessage[];
 };
+
+/** The note that came with the last status change, with who and when. */
+function latestNote(d: BidView): PanelNote | null {
+  if (!d.statusNote) return null;
+  const msg = [...d.comments].reverse().find((c) => c.statusChange && c.body === d.statusNote)
+    ?? [...d.comments].reverse().find((c) => c.statusChange);
+  const author = !msg
+    ? "Quince"
+    : msg.authorSide === "QUINCE"
+      ? (msg.authorName ?? "Quince")
+      : (msg.authorName ?? "Vendor");
+  return { body: d.statusNote, author, at: msg?.createdAt ?? d.statusChangedAt };
+}
 
 export type BidTab = "details" | "comments";
 
@@ -47,7 +60,6 @@ export function BidTabs({
 }) {
   const bid = useApi<BidView>(`/api/bids/${invitationId}/${styleId}?side=QUINCE`);
   const [tab, setTab] = React.useState<BidTab>(initialTab);
-  const [barDismissed, setBarDismissed] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const data = bid.data;
 
@@ -74,50 +86,28 @@ export function BidTabs({
 
   return (
     <>
-      <div className="qd-status">
-        {data ? (
-          <>
-            <Badge tone={data.status === "NOT_PROCEEDING" ? "danger" : undefined}>
-              {data.quinceLabel}
-            </Badge>
-            <BidStatusInfo status={data.status} />
-            <span className="qd-vendor-sees">
-              Vendor sees <strong>{data.vendorLabel}</strong>
-            </span>
-            <span className="qd-status-acts">
-              <BidMoveMenu
-                invitationId={invitationId}
-                styleId={styleId}
-                status={data.status}
-                label="Move this bid"
-                onMoved={changed}
-              />
-            </span>
-          </>
-        ) : (
-          <div className="sk" style={{ blockSize: 28, inlineSize: "60%" }} />
-        )}
-      </div>
-
-      {data?.statusNote && !barDismissed ? (
-        <div className="bar bar--info qd-bar">
-          <Icon name="chat" />
-          <div>
-            <strong>Latest note:</strong> {data.statusNote}
-            {tab !== "comments" ? (
-              <>
-                {" "}
-                <button type="button" className="qd-link" onClick={() => setTab("comments")}>
-                  View
-                </button>
-              </>
-            ) : null}
-          </div>
-          <button type="button" className="x" aria-label="Dismiss" onClick={() => setBarDismissed(true)}>
-            <Icon name="close" />
-          </button>
-        </div>
-      ) : null}
+      {data ? (
+        <BidStatusPanel
+          status={data.status}
+          label={data.quinceLabel}
+          otherSide={{ who: "Vendor", label: data.vendorLabel }}
+          changedAt={data.statusChangedAt}
+          note={latestNote(data)}
+          tone={turnOf(data.status) === "QUINCE" ? "attention" : "neutral"}
+          action={
+            <BidMoveMenu
+              invitationId={invitationId}
+              styleId={styleId}
+              status={data.status}
+              label="Move this bid"
+              onMoved={changed}
+            />
+          }
+          onViewConversation={tab !== "comments" ? () => setTab("comments") : undefined}
+        />
+      ) : (
+        <div className="sk" style={{ blockSize: 96, marginBlockEnd: "var(--space-md)" }} />
+      )}
 
       <div className="tabs qd-tabs" role="tablist" aria-label="Bid">
         <button
