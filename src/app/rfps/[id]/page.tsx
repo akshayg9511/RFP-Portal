@@ -8,7 +8,7 @@ import { useApi } from "@/lib/useApi";
 import { percent } from "@/lib/format";
 import { NewVendorDialog, type CreatedVendor } from "./NewVendorDialog";
 import { VendorPicker } from "./VendorPicker";
-import { ProductsTab } from "./ProductsTab";
+import { ProductsSummary } from "./ProductsSummary";
 import { VendorsTab } from "./VendorsTab";
 import { QuoteDrawer } from "./QuoteDrawer";
 import { PeoplePicker } from "@/components/PeoplePicker";
@@ -129,9 +129,6 @@ export default function RfpDetailPage() {
   const [removed, setRemoved] = React.useState<Set<string>>(new Set());
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  // Products lead: an RFP is a set of products sent to vendors, and this page
-  // used to put them below 38 vendor rows.
-  const [tab, setTab] = React.useState<"products" | "vendors">("products");
   // Ownership is a SETTING, not the subject. Three input fields used to occupy
   // the top of the page.
   const [ownerOpen, setOwnerOpen] = React.useState(false);
@@ -172,6 +169,7 @@ export default function RfpDetailPage() {
     invitationId: string;
     styleId: string;
     vendorName: string;
+    tab?: "details" | "comments";
   } | null>(null);
 
   const issued = data?.status === "ISSUED";
@@ -358,6 +356,46 @@ export default function RfpDetailPage() {
     setBusy(false);
   }
 
+  /**
+   * Add vendors to an RFP that is already out. Saves straight away, and the
+   * invitations route issues each new one on creation, so the vendor sees it
+   * in their portal immediately — no second Issue step (Akshay, 8 Oct).
+   */
+  async function addAndIssue(vendorIds: string[]) {
+    const next = new Map(picked);
+    for (const vid of vendorIds) {
+      if (next.has(vid)) continue;
+      const clashing = new Set(
+        data?.candidates.find((c) => c.id === vid)?.clashingStyleIds ?? [],
+      );
+      next.set(vid, new Set(allStyleIds.filter((sid) => !clashing.has(sid))));
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      const response = await fetch(`/api/rfps/${id}/invitations`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          invitations: [...next.entries()].map(([vendorId, keys]) => ({
+            vendorId,
+            ...splitNominationKeys(keys),
+          })),
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.message ?? "Could not add vendors");
+      setAdded(new Map());
+      setRemoved(new Set());
+      reload();
+      const n = vendorIds.length;
+      say("ok", `${n} vendor${n === 1 ? "" : "s"} added and issued to.`);
+    } catch (err: unknown) {
+      say("error", err instanceof Error ? err.message : String(err));
+    }
+    setBusy(false);
+  }
+
   async function issue() {
     setBusy(true);
     setNote(null);
@@ -464,8 +502,20 @@ export default function RfpDetailPage() {
             <h1 className="ttl">{data?.name ?? "…"}</h1>
             {data ? (
               <p className="page-sub">
-                {data.templateName} · {data.styles.length} products ·{" "}
-                <Badge tone={issued ? "success" : undefined}>{data.status}</Badge>
+                <Badge tone={issued ? "success" : "warning"}>
+                  {issued ? "Issued" : data.status === "DRAFT" ? "Draft" : data.status}
+                </Badge>{" "}
+                {data.templateName} · {data.styles.length} product
+                {data.styles.length === 1 ? "" : "s"}
+                {data.dueDate
+                  ? ` · due ${new Date(data.dueDate).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                    })}`
+                  : ""}
+                {partnersNow.length || gmsNow.length
+                  ? ` · ${[...partnersNow, ...gmsNow].join(", ")}`
+                  : ""}
               </p>
             ) : null}
           </div>
@@ -657,35 +707,54 @@ export default function RfpDetailPage() {
               tabs viable. Products answers "which vendors bid this", Vendors
               answers "which products did they quote", so the cross-question
               never needs a tab switch. */}
-          <div className="tabs" role="tablist" aria-label="RFP view">
-            <button
-              className={tab === "products" ? "tab on" : "tab"}
-              role="tab"
-              aria-selected={tab === "products"}
-              onClick={() => setTab("products")}
-            >
-              Products <span className="vl-count">{data.styles.length}</span>
-            </button>
-            <button
-              className={tab === "vendors" ? "tab on" : "tab"}
-              role="tab"
-              aria-selected={tab === "vendors"}
-              onClick={() => setTab("vendors")}
-            >
-              Vendors <span className="vl-count">{picked.size}</span>
-            </button>
-          </div>
+          {/* ONE PAGE, no tabs (Akshay, 8 Oct): what is going out at the
+              top, who it is going to underneath. */}
+          <ProductsSummary
+            styles={data.styles}
+            invitations={data.invitations}
+            issued={issued}
+          />
 
-          <div className="card">
+          <section className="card rd-vendors" aria-labelledby="rd-vendors-h">
+            <div className="card-h rd-vendors-h">
+              <div className="ttl" id="rd-vendors-h">
+                Vendors <span className="vl-count">{picked.size}</span>
+              </div>
+              {picked.size > 0 ? (
+                <button
+                  type="button"
+                  className="btn btn--secondary sm"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <Icon name="plus" size="sm" />
+                  Add vendors
+                </button>
+              ) : null}
+            </div>
             <div className="card-b">
-              {tab === "products" ? (
-                <ProductsTab
-                  styles={data.styles}
-                  invitations={data.invitations}
-                  onOpenBid={(invitationId, styleId, vendorName) =>
-                    setOpenQuote({ invitationId, styleId, vendorName })
-                  }
-                />
+              {picked.size === 0 ? (
+                /* The empty state IS the call to action — the old "Add
+                   vendors" sat in a filter strip and read as one more filter. */
+                <div className="empty">
+                  <span className="glyph">
+                    <Icon name="users" size="lg" />
+                  </span>
+                  <div className="ttl">No vendors yet</div>
+                  <div className="desc">
+                    Add the vendors who should quote these products.
+                    {issued ? " They are issued to as soon as you add them." : ""}
+                  </div>
+                  <div className="acts">
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      onClick={() => setPickerOpen(true)}
+                    >
+                      <Icon name="plus" />
+                      Add vendors
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <VendorsTab
                   styles={data.styles}
@@ -696,14 +765,14 @@ export default function RfpDetailPage() {
                   onRemove={toggleVendor}
                   onToggleStyle={toggleStyleFor}
                   onSetVariations={setVariationsFor}
-                  onAddVendors={() => setPickerOpen(true)}
-                  onOpenBid={(invitationId, styleId, vendorName) =>
-                    setOpenQuote({ invitationId, styleId, vendorName })
+                  onOpenBid={(invitationId, styleId, vendorName, tab) =>
+                    setOpenQuote({ invitationId, styleId, vendorName, tab })
                   }
+                  onChanged={reload}
                 />
               )}
             </div>
-          </div>
+          </section>
         </>
       ) : null}
 
@@ -712,6 +781,12 @@ export default function RfpDetailPage() {
         onClose={() => setPickerOpen(false)}
         candidates={candidates.filter((c) => !picked.has(c.id))}
         onAdd={(ids) => {
+          if (issued) {
+            // Already issued: adding IS issuing, so save at once rather than
+            // leave an unsaved edit the vendor can never see.
+            addAndIssue(ids);
+            return;
+          }
           for (const vid of ids) if (!picked.has(vid)) toggleVendor(vid);
         }}
         onNewVendor={() => {
@@ -728,7 +803,9 @@ export default function RfpDetailPage() {
         invitationId={openQuote?.invitationId ?? null}
         styleId={openQuote?.styleId ?? null}
         vendorName={openQuote?.vendorName ?? null}
+        initialTab={openQuote?.tab ?? "details"}
         onClose={() => setOpenQuote(null)}
+        onChanged={reload}
       />
 
       <NewVendorDialog

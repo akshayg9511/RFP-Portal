@@ -39,6 +39,8 @@ export type Invitation = {
   cooRegion: string | null;
   styleIds: string[];
   quotes: { styleId: string; status: string; fob: number | null }[];
+  /** Bid status per product (UX v2). Absent row = INVITED. */
+  bids?: { styleId: string; status: string; commentCount: number }[];
 };
 
 export function ProductsTab({

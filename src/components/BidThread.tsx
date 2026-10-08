@@ -44,7 +44,7 @@ export function BidThread({
   messages: ThreadMessage[];
   /** Whose screen this is — decides which messages read as "you". */
   side: "QUINCE" | "VENDOR";
-  as?: "drawer" | "panel";
+  as?: "drawer" | "panel" | "inline";
   open?: boolean;
   onClose?: () => void;
   onSend: (body: string) => Promise<void>;
@@ -142,6 +142,12 @@ export function BidThread({
 
   // A panel respects `open` too, so Comments is a real toggle on both
   // sides rather than the thread always being on screen in one of them.
+  // Inside a tab (UX v2: the drawer's Comments tab). Messages scroll; the
+  // composer stays pinned at the bottom (Aravind, C53).
+  if (as === "inline") {
+    return <div className="bt bt-inline">{body}</div>;
+  }
+
   if (as === "panel") {
     if (!open) return null;
     return (

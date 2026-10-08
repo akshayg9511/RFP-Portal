@@ -3,6 +3,9 @@
 import * as React from "react";
 import { Badge, Checkbox, Icon } from "@/ds/components";
 import { percent, unitCost } from "@/lib/format";
+import { FilterBar } from "@/components/FilterBar";
+import { BidMoveMenu } from "@/components/BidMoveMenu";
+import { quinceLabel, type BidStatus } from "@/domain/bidStatus";
 import type { Invitation, Style } from "./ProductsTab";
 
 /**
@@ -39,8 +42,8 @@ export function VendorsTab({
   onRemove,
   onToggleStyle,
   onSetVariations,
-  onAddVendors,
   onOpenBid,
+  onChanged,
 }: {
   styles: Style[];
   invitations: Invitation[];
@@ -60,12 +63,18 @@ export function VendorsTab({
     styleId: string,
     variationIds: string[],
   ) => void;
-  onAddVendors: () => void;
-  /** See the note in ProductsTab — A4 replaces this with a full page. */
-  onOpenBid: (invitationId: string, styleId: string, vendorName: string) => void;
+  /** Opens the bid drawer, on Bid details or straight on Comments. */
+  onOpenBid: (
+    invitationId: string,
+    styleId: string,
+    vendorName: string,
+    tab?: "details" | "comments",
+  ) => void;
+  /** A quick action moved a bid; the page reloads. */
+  onChanged: () => void;
 }) {
   const [query, setQuery] = React.useState("");
-  const [region, setRegion] = React.useState("");
+  const [regions, setRegions] = React.useState<string[]>([]);
   const [status, setStatus] = React.useState("");
   const [open, setOpen] = React.useState<Set<string>>(new Set());
 
@@ -93,7 +102,7 @@ export function VendorsTab({
       .map((vendorId) => ({ vendorId, info: infoFor(vendorId) }))
       .filter(({ vendorId, info }) => {
         if (!info) return false;
-        if (region && info.cooRegion !== region) return false;
+        if (regions.length && !regions.includes(info.cooRegion ?? "")) return false;
         if (status) {
           const c = completion(vendorId);
           if (status === "complete" && c.share < 1) return false;
@@ -111,7 +120,73 @@ export function VendorsTab({
       })
       .sort((a, b) => a.info!.name.localeCompare(b.info!.name));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [picked, candidates, query, region, status, invitations]);
+  }, [picked, candidates, query, regions, status, invitations]);
+
+  // Region counts across the vendors on this RFP, for the More filters panel.
+  const regionFacets = REGIONS.map((r) => ({
+    value: r,
+    count: [...picked.keys()].filter((v) => infoFor(v)?.cooRegion === r).length,
+  })).filter((f) => f.count > 0);
+
+  const RESPONSE_LABEL: Record<string, string> = {
+    complete: "Fully submitted",
+    partial: "Part submitted",
+    none: "Nothing yet",
+  };
+  const responseFacets = (["complete", "partial", "none"] as const).map((k) => ({
+    value: k,
+    count: [...picked.keys()].filter((v) => {
+      const c = completion(v);
+      return k === "complete"
+        ? c.share === 1 && c.total > 0
+        : k === "partial"
+          ? c.share > 0 && c.share < 1
+          : c.submitted === 0;
+    }).length,
+  }));
+
+  function bidOf(vendorId: string, styleId: string) {
+    const b = byVendor.get(vendorId)?.bids?.find((x) => x.styleId === styleId);
+    return {
+      status: (b?.status ?? "INVITED") as BidStatus,
+      commentCount: b?.commentCount ?? 0,
+    };
+  }
+
+  /** Status, Move ▾ and Comment for one vendor × product (issued only). */
+  function bidActions(vendorId: string, styleId: string, vendorName: string) {
+    const inv = byVendor.get(vendorId);
+    if (!inv) return null;
+    const b = bidOf(vendorId, styleId);
+    return (
+      <span className="rd-bid-acts">
+        <Badge tone={b.status === "NOT_PROCEEDING" ? "danger" : undefined}>
+          {quinceLabel(b.status)}
+        </Badge>
+        <BidMoveMenu
+          invitationId={inv.id}
+          styleId={styleId}
+          status={b.status}
+          onMoved={onChanged}
+        />
+        <button
+          type="button"
+          className="btn btn--ghost sm"
+          onClick={() => onOpenBid(inv.id, styleId, vendorName, "comments")}
+        >
+          <Icon name="chat" size="sm" />
+          Comment{b.commentCount ? <span className="ct">{b.commentCount}</span> : null}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost sm"
+          onClick={() => onOpenBid(inv.id, styleId, vendorName, "details")}
+        >
+          View details
+        </button>
+      </span>
+    );
+  }
 
   function toggle(id: string) {
     setOpen((prev) => {
@@ -124,67 +199,30 @@ export function VendorsTab({
 
   return (
     <>
-      <div className="aw-filters">
-        <div className="control search sm aw-search">
-          <Icon name="search" size="sm" />
-          <input
-            placeholder="Search vendors"
-            aria-label="Search vendors on this RFP"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <select
-          className="control sm"
-          aria-label="Filter by region"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-        >
-          <option value="">All regions</option>
-          {REGIONS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        <select
-          className="control sm"
-          aria-label="Filter by response"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="">Any response</option>
-          <option value="complete">Fully submitted</option>
-          <option value="partial">Part submitted</option>
-          <option value="none">Nothing yet</option>
-        </select>
+      {/* Filter & sort pattern (Aravind, C15): search, ONE facet
+          (Response, only once issued), More filters for Region. */}
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: "Search vendors" }}
+        facet={
+          issued
+            ? {
+                label: "response",
+                placeholder: "Select response",
+                value: status,
+                onChange: setStatus,
+                options: responseFacets,
+                format: (v) => RESPONSE_LABEL[v] ?? v,
+              }
+            : undefined
+        }
+        groups={[
+          { key: "region", label: "Region", options: regionFacets, selected: regions },
+        ]}
+        onGroupsChange={(next) => setRegions(next.region ?? [])}
+        meta={`${rows.length} vendor${rows.length === 1 ? "" : "s"}`}
+      />
 
-        {/* Adding opens a drawer. The second full-page list is gone. */}
-        {!issued ? (
-          /* Ghost: this sits in a UTILITY strip beside the filters, and the
-             page's secondary is Save nominations. */
-          <button className="btn btn--ghost sm" onClick={onAddVendors}>
-            <Icon name="plus" size="sm" />
-            Add vendors
-          </button>
-        ) : null}
-
-        <span className="aw-filter-count">
-          {rows.length} of {picked.size} vendors
-        </span>
-      </div>
-
-      {picked.size === 0 ? (
-        <div className="empty compact">
-          <span className="glyph">
-            <Icon name="users" size="lg" />
-          </span>
-          <div className="ttl">No vendors yet</div>
-          <div className="desc">
-            Add the vendors who should quote these products.
-          </div>
-        </div>
-      ) : rows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="empty compact">
           <span className="glyph">
             <Icon name="search" size="lg" />
@@ -338,6 +376,12 @@ export function VendorsTab({
                                 : `${groups.length} variants`}
                             </span>
                           ) : null}
+                          {/* The bid is per vendor × product, so its status
+                              and quick actions sit on the product heading —
+                              the same moves the drawer offers (Akshay, 8 Oct). */}
+                          {issued && inSubset
+                            ? bidActions(vendorId, style.id, info!.name)
+                            : null}
                         </div>
 
                         {/* A style-grain product: one row, no variants. */}

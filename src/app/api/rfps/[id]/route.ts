@@ -74,6 +74,15 @@ export async function GET(
             // Per-product state, so a vendor row can say which products are
             // still pending and open the ones that are in.
             quotes: { select: { styleId: true, status: true, fob: true } },
+            // Bid status per product (UX v2): the vendor rows carry the
+            // status and the Move quick action without opening the drawer.
+            bids: {
+              select: {
+                styleId: true,
+                status: true,
+                _count: { select: { comments: true } },
+              },
+            },
           },
         },
       },
@@ -218,6 +227,12 @@ export async function GET(
           styleId: q.styleId,
           status: q.status,
           fob: num(q.fob),
+        })),
+        // A product with no ProductBid row yet is at the floor: INVITED.
+        bids: inv.bids.map((b) => ({
+          styleId: b.styleId,
+          status: b.status,
+          commentCount: b._count.comments,
         })),
       })),
 

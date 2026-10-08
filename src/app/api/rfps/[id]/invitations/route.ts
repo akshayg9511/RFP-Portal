@@ -189,7 +189,15 @@ export async function PUT(
     for (const inv of allowed) {
       const invitation = await db.invitation.upsert({
         where: { rfpId_vendorId: { rfpId: id, vendorId: inv.vendorId } },
-        create: { rfpId: id, vendorId: inv.vendorId, status: "NOT_STARTED" },
+        // A vendor added to an RFP that is ALREADY issued is issued to on the
+        // spot (UX v2, Akshay 8 Oct) — there is no second Issue step, and the
+        // vendor portal shows it straight away.
+        create: {
+          rfpId: id,
+          vendorId: inv.vendorId,
+          status: "NOT_STARTED",
+          ...(rfp.status === "ISSUED" ? { issuedAt: new Date() } : {}),
+        },
         update: {},
       });
 
