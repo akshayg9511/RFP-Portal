@@ -58,6 +58,11 @@ if ! aws sts get-caller-identity --query Arn --output text >/dev/null 2>&1; then
   echo "  Replace the [default] block with your fresh keys, save (⌘S), close it."
   open -e ~/.aws/credentials
   read -r -p "  Press Enter when saved… " _
+  # Pasting the new block BESIDE the old one leaves two [default] headers,
+  # which the AWS CLI refuses to parse at all — say so rather than "bad keys".
+  if [ "$(grep -c '^\[default\]' ~/.aws/credentials)" -gt 1 ]; then
+    die "~/.aws/credentials has two [default] blocks. Delete the old one, keep the new, save, and run again."
+  fi
   aws sts get-caller-identity --query Arn --output text >/dev/null 2>&1 \
     || die "Still no valid AWS session. Check the keys you pasted and run again."
 fi
