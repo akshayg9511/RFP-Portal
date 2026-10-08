@@ -19,6 +19,7 @@ export function WithdrawAction({
   busy,
   startArmed = false,
   onConfirm,
+  onCancel,
 }: {
   /** Already withdrawn — there is nothing to withdraw from. */
   reinstate: boolean;
@@ -31,9 +32,14 @@ export function WithdrawAction({
    */
   startArmed?: boolean;
   onConfirm: (reason: string) => void;
+  /** In a modal, Cancel closes it (Aravind, C64). */
+  onCancel?: () => void;
 }) {
   const [arming, setArming] = React.useState(startArmed);
   const [reason, setReason] = React.useState("");
+  // Withdraw is always clickable; an empty reason is reported ON the field
+  // rather than leaving a greyed button that reads as a label (C64).
+  const [missing, setMissing] = React.useState(false);
 
   if (reinstate) return null;
 
@@ -53,31 +59,50 @@ export function WithdrawAction({
       <label className="bl-act-l" htmlFor="bl-withdraw-why">
         Why are you withdrawing? Quince will see this.
       </label>
-      <div className="control textarea">
+      <div className={missing ? "control textarea invalid" : "control textarea"}>
         <textarea
           id="bl-withdraw-why"
           rows={2}
           value={reason}
+          aria-invalid={missing || undefined}
+          aria-describedby={missing ? "bl-withdraw-err" : undefined}
           placeholder="No capacity in Q1 for this size run…"
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(e) => {
+            setReason(e.target.value);
+            if (e.target.value.trim()) setMissing(false);
+          }}
         />
       </div>
+      {missing ? (
+        <p className="bl-withdraw-err" id="bl-withdraw-err">
+          Tell Quince why you are withdrawing.
+        </p>
+      ) : null}
       <div className="bl-withdraw-acts">
-        {startArmed ? null : (
-          <button
-            className="btn btn--ghost sm"
-            onClick={() => {
-              setArming(false);
-              setReason("");
-            }}
-          >
-            Cancel
-          </button>
-        )}
         <button
           className="btn btn--secondary sm"
-          disabled={busy || !reason.trim()}
-          onClick={() => onConfirm(reason)}
+          onClick={() => {
+            if (startArmed) {
+              onCancel?.();
+              return;
+            }
+            setArming(false);
+            setReason("");
+            setMissing(false);
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--danger sm"
+          disabled={busy}
+          onClick={() => {
+            if (!reason.trim()) {
+              setMissing(true);
+              return;
+            }
+            onConfirm(reason);
+          }}
         >
           Withdraw
         </button>

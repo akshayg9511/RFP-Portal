@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { ProductGallery, type Colourway } from "@/components/ProductGallery";
-import { BidLifecycle } from "@/components/BidLifecycle";
+import { BidStatusInfo } from "@/components/BidStatusInfo";
+import { BidThread, type ThreadMessage } from "@/components/BidThread";
 import { computeQuote, missingInputs, type QuoteValues } from "@/domain/quote";
 import {
   askSummary,
@@ -21,6 +22,7 @@ import {
   templateFor,
   vendorCanEdit,
   vendorStatus,
+  turnOf,
   type BidStatus,
 } from "@/domain/bidStatus";
 import { WithdrawAction } from "@/components/WithdrawAction";
@@ -350,6 +352,26 @@ export default function QuotePage() {
 
   /** The two modal surfaces the collapsed action row opens (L1/L2). */
   const [submitOpen, setSubmitOpen] = React.useState(false);
+  // UX v2: Bid details · Comments, with Quince's latest note as a bar.
+  const [tab, setTab] = React.useState<"details" | "comments">("details");
+  const [barDismissed, setBarDismissed] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const bid = useApi<{ statusNote: string | null; comments: ThreadMessage[] }>(
+    `/api/bids/${invitationId}/${styleId}?side=VENDOR`,
+  );
+  async function sendMessage(body: string) {
+    setSending(true);
+    try {
+      await fetch(`/api/bids/${invitationId}/${styleId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ authorSide: "VENDOR", authorName: data?.vendor.name, note: body }),
+      });
+      bid.reload();
+    } finally {
+      setSending(false);
+    }
+  }
   const [withdrawOpen, setWithdrawOpen] = React.useState(false);
 
   /**
@@ -665,6 +687,8 @@ export default function QuotePage() {
 
   return (
     <>
+      {/* Header and variation selection stay put on scroll (C62). */}
+      <div className="vq-sticky">
       <div className="page-hd">
         {/* The vendor has no RFPs (H4), so the crumb goes back to the
             product list and the RFP name is nowhere on this page either. */}
@@ -673,7 +697,13 @@ export default function QuotePage() {
         </nav>
         <div className="row">
           <div className="grow">
-            <h1 className="ttl">{data.style.name}</h1>
+            {/* The status lives beside the title, the lifecycle behind ⓘ
+                (Aravind, C57 / C58). */}
+            <div className="vq-title">
+              <h1 className="ttl">{data.style.name}</h1>
+              <Badge tone={canEdit ? "warning" : undefined}>{vendorStatus(bidStatus)}</Badge>
+              <BidStatusInfo status={bidStatus} />
+            </div>
             <p className="page-sub">
               {data.style.styleNumber} · quoting in USD ·{" "}
               {isLight
@@ -682,12 +712,6 @@ export default function QuotePage() {
             </p>
           </div>
           <div className="acts">
-            {/* J11 — the SHORT status, matching the panel below. This still
-                read "Initial quote submitted — with Quince", which is the
-                duplication removed from the panel in 2a.9 and missed here. */}
-            <Badge tone={canEdit ? "warning" : undefined}>
-              {vendorStatus(bidStatus)}
-            </Badge>
             {/* TWO CONTROLS, NOT FIVE — decision L1, 5 Oct.
             
                 Akshay: "couple 5 option into 1 or 2 or max 3 option and
@@ -725,6 +749,41 @@ export default function QuotePage() {
             ) : null}
           </div>
         </div>
+      </div>
+        {/* WHICH VARIATION — full width, above the summary, and held with
+            the header while the form scrolls (Aravind, C60 / C62). Every
+            variant carries its own complete quote, so the form edits one at a
+            time; absent at STYLE grain, where a one-item selector reads as
+            broken. Only on Bid details — the conversation is per product. */}
+        {tab === "details" && priced.length > 1 ? (
+          <div className="vq-variations">
+            <div className="vq-variations-h">
+              <span className="ttl">Which variation</span>
+              <span className="qv-count">
+                {priced.filter((v) => v.status === "SUBMITTED").length} of {priced.length} submitted
+              </span>
+              <span className="quote-side-note">
+                Fill one, then <strong>copy it to the rest</strong> from More — a variation
+                you have already submitted is never overwritten.
+              </span>
+            </div>
+            <div className="qv-tabs" role="tablist">
+              {priced.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={v.id === activeVariation}
+                  className={`qv-tab${v.id === activeVariation ? " on" : ""}`}
+                  onClick={() => setActiveVariation(v.id)}
+                >
+                  <span className="qv-tab-l">{v.label}</span>
+                  <span className="qv-tab-v">{v.fob === null ? "—" : unitCost(v.fob)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* J12 — NOMINATED WHOLE ON A PER-SIZE PRODUCT.
@@ -879,6 +938,7 @@ export default function QuotePage() {
                 reinstate={bidStatus === "WITHDRAWN"}
                 busy={busy}
                 startArmed
+                onCancel={() => setWithdrawOpen(false)}
                 onConfirm={(reason) => {
                   setWithdrawOpen(false);
                   withdrawNow(reason);
@@ -889,25 +949,65 @@ export default function QuotePage() {
         </div>
       ) : null}
 
-      {/* THE LADDER AND THE THREAD, vendor side.
+      {/* Quince's latest word, ONCE, as a dismissible message bar between
+          the header and the tabs — not a card (Aravind C59, walkthrough
+          8 Oct). View jumps to the conversation. */}
+      {bid.data?.statusNote && !barDismissed ? (
+        <div className={turnOf(bidStatus) === "VENDOR" ? "bar bar--warning vq-bar" : "bar bar--info vq-bar"}>
+          <Icon name="chat" />
+          <div>
+            <strong>
+              {turnOf(bidStatus) === "VENDOR" ? "Quince needs something from you." : "Quince's latest note."}
+            </strong>{" "}
+            {bid.data.statusNote}{" "}
+            {tab !== "comments" ? (
+              <button type="button" className="qd-link" onClick={() => setTab("comments")}>
+                View comments
+              </button>
+            ) : null}
+          </div>
+          <button type="button" className="x" aria-label="Dismiss" onClick={() => setBarDismissed(true)}>
+            <Icon name="close" />
+          </button>
+        </div>
+      ) : null}
 
-          Same component, `side="VENDOR"`, so the vendor reads the vendor
-          label set and posts into the SAME thread — there is one
-          conversation per vendor x product, not a copy each side (H6). */}
-      <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
-        <div className="card-h">
-          <div className="ttl">Where this bid stands</div>
-        </div>
-        <div className="card-b">
-          <BidLifecycle
-            invitationId={invitationId}
-            styleId={styleId}
-            side="VENDOR"
-            authorName={data.vendor.name}
-          />
-        </div>
+      {/* Two tabs, the same as Quince's side (decision D5; no Activity, D3). */}
+      <div className="tabs vq-tabs" role="tablist" aria-label="This product">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "details"}
+          className={tab === "details" ? "tab on" : "tab"}
+          onClick={() => setTab("details")}
+        >
+          Bid details
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "comments"}
+          className={tab === "comments" ? "tab on" : "tab"}
+          onClick={() => setTab("comments")}
+        >
+          Comments{bid.data?.comments.length ? <span className="ct">{bid.data.comments.length}</span> : null}
+        </button>
       </div>
 
+      {tab === "comments" ? (
+        <div className="card">
+          <div className="card-b">
+            <BidThread
+              messages={bid.data?.comments ?? []}
+              side="VENDOR"
+              as="inline"
+              busy={sending}
+              onSend={sendMessage}
+            />
+          </div>
+        </div>
+      ) : (
+      <>
       {data.rfp.instructions ? (
         <div className="bar bar--info" style={{ marginBlockEnd: "var(--space-lg)" }}>
           <Icon name="info_circle" />
@@ -917,54 +1017,6 @@ export default function QuotePage() {
 
       <div className="quote-layout">
         <div>
-          {/* WHICH VARIANT — a selector, not a page each.
-
-              F7/H8.5: every variant carries its own COMPLETE quote, so the
-              form edits one at a time. The worst-case vendor here holds 9
-              variation groups and a page each would be 9 navigations to
-              submit one bid; the real Lauren Home template is one sheet per
-              colourway with the sizes beside each other, which is this.
-
-              Absent at STYLE grain — a one-item selector reads as broken. */}
-          {priced.length > 1 ? (
-            <div className="card" style={{ marginBlockEnd: "var(--space-lg)" }}>
-              <div className="card-h">
-                <div className="ttl">Which variation</div>
-                <div className="act">
-                  <span className="qv-count">
-                    {priced.filter((v) => v.status === "SUBMITTED").length} of{" "}
-                    {priced.length} submitted
-                  </span>
-                </div>
-              </div>
-              <div className="card-b">
-                <div className="qv-tabs" role="tablist">
-                  {priced.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={v.id === activeVariation}
-                      className={`qv-tab${v.id === activeVariation ? " on" : ""}`}
-                      onClick={() => setActiveVariation(v.id)}
-                    >
-                      <span className="qv-tab-l">{v.label}</span>
-                      <span className="qv-tab-v">
-                        {v.fob === null ? "—" : unitCost(v.fob)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <p className="quote-side-note">
-                  Each variation is priced in full and submitted on its own.
-                  Fill one, then{" "}
-                  <strong>copy it to the rest</strong> and adjust — a
-                  variation you have already submitted is never overwritten.
-                </p>
-              </div>
-            </div>
-          ) : null}
-
           {/* THE TEMPLATE, LIGHT OR FULL.
 
               H2/H3: what changes across the lifecycle is HOW MUCH the vendor
@@ -1415,6 +1467,8 @@ export default function QuotePage() {
           </div>
         </aside>
       </div>
+      </>
+      )}
     </>
   );
 }

@@ -6693,3 +6693,62 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   justify-self: start;
   margin-block-start: var(--space-sm);
 }
+
+/* ── VENDOR QUOTE PAGE (UX v2: C56-C62) ──────────────────────────────────── */
+/* Header + variation selector held at the top while the form scrolls. */
+.vq-sticky {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-sticky);
+  background: var(--color-bg-canvas);
+  padding-block-end: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+.vq-sticky > .page-hd {
+  margin-block-end: var(--space-sm);
+}
+.vq-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.vq-variations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-bg-surface-raised);
+  border-radius: var(--radius-container);
+  box-shadow: var(--elevation-raised);
+}
+.vq-variations-h {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+}
+.vq-variations-h .ttl {
+  font-weight: var(--type-label-weight);
+}
+.vq-variations-h .quote-side-note {
+  margin: 0;
+  margin-inline-start: auto;
+}
+.vq-bar,
+.vq-tabs {
+  margin-block-end: var(--space-lg);
+}
+.vq-tabs .ct {
+  margin-inline-start: var(--space-xs);
+}
+/* The conversation composer is a persistent footer wherever the thread
+   shows (Aravind, C53). */
+.bt .bt-compose {
+  position: sticky;
+  inset-block-end: 0;
+  background: var(--color-bg-surface-raised);
+  padding-block: var(--space-sm);
+}
+.vd-instructions { margin-block-end: var(--space-lg); }
+.bl-withdraw-err { margin: var(--space-2xs) 0 0; color: var(--color-feedback-danger-fg); font-size: var(--type-body-sm-size); }

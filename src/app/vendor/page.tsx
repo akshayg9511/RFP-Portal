@@ -166,9 +166,19 @@ export default function VendorDashboard() {
           just need to have a bid page… RFP, as a concept, is only for
           Quince." So the vendor never learns the concept exists; the RFP's
           instruction travels with the product as guidance instead. */}
+      {/* The table IS the surface — no card around it (Aravind, C55) —
+          and the RFP's instruction leads, as a message bar. The vendor sees
+          WHAT to follow, never which RFP it came from. */}
+      {flat.length && instructions.length ? (
+        <div className="bar bar--info vd-instructions">
+          <Icon name="info_circle" />
+          <div>
+            <strong>Instructions.</strong> {instructions.join(" ")}
+          </div>
+        </div>
+      ) : null}
+
       {flat.length ? (
-        <div className="card">
-          <div className="card-b">
             <div className="data-grid-surface">
               <table className="data-grid">
                 <colgroup>
@@ -256,18 +266,6 @@ export default function VendorDashboard() {
                 </tbody>
               </table>
             </div>
-
-            {/* The RFP's instruction, shown as plain guidance. The vendor
-                sees WHAT to follow, never which RFP it came from. */}
-            {instructions.length ? (
-              <div className="bar" style={{ marginBlockStart: "var(--space-lg)" }}>
-                <span>
-                  <strong>Instructions.</strong> {instructions.join(" ")}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </div>
       ) : null}
 
     </>

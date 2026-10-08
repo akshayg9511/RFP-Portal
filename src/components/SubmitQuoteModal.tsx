@@ -180,14 +180,17 @@ export function SubmitQuoteModal({
         </div>
 
         <div className="modal-f">
-          {/* ONE commit. The footer is spent on it, so there is no Cancel
-              beside it — the header's x is the dismissal (the DS rule a
-              form modal follows). */}
+          {/* Cancel beside the one commit — every modal has a way out in
+              its footer (Aravind, C65). */}
           {variants.length && !selectable.length ? (
             <button className="btn btn--secondary" onClick={onClose}>
               Close
             </button>
           ) : (
+            <>
+            <button className="btn btn--secondary" onClick={onClose} disabled={busy}>
+              Cancel
+            </button>
             <button
               className="btn btn--primary"
               disabled={busy || (variants.length > 0 && picked.size === 0)}
@@ -197,6 +200,7 @@ export function SubmitQuoteModal({
                 ? `Submit ${picked.size} variation${picked.size === 1 ? "" : "s"}`
                 : "Submit quote"}
             </button>
+            </>
           )}
           {alreadyDone.length ? (
             <span className="sq-note">
