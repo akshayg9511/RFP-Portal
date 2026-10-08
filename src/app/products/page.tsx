@@ -8,7 +8,9 @@ import { money, units } from "@/lib/format";
 import { SaveAsSetDialog } from "./SaveAsSetDialog";
 import { SelectionTray } from "../style-sets/SelectionTray";
 import { ReviewVariationsModal } from "../style-sets/ReviewVariationsModal";
-import { FacetSelect } from "@/components/FacetSelect";
+import { FilterBar } from "@/components/FilterBar";
+import { SortTh, sortRows, type SortState } from "@/components/SortTh";
+import { SummaryStrip } from "@/components/SummaryStrip";
 import { Badge, Checkbox } from "@/ds/components";
 import { GRAINS, isExpandable, type Grain } from "@/domain/grain";
 import {
@@ -93,7 +95,8 @@ export default function ProductCatalogPage() {
   const [material, setMaterial] = React.useState("");
   const [minRevenue, setMinRevenue] = React.useState(0);
   const [inSet, setInSet] = React.useState("");
-  const [sort, setSort] = React.useState<SortKey>("revenue");
+  // Sort lives in the column headers now (Aravind, C4). Revenue first, as before.
+  const [sort, setSort] = React.useState<SortState<SortKey>>({ key: "revenue", dir: "desc" });
   // ONE row open at a time. The catalog has no pagination, so several open
   // SKU-grain products would push a very long page; and it matches how the
   // RFP Products tab already behaves.
@@ -125,13 +128,15 @@ export default function ProductCatalogPage() {
     const list = (data?.styles ?? []).filter(
       (r) => !grain || r.variationLevel === grain,
     );
-    list.sort((a, b) => {
-      if (sort === "styleNumber") return a.styleNumber.localeCompare(b.styleNumber);
-      if (sort === "units") return (b.planUnits ?? 0) - (a.planUnits ?? 0);
-      if (sort === "spend") return b.annualSpend - a.annualSpend;
-      return b.revenue - a.revenue;
-    });
-    return list;
+    return sortRows(list, sort, (r, key) =>
+      key === "styleNumber"
+        ? r.styleNumber
+        : key === "units"
+          ? r.planUnits ?? 0
+          : key === "spend"
+            ? r.annualSpend
+            : r.revenue,
+    );
   }, [data, sort, grain]);
 
   const filtered =
@@ -163,20 +168,20 @@ export default function ProductCatalogPage() {
   return (
     <>
       <div className="page-hd">
-        <h1>Product catalog</h1>
-        <div className="acts">
-          <span className="aw-summary">
-            <span className="k">Products</span>
-            <span className="v">{data?.total ?? 0}</span>
-          </span>
-          <span className="aw-summary">
-            <span className="k">Revenue shown</span>
-            <span className="v">
-              {money(rows.reduce((s, r) => s + r.revenue, 0))}
-            </span>
-          </span>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">Product catalog</h1>
+          </div>
         </div>
       </div>
+
+      {/* Flat, equal cards across the width (Aravind, C3). */}
+      <SummaryStrip
+        items={[
+          { label: "Products", value: units(data?.total ?? 0) },
+          { label: "Revenue shown", value: money(rows.reduce((t, r) => t + r.revenue, 0)) },
+        ]}
+      />
 
       {error ? (
         <div className="bar bar--danger">
@@ -187,104 +192,56 @@ export default function ProductCatalogPage() {
         </div>
       ) : null}
 
-      <div className="aw-filters">
-        <div className="control search sm aw-search">
-          <Icon name="search" size="sm" />
-          <input
-            placeholder="Search products"
-            aria-label="Search products by style number or name"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-
-        <FacetSelect
-          label="division"
-          value={division}
-          onChange={setDivision}
-          options={data?.facets.division ?? []}
-        />
-        <FacetSelect
-          label="department"
-          value={department}
-          onChange={setDepartment}
-          options={data?.facets.department ?? []}
-        />
-        <FacetSelect
-          label="sub-department"
-          value={subDepartment}
-          onChange={setSubDepartment}
-          options={data?.facets.subDepartment ?? []}
-        />
-        <FacetSelect
-          label="material"
-          value={material}
-          onChange={setMaterial}
-          options={data?.facets.material ?? []}
-        />
-
-        <select
-          className="control sm"
-          aria-label="Minimum revenue"
-          value={minRevenue}
-          onChange={(e) => setMinRevenue(Number(e.target.value))}
-        >
-          {REVENUE_BANDS.map((b) => (
-            <option key={b.value} value={b.value}>
-              {b.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="control sm"
-          aria-label="Filter by style set membership"
-          value={inSet}
-          onChange={(e) => setInSet(e.target.value)}
-        >
-          <option value="">In a set or not</option>
-          <option value="any">In a style set</option>
-          {/* The products quietly missing from every RFP. */}
-          <option value="none">Not in any set</option>
-        </select>
-
-        <select
-          className="control sm"
-          aria-label="Filter by bid grain"
-          value={grain}
-          onChange={(e) => setGrain(e.target.value)}
-        >
-          <option value="">All grains</option>
-          {GRAINS.map((g) => (
-            <option key={g} value={g}>
-              {GRAIN_LABEL[g]} level
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="control sm"
-          aria-label="Sort by"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
-        >
-          <option value="revenue">Sort: revenue</option>
-          <option value="spend">Sort: annual spend</option>
-          <option value="units">Sort: plan units</option>
-          <option value="styleNumber">Sort: style number</option>
-        </select>
-
-        {filtered ? (
-          <button className="btn btn--ghost sm" onClick={clearFilters}>
-            Clear
-          </button>
-        ) : null}
-
-        <span className="aw-filter-count">
-          {rows.length} shown
-          {selection.count ? ` · ${selection.count} selected` : ""}
-        </span>
-      </div>
+      {/* Filter & sort pattern (Aravind, C4): search, ONE facet
+          (department), and everything else in the More filters panel. */}
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: "Search style number or name" }}
+        facet={{
+          label: "department",
+          placeholder: "Select department",
+          value: department,
+          onChange: setDepartment,
+          options: data?.facets.department ?? [],
+        }}
+        groups={[
+          { key: "division", label: "Division", single: true, options: data?.facets.division ?? [], selected: division ? [division] : [] },
+          { key: "subDepartment", label: "Sub-department", single: true, options: data?.facets.subDepartment ?? [], selected: subDepartment ? [subDepartment] : [] },
+          { key: "material", label: "Material", single: true, options: data?.facets.material ?? [], selected: material ? [material] : [] },
+          {
+            key: "revenue",
+            label: "Revenue",
+            single: true,
+            options: REVENUE_BANDS.filter((b) => b.value > 0).map((b) => ({ value: String(b.value), count: -1 })),
+            selected: minRevenue ? [String(minRevenue)] : [],
+            format: (v) => REVENUE_BANDS.find((b) => String(b.value) === v)?.label ?? v,
+          },
+          {
+            key: "inSet",
+            label: "Style set",
+            single: true,
+            options: [{ value: "any", count: -1 }, { value: "none", count: -1 }],
+            selected: inSet ? [inSet] : [],
+            format: (v) => (v === "any" ? "In a style set" : "Not in any set"),
+          },
+          {
+            key: "grain",
+            label: "Bid grain",
+            single: true,
+            options: GRAINS.map((g) => ({ value: g, count: -1 })),
+            selected: grain ? [grain] : [],
+            format: (v) => `${GRAIN_LABEL[v as Grain]} level`,
+          },
+        ]}
+        onGroupsChange={(next) => {
+          setDivision(next.division?.[0] ?? "");
+          setSubDepartment(next.subDepartment?.[0] ?? "");
+          setMaterial(next.material?.[0] ?? "");
+          setMinRevenue(Number(next.revenue?.[0] ?? 0));
+          setInSet(next.inSet?.[0] ?? "");
+          setGrain(next.grain?.[0] ?? "");
+        }}
+        meta={`${rows.length} product${rows.length === 1 ? "" : "s"}${selection.count ? ` · ${selection.count} selected` : ""}`}
+      />
 
       <div className="data-grid-surface">
         <table className="data-grid aw-grid">
@@ -322,12 +279,12 @@ export default function ProductCatalogPage() {
                   }}
                 />
               </th>
-              <th>Product</th>
+              <SortTh sortKey="styleNumber" sort={sort} onSort={setSort}>Product</SortTh>
               <th>Category</th>
               <th>Bid grain</th>
-              <th className="num">Plan units</th>
-              <th className="num">Revenue</th>
-              <th className="num">Annual spend</th>
+              <SortTh sortKey="units" sort={sort} onSort={setSort} num>Plan units</SortTh>
+              <SortTh sortKey="revenue" sort={sort} onSort={setSort} num>Revenue</SortTh>
+              <SortTh sortKey="spend" sort={sort} onSort={setSort} num>Annual spend</SortTh>
               <th className="num">Sets · bids</th>
             </tr>
           </thead>

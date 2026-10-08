@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Checkbox, Icon, Token } from "@/ds/components";
+import { Checkbox, Icon, Radio, Token } from "@/ds/components";
+import { SideDrawer } from "@/components/SideDrawer";
 import type { Facet } from "@/components/FacetSelect";
 
 /**
@@ -23,8 +24,13 @@ import type { Facet } from "@/components/FacetSelect";
 export type FilterGroup = {
   key: string;
   label: string;
+  /** count < 0 hides the count (for fixed choices like revenue bands). */
   options: Facet[];
   selected: string[];
+  /** One-of rather than any-of: picking a value replaces the last. */
+  single?: boolean;
+  /** Display text for a stored value. */
+  format?: (v: string) => string;
 };
 
 export function FilterBar({
@@ -132,7 +138,7 @@ export function FilterBar({
               onDismiss={() => remove(group.key, value)}
               dismissLabel={`Remove ${group.label} ${value}`}
             >
-              {value}
+              {group.format ? group.format(value) : value}
             </Token>
           ))}
           <button type="button" className="btn btn--ghost sm" onClick={clearAll}>
@@ -147,10 +153,11 @@ export function FilterBar({
 }
 
 /**
- * More filters: a popover of checkbox groups with Apply / Reset.
+ * More filters: checkbox groups (or one-of groups) with Apply / Reset.
  *
- * Up to four groups fit a popover (three or four run in two columns); five or
- * more belong in a side panel. Edits are a draft until Apply, because
+ * Up to FOUR groups fit a popover (three or four run in two columns); FIVE or
+ * more belong in a side panel, because a popover the user has to scroll is a
+ * drawer that has not admitted it. Edits are a draft until Apply, because
  * re-running the list on every tick shows states nobody asked for.
  */
 function MoreFilters({
@@ -164,9 +171,10 @@ function MoreFilters({
   const [draft, setDraft] = React.useState<Record<string, string[]>>({});
   const wrap = React.useRef<HTMLDivElement>(null);
   const active = groups.reduce((n, g) => n + g.selected.length, 0);
+  const asPanel = groups.length >= 5;
 
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || asPanel) return; // the panel handles its own Escape/outside
     function onDown(e: MouseEvent) {
       if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
     }
@@ -179,7 +187,7 @@ function MoreFilters({
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, asPanel]);
 
   function toggleOpen() {
     if (!open) {
@@ -188,17 +196,52 @@ function MoreFilters({
     setOpen((v) => !v);
   }
 
-  function toggle(key: string, value: string) {
+  function toggle(g: FilterGroup, value: string) {
     setDraft((prev) => {
-      const current = prev[key] ?? [];
-      return {
-        ...prev,
-        [key]: current.includes(value)
+      const current = prev[g.key] ?? [];
+      const next = g.single
+        ? current.includes(value) ? [] : [value]
+        : current.includes(value)
           ? current.filter((v) => v !== value)
-          : [...current, value],
-      };
+          : [...current, value];
+      return { ...prev, [g.key]: next };
     });
   }
+
+  const body = groups.map((g) => (
+    <fieldset className="fb-group" key={g.key}>
+      <legend>{g.label}</legend>
+      <div className={g.options.length > 8 ? "fb-opts fb-opts--long" : "fb-opts"}>
+        {g.options.length ? (
+          g.options.map((o) => {
+            const id = `fb-${g.key}-${o.value}`;
+            const checked = (draft[g.key] ?? []).includes(o.value);
+            return (
+              <div className="opt" key={o.value}>
+                {g.single ? (
+                  <Radio id={id} checked={checked} onChange={() => toggle(g, o.value)} />
+                ) : (
+                  <Checkbox id={id} checked={checked} onChange={() => toggle(g, o.value)} />
+                )}
+                <label htmlFor={id}>
+                  {g.format ? g.format(o.value) : o.value}
+                  {o.count >= 0 ? <span className="fb-n"> {o.count}</span> : null}
+                </label>
+              </div>
+            );
+          })
+        ) : (
+          <p className="fb-none">None yet</p>
+        )}
+      </div>
+    </fieldset>
+  ));
+
+  const reset = () => setDraft(Object.fromEntries(groups.map((g) => [g.key, []])));
+  const apply = () => {
+    onApply(draft);
+    setOpen(false);
+  };
 
   return (
     <div className="fb-more" ref={wrap}>
@@ -214,7 +257,27 @@ function MoreFilters({
         {/* No pill at zero: a count of zero is not a count. */}
         {active ? <span className="ct">{active}</span> : null}
       </button>
-      {open ? (
+      {open && asPanel ? (
+        <SideDrawer
+          open
+          size="sm"
+          onClose={() => setOpen(false)}
+          title="More filters"
+          footer={
+            <>
+              <button type="button" className="btn btn--secondary" onClick={reset}>
+                Reset
+              </button>
+              <button type="button" className="btn btn--primary" onClick={apply}>
+                Apply
+              </button>
+            </>
+          }
+        >
+          <div className="fb-panel">{body}</div>
+        </SideDrawer>
+      ) : null}
+      {open && !asPanel ? (
         <div
           className={groups.length >= 3 ? "popover divided cols" : "popover divided"}
           role="dialog"
@@ -226,51 +289,12 @@ function MoreFilters({
               <Icon name="close" size="sm" />
             </button>
           </div>
-          <div className="popover-b">
-            {groups.map((g) => (
-              <fieldset className="fb-group" key={g.key}>
-                <legend>{g.label}</legend>
-                {g.options.length ? (
-                  g.options.map((o) => {
-                    const id = `fb-${g.key}-${o.value}`;
-                    const checked = (draft[g.key] ?? []).includes(o.value);
-                    return (
-                      <div className="opt" key={o.value}>
-                        <Checkbox
-                          id={id}
-                          checked={checked}
-                          onChange={() => toggle(g.key, o.value)}
-                        />
-                        <label htmlFor={id}>
-                          {o.value} <span className="fb-n">{o.count}</span>
-                        </label>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="fb-none">None yet</p>
-                )}
-              </fieldset>
-            ))}
-          </div>
+          <div className="popover-b">{body}</div>
           <div className="popover-f">
-            <button
-              type="button"
-              className="btn btn--secondary sm"
-              onClick={() =>
-                setDraft(Object.fromEntries(groups.map((g) => [g.key, []])))
-              }
-            >
+            <button type="button" className="btn btn--secondary sm" onClick={reset}>
               Reset
             </button>
-            <button
-              type="button"
-              className="btn btn--primary sm"
-              onClick={() => {
-                onApply(draft);
-                setOpen(false);
-              }}
-            >
+            <button type="button" className="btn btn--primary sm" onClick={apply}>
               Apply
             </button>
           </div>

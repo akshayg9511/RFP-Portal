@@ -6482,3 +6482,48 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   cursor: pointer;
   min-inline-size: 0;
 }
+/* More filters: long option lists scroll inside their group; the side panel
+   stacks groups with the system's group gap. */
+.fb-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.fb-opts--long {
+  max-block-size: 220px;
+  overflow-y: auto;
+  padding-inline-end: var(--space-xs);
+}
+.fb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+/* ── SUMMARY STRIP (src/components/SummaryStrip.tsx) ─────────────────────── */
+.sum-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-block-end: var(--space-lg);
+}
+.sum-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-md) var(--space-lg);
+}
+.sum-card .k {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
+.sum-card .v {
+  font-size: var(--type-heading-3-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-default);
+}
+.sum-card .s {
+  font-size: var(--type-body-sm-size);
+  color: var(--color-fg-muted);
+}
