@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // data-brand="procura" — a custom brand layer over Quince Core: deep navy
+    // data-brand="procura" — a custom brand layer over Quince Core: neutral
     // chrome, cobalt accent, softer radii. It overrides only Tier-1 refs,
     // radius and density, which is the contract's sanctioned surface, so every
     // component and QDS_LINT keep working unchanged.

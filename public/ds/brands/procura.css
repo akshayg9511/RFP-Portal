@@ -2,9 +2,9 @@
    THEME · PROCURA
    ------------------------------------------------------------
    Personality:   editorial · confident · product-forward
-   Visual style:  deep navy chrome · cobalt accent · crisp white
+   Visual style:  Quince neutral chrome · cobalt accent · crisp white
                   content · generous product imagery
-   Colors:        primary = cobalt (cobalt-700) · chrome = navy
+   Colors:        primary = cobalt (cobalt-700) · chrome = foundation neutral
    Typography:    foundation-fixed (Inter) — brands never override
                   the face
 
@@ -19,25 +19,18 @@
    personality is "efficient · data-dense · operational". Procura
    is a screen a CEO looks at while deciding where $50M goes, and
    the products on it are photographed. The chrome steps back to
-   a deep navy so the photography carries the colour, and the
-   accent is used with intent rather than sparingly.
+   the shared Quince neutral (UX v2 — it was navy) so the
+   photography carries the colour, and the accent is used with
+   intent rather than sparingly.
 ============================================================ */
 
 [data-brand="procura"] {
-  /* — Ground: a true blue-black rather than the warm near-black the neutral
-       ramp supplies. The chrome then sits in the same family as the accent
-       instead of reading as an unrelated black bar beside a blue button. */
-  --ref-ground-raised: #141b2d;
-  --ref-ground-base: #0d1220;
-
-  /* — The nav and header ground. The foundation points --color-bg-nav at
-       --ref-neutral-950 (#21201f, a warm near-black) on a LIGHT page, so
-       overriding the ground alone leaves the chrome unchanged. These three
-       rungs are Tier-1 refs and are the brand's to own. */
-  --ref-neutral-1000: #0d1220;
-  --ref-neutral-950: #141b2d; /* nav ground */
-  --ref-neutral-910: #1d2740; /* nav hover */
-  --ref-neutral-900: #26324f; /* nav selected fill · inverse surface */
+  /* — Chrome: the Quince neutral, not navy (Boram, UX v2; Akshay chose
+       "nav + logo only", 8 Oct). The nav, header and their hover / selected
+       rungs now come straight from the foundation's warm neutral ramp
+       (--ref-neutral-950 / 910 / 900, ground-raised / -base), so Procura's
+       chrome matches every other Quince tool. Page greys and radii below are
+       deliberately left as they were. */
 
   /* — Canvas: a hint cooler than the warm cream, so white cards read as
        white rather than as blue-tinted paper on a yellow ground. */
@@ -62,8 +55,8 @@
   --ref-hue-tint-fg-on-light: var(--ref-hue-800);
   --ref-hue-selected-on-light: var(--ref-cobalt-50);
 
-  /* On the navy chrome the tint has to lift off a blue ground rather than a
-     brown one, so it mixes toward the raised ground. */
+  /* On the dark chrome the tint lifts off the raised ground, so it mixes
+     toward it. */
   --ref-hue-tint-bg-on-dark: color-mix(
     in oklch,
     var(--ref-hue-300) 16%,
@@ -76,10 +69,11 @@
     var(--ref-ground-raised)
   );
 
-  /* The nav's selected item: the accent tint, so the current destination is
-     unmistakable on the navy. Contract-assigned to the brand. */
-  --color-bg-nav-item-selected: var(--ref-hue-selected-on-dark);
-  --color-fg-nav-item-selected: var(--ref-neutral-0);
+  /* The nav's selected item: NEUTRAL, the foundation's toggled nav fill —
+     the selected destination reads by its fill and weight, not a blue tint
+     on a dark ground. Contract-assigned to the brand. */
+  --color-bg-nav-item-selected: var(--color-bg-nav-selected);
+  --color-fg-nav-item-selected: var(--color-fg-on-nav-strong);
 
   /* — Shadow ink: a navy-tinted shadow rather than neutral grey, so a raised
        card lifts within the palette.
