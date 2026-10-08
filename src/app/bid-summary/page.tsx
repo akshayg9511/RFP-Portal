@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Checkbox, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { moneyCompact, unitCost, units } from "@/lib/format";
-import { FacetSelect, facetsOf } from "@/components/FacetSelect";
+import { facetsOf } from "@/components/FacetSelect";
 import type { BidGroup, BidSummary, FlatRow } from "./types";
 import { BidDrawer } from "./BidDrawer";
 import { BulkBar } from "./BulkBar";
+import { FilterBar } from "@/components/FilterBar";
 import { AwardOverlay } from "./AwardOverlay";
 
 /**
@@ -104,6 +105,12 @@ function BidSummaryInner() {
   // "all" is explicit in the URL, because the DEFAULT is "review" — clearing
   // the chip must not snap straight back to it.
   const setView = (v: View) => setParam("view", v === "review" ? "" : v);
+  const VIEW_LABEL: Record<View, string> = {
+    review: "Awaiting review",
+    notbid: "Not bid",
+    unallocated: "Unallocated variants",
+    all: "All bids",
+  };
 
   const flat: FlatRow[] = React.useMemo(
     () =>
@@ -273,10 +280,6 @@ function BidSummaryInner() {
         (r) => r.invitationId === openRow.invitationId && r.group.styleId === openRow.group.styleId,
       )
     : [];
-  const hiddenActive = [f.material, f.colour, f.country, f.gm, f.partner, f.freight].filter(Boolean).length;
-  // Open by default when one of its filters is already applied (e.g. a shared
-  // link), so an active filter is never hidden on arrival.
-  const [moreOpen, setMoreOpen] = React.useState(hiddenActive > 0);
 
   if (loading && !data) {
     return (
@@ -302,71 +305,39 @@ function BidSummaryInner() {
 
       {data ? (
         <>
-          <div className="aw-filters bs-filters">
-            {/* ONE "Show" control, not three chips (Akshay, 5 Oct: "keep
-                awaiting review, not bid and unallocated variants as one
-                filter"). Defaults to Awaiting review; "All bids" clears it. */}
-            <select
-              className="control sm bs-show"
-              aria-label="Show"
-              value={view}
-              onChange={(e) => setView(e.target.value as View)}
-            >
-              <option value="review">Awaiting review ({viewCount("review")})</option>
-              <option value="notbid">Not bid ({viewCount("notbid")})</option>
-              <option value="unallocated">Unallocated variants ({viewCount("unallocated")})</option>
-              <option value="all">All bids ({flat.filter((r) => matches(r)).length})</option>
-            </select>
-            <div className="control search sm aw-search">
-              <Icon name="search" size="sm" />
-              <input
-                placeholder="Search product or vendor"
-                aria-label="Search product or vendor"
-                value={f.q}
-                onChange={(e) => setParam("q", e.target.value)}
-              />
-            </div>
-            <FacetSelect label="Division" value={f.division} onChange={(v) => setParam("division", v)} options={facets.division} />
-            <FacetSelect label="Department" value={f.department} onChange={(v) => setParam("department", v)} options={facets.department} />
-            <FacetSelect label="Sub-department" value={f.subDepartment} onChange={(v) => setParam("subDepartment", v)} options={facets.subDepartment} />
-            <FacetSelect label="Vendor" value={f.vendor} onChange={(v) => setParam("vendor", v)} options={facets.vendor} />
-            <FacetSelect label="Stage" value={f.stage} onChange={(v) => setParam("stage", v)} options={facets.stage} />
-            {/* Twelve filters took three rows before a single bid was
-                visible. The six used most stay out; the rest sit behind
-                "More filters", which COUNTS how many of them are applied —
-                a filter you cannot see must never silently narrow the list. */}
-            <button
-              type="button"
-              className="btn btn--ghost sm"
-              aria-expanded={moreOpen}
-              onClick={() => setMoreOpen((v) => !v)}
-            >
-              <Icon name="filter" size="sm" />
-              More filters{hiddenActive ? ` (${hiddenActive})` : ""}
-            </button>
-            {moreOpen ? (
-              <>
-                <FacetSelect label="Material" value={f.material} onChange={(v) => setParam("material", v)} options={facets.material} />
-                <FacetSelect label="Colour" value={f.colour} onChange={(v) => setParam("colour", v)} options={facets.colour} />
-                <FacetSelect label="Country" allLabel="All countries" value={f.country} onChange={(v) => setParam("country", v)} options={facets.country} />
-                <FacetSelect label="GM" value={f.gm} onChange={(v) => setParam("gm", v)} options={facets.gm} />
-                <FacetSelect label="Sourcing partner" value={f.partner} onChange={(v) => setParam("partner", v)} options={facets.partner} />
-                <FacetSelect label="Freight" allLabel="Any freight" value={f.freight} onChange={(v) => setParam("freight", v)} options={facets.freight} />
-              </>
-            ) : null}
-            {anyFilter ? (
-              <button
-                className="btn btn--ghost sm"
-                onClick={() => {
-                  const next = new URLSearchParams();
-                  if (params.get("view")) next.set("view", params.get("view")!);
-                  router.replace(next.toString() ? `?${next}` : "?", { scroll: false });
-                }}
-              >
-                Clear filters
-              </button>
-            ) : null}
-          </div>
+          {/* Filter & sort pattern (Aravind, C27): search, the ONE "Show"
+              control (Akshay, 5 Oct), and the other eleven filters in the
+              More filters side panel — they used to take three rows. */}
+          <FilterBar
+            search={{ value: f.q, onChange: (v) => setParam("q", v), placeholder: "Search product or vendor" }}
+            facet={{
+              label: "view",
+              placeholder: "Show",
+              value: view,
+              onChange: (v) => setView((v || "review") as View),
+              options: (["review", "notbid", "unallocated", "all"] as View[]).map((v) => ({
+                value: v,
+                count: v === "all" ? flat.filter((r) => matches(r)).length : viewCount(v),
+              })),
+              format: (v) => VIEW_LABEL[v as View] ?? v,
+            }}
+            groups={[
+              { key: "division", label: "Division", single: true, options: facets.division, selected: f.division ? [f.division] : [] },
+              { key: "department", label: "Department", single: true, options: facets.department, selected: f.department ? [f.department] : [] },
+              { key: "subDepartment", label: "Sub-department", single: true, options: facets.subDepartment, selected: f.subDepartment ? [f.subDepartment] : [] },
+              { key: "vendor", label: "Vendor", single: true, options: facets.vendor, selected: f.vendor ? [f.vendor] : [] },
+              { key: "stage", label: "Stage", single: true, options: facets.stage, selected: f.stage ? [f.stage] : [] },
+              { key: "material", label: "Material", single: true, options: facets.material, selected: f.material ? [f.material] : [] },
+              { key: "colour", label: "Colour", single: true, options: facets.colour, selected: f.colour ? [f.colour] : [] },
+              { key: "country", label: "Country", single: true, options: facets.country, selected: f.country ? [f.country] : [] },
+              { key: "gm", label: "GM", single: true, options: facets.gm, selected: f.gm ? [f.gm] : [] },
+              { key: "partner", label: "Sourcing partner", single: true, options: facets.partner, selected: f.partner ? [f.partner] : [] },
+              { key: "freight", label: "Freight", single: true, options: facets.freight, selected: f.freight ? [f.freight] : [] },
+            ]}
+            onGroupsChange={(next) =>
+              setParams(Object.fromEntries(['division', 'department', 'subDepartment', 'vendor', 'stage', 'material', 'colour', 'country', 'gm', 'partner', 'freight'].map((k) => [k, next[k]?.[0] ?? ""])))
+            }
+          />
 
           {groups.length === 0 ? (
             <div className="card">

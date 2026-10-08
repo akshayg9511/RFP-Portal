@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Icon, Menu, MenuItem } from "@/ds/components";
+import { Icon } from "@/ds/components";
+import { SelBarMenu } from "@/components/SelBarMenu";
 import { quinceLabel, transitionsFrom, type BidStatus } from "@/domain/bidStatus";
 import type { FlatRow } from "./types";
 
@@ -28,12 +29,10 @@ export function BulkBar({
   onClear: () => void;
   onDone: () => void;
 }) {
-  const [open, setOpen] = React.useState(false);
   const [moveTo, setMoveTo] = React.useState<BidStatus | null>(null);
   const [note, setNote] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const wrap = React.useRef<HTMLDivElement>(null);
 
   // Distinct vendor x product pairs — where status actually lives.
   const pairs = React.useMemo(() => {
@@ -54,20 +53,6 @@ export function BulkBar({
     const sets = pairs.map((p) => new Set(transitionsFrom(p.status, "QUINCE").map((t) => t.to)));
     return [...sets[0]!].filter((to) => sets.every((s) => s.has(to)));
   }, [pairs]);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   // Reserve room for the bar on the scroll container, as the tray does.
   React.useEffect(() => {
@@ -115,38 +100,18 @@ export function BulkBar({
             ? ` · ${pairs.length} vendor × product${pairs.length === 1 ? "" : "s"}`
             : ""}
         </span>
+        {/* Reworked selection bar (Aravind, C29): Clear selection, then ONE
+            menu with only the moves legal for every selected bid. */}
         <div className="acts">
-          <button className="btn btn--ghost" onClick={onClear}>Clear</button>
-          <div className="sel-menu-wrap" ref={wrap}>
-            <button
-              className="btn btn--ghost"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              aria-haspopup="menu"
-            >
-              With {rows.length} selected
-              <Icon name={open ? "chevron_up" : "chevron_down"} size="sm" />
-            </button>
-            {open ? (
-              <Menu className="sel-menu" aria-label="Move the selected bids">
-                {legal.length ? (
-                  legal.map((to) => (
-                    <MenuItem
-                      key={to}
-                      onClick={() => {
-                        setMoveTo(to);
-                        setOpen(false);
-                      }}
-                    >
-                      Move to {quinceLabel(to)}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem disabled>No move fits every selected bid</MenuItem>
-                )}
-              </Menu>
-            ) : null}
-          </div>
+          <button className="btn btn--ghost" onClick={onClear}>Clear selection</button>
+          <SelBarMenu
+            label="Move"
+            items={
+              legal.length
+                ? legal.map((to) => ({ label: `Move to ${quinceLabel(to)}`, onSelect: () => setMoveTo(to) }))
+                : [{ label: "No move fits every selected bid", disabled: true, onSelect: () => {} }]
+            }
+          />
         </div>
       </div>
 
@@ -181,6 +146,10 @@ export function BulkBar({
               {error ? <p className="bd-err">{error}</p> : null}
             </div>
             <div className="modal-f">
+              {/* Every modal has a way out (Aravind, C9/C65). */}
+              <button className="btn btn--secondary" disabled={busy} onClick={() => setMoveTo(null)}>
+                Cancel
+              </button>
               <button className="btn btn--primary" disabled={busy || !note.trim()} onClick={apply}>
                 {busy ? "Moving…" : `Move ${pairs.length}`}
               </button>
