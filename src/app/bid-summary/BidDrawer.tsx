@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Badge, Icon } from "@/ds/components";
 import { SideDrawer } from "@/components/SideDrawer";
-import { BidLifecycle } from "@/components/BidLifecycle";
+import { BidTabs } from "@/components/BidTabs";
 import { useApi } from "@/lib/useApi";
 import { money, unitCost, units } from "@/lib/format";
 import type { ProductBids } from "@/app/products/[styleId]/types";
@@ -57,10 +57,19 @@ export function BidDrawer({
       onPrev={onPrev}
       onNext={onNext}
       stepNoun="bid"
+      // Allocate is a persistent footer, never scrolled out of reach
+      // (Aravind, C34).
+      footer={
+        row ? (
+          <button type="button" className="btn btn--primary" onClick={() => onAllocate(row.group)}>
+            Allocate this variant
+          </button>
+        ) : undefined
+      }
     >
       {row ? (
         // Keyed, so switching bid never shows the previous one's numbers.
-        <DrawerBody key={row.rowKey} row={row} siblings={siblings} onSelect={onSelect} onAllocate={onAllocate} onChanged={onChanged} />
+        <DrawerBody key={row.rowKey} row={row} siblings={siblings} onSelect={onSelect} onChanged={onChanged} />
       ) : null}
     </SideDrawer>
   );
@@ -70,20 +79,20 @@ function DrawerBody({
   row,
   siblings,
   onSelect,
-  onAllocate,
   onChanged,
 }: {
   row: FlatRow;
   siblings: FlatRow[];
   onSelect: (row: FlatRow) => void;
-  onAllocate: (group: FlatRow["group"]) => void;
   onChanged: () => void;
 }) {
   const g = row.group;
   const p = row.price;
 
   return (
-    <>
+    // Status, Move, latest note and the Bid details · Comments tabs — the
+    // same body as the RFP page's drawer (BidTabs; C31–C33).
+    <BidTabs invitationId={row.invitationId} styleId={g.styleId} onChanged={onChanged}>
       {/* P7 — the same vendor on the other variants of this product. */}
       {siblings.length > 1 ? (
         <div className="section">
@@ -109,17 +118,6 @@ function DrawerBody({
         </div>
       ) : null}
 
-      {/* STATUS + THREAD — the RFP drawer's own control (P6). */}
-      <div className="section">
-        <div className="hd">Status and conversation</div>
-        <BidLifecycle
-          invitationId={row.invitationId}
-          styleId={g.styleId}
-          side="QUINCE"
-          threadAs="panel"
-          onChanged={onChanged}
-        />
-      </div>
 
       {p ? (
         <>
@@ -156,11 +154,8 @@ function DrawerBody({
           </dd>
           <dt>RFP</dt><dd>{row.rfp.name}</dd>
         </dl>
-        <button type="button" className="btn btn--secondary sm" onClick={() => onAllocate(g)}>
-          Allocate this variant
-        </button>
       </div>
-    </>
+    </BidTabs>
   );
 }
 
