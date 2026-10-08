@@ -26,8 +26,11 @@ IID="i-084e7f909db5aef50"
 REGION="ap-south-1"
 HOST_IP="10.1.13.115"
 DB_CONTAINER="procura-mysql"
-DB_NAME="procura"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
+# The database THIS checkout uses, read from its own .env — procura-dev runs on
+# `procura_dev`, the other checkout on `procura`, both in the same container.
+DB_NAME=$(sed -nE 's#^DATABASE_URL="?mysql://[^/]+/([^?"]+).*#\1#p' "$HERE/.env" | sed -n 1p)
+[ -n "$DB_NAME" ] || { echo "Could not read the database name from $HERE/.env"; exit 1; }
 STAMP="$(date +%Y%m%d-%H%M%S)"
 WORK="$(mktemp -d /tmp/procura-deploy.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
