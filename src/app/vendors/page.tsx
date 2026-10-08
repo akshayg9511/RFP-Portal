@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Icon } from "@/ds/components";
+import { Badge, Icon } from "@/ds/components";
+import { FilterBar } from "@/components/FilterBar";
+import { SortTh, sortRows, type SortState } from "@/components/SortTh";
+import { SummaryStrip } from "@/components/SummaryStrip";
 import { SideDrawer } from "@/components/SideDrawer";
 import { useApi } from "@/lib/useApi";
 import { money, unitCost } from "@/lib/format";
-import { regionColor, REGION_ORDER } from "@/components/charts";
+import { REGION_ORDER } from "@/components/charts";
 
 /**
  * The vendor master — procurement's view of who Quince works with.
@@ -59,10 +62,11 @@ export default function VendorsPage() {
   const [region, setRegion] = React.useState("");
   const [type, setType] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
+  const [sort, setSort] = React.useState<SortState<"name" | "supplies" | "bids" | "awarded">>(null);
 
   const rows = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (data ?? []).filter((v) => {
+    const list = (data ?? []).filter((v) => {
       if (region && v.cooRegion !== region) return false;
       if (type && v.type !== type) return false;
       if (
@@ -74,7 +78,16 @@ export default function VendorsPage() {
       }
       return true;
     });
-  }, [data, query, region, type]);
+    return sortRows(list, sort, (v, key) =>
+      key === "name"
+        ? v.name.toLowerCase()
+        : key === "supplies"
+          ? v.stylesSupplied
+          : key === "bids"
+            ? v.quoteCount
+            : v.awardedDollars,
+    );
+  }, [data, query, region, type, sort]);
 
   const open = rows.find((v) => v.id === openId) ?? null;
 
@@ -93,18 +106,20 @@ export default function VendorsPage() {
   return (
     <>
       <div className="page-hd">
-        <h1>Vendors</h1>
-        <div className="acts">
-          <span className="aw-summary">
-            <span className="k">Vendors</span>
-            <span className="v">{data?.length ?? 0}</span>
-          </span>
-          <span className="aw-summary">
-            <span className="k">Placed with them</span>
-            <span className="v">{money(placed)}</span>
-          </span>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">Vendors</h1>
+          </div>
         </div>
       </div>
+
+      {/* Flat, equal cards across the width (Aravind, C3 pattern). */}
+      <SummaryStrip
+        items={[
+          { label: "Vendors", value: data?.length ?? 0 },
+          { label: "Placed with them", value: money(placed) },
+        ]}
+      />
 
       {error ? (
         <div className="bar bar--danger">
@@ -115,47 +130,36 @@ export default function VendorsPage() {
         </div>
       ) : null}
 
-      <div className="aw-filters">
-        <div className="control search sm aw-search">
-          <Icon name="search" size="sm" />
-          <input
-            placeholder="Search vendors"
-            aria-label="Search vendors"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-
-        <select
-          className="control sm"
-          aria-label="Filter by region"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-        >
-          <option value="">All regions</option>
-          {REGION_ORDER.filter((r) => byRegion.has(r)).map((r) => (
-            <option key={r} value={r}>
-              {r} ({byRegion.get(r)})
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="control sm"
-          aria-label="Filter by vendor type"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-        >
-          <option value="">All types</option>
-          <option value="INCUMBENT">Incumbent</option>
-          <option value="EXISTING">Existing</option>
-          <option value="NEW">New to Quince</option>
-        </select>
-
-        <span className="aw-filter-count">
-          {rows.length} of {data?.length ?? 0} vendors
-        </span>
-      </div>
+      {/* Filter & sort pattern (Aravind, C19): search, Region facet,
+          vendor type behind More filters. */}
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: "Search vendors" }}
+        facet={{
+          label: "region",
+          placeholder: "Select region",
+          value: region,
+          onChange: setRegion,
+          options: REGION_ORDER.filter((r) => byRegion.has(r)).map((r) => ({
+            value: r,
+            count: byRegion.get(r) ?? 0,
+          })),
+        }}
+        groups={[
+          {
+            key: "type",
+            label: "Vendor type",
+            single: true,
+            options: (["INCUMBENT", "EXISTING", "NEW"] as const).map((t) => ({
+              value: t,
+              count: (data ?? []).filter((v) => v.type === t).length,
+            })),
+            selected: type ? [type] : [],
+            format: (v) => TYPE_LABEL[v as Vendor["type"]] ?? v,
+          },
+        ]}
+        onGroupsChange={(next) => setType(next.type?.[0] ?? "")}
+        meta={`${rows.length} vendor${rows.length === 1 ? "" : "s"}`}
+      />
 
       <div className="data-grid-surface">
         <table className="data-grid">
@@ -169,12 +173,12 @@ export default function VendorsPage() {
           </colgroup>
           <thead>
             <tr>
-              <th>Vendor</th>
+              <SortTh sortKey="name" sort={sort} onSort={setSort}>Vendor</SortTh>
               <th>Region</th>
               <th>Type</th>
-              <th className="num">Supplies</th>
-              <th className="num">Bids</th>
-              <th className="num">Awarded</th>
+              <SortTh sortKey="supplies" sort={sort} onSort={setSort} num>Supplies</SortTh>
+              <SortTh sortKey="bids" sort={sort} onSort={setSort} num>Bids</SortTh>
+              <SortTh sortKey="awarded" sort={sort} onSort={setSort} num>Awarded</SortTh>
             </tr>
           </thead>
           <tbody>
@@ -231,24 +235,17 @@ export default function VendorsPage() {
                 </td>
                 <td>
                   {v.cooRegion ? (
-                    <span className="vm-region">
-                      {/* The same entity colours as every chart, so a region
-                          means the same thing on every screen. */}
-                      <span
-                        className="chart-swatch"
-                        style={{ background: regionColor(v.cooRegion) }}
-                        aria-hidden="true"
-                      />
-                      {v.cooRegion}
-                    </span>
+                    // Plain text: the colour dot was not a status and did not
+                    // need a system of its own (Aravind, C20).
+                    <span className="vm-region">{v.cooRegion}</span>
                   ) : (
                     <span className="aw-muted">—</span>
                   )}
                 </td>
                 <td>
-                  {/* Neutral. Type is a QUALIFIER, not a status — giving it a
-                      tone made it read as a state beside the real ones. */}
-                  <span className="vl-type">{TYPE_LABEL[v.type]}</span>
+                  {/* Neutral badge, the same everywhere (decision D12): type is
+                      a qualifier, so it never takes a status tone. */}
+                  <Badge>{TYPE_LABEL[v.type]}</Badge>
                 </td>
                 <td className="num">
                   {v.stylesSupplied || <span className="aw-muted">—</span>}

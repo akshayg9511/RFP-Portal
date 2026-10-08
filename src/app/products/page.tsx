@@ -312,6 +312,13 @@ export default function ProductCatalogPage() {
                         ? "Try a wider filter, or clear them."
                         : "The catalog is empty."}
                     </div>
+                    {filtered ? (
+                      <div className="acts">
+                        <button type="button" className="btn btn--secondary" onClick={clearFilters}>
+                          Clear filters
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </td>
               </tr>

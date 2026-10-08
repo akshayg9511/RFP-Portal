@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
-import { FacetSelect, facetsOf } from "@/components/FacetSelect";
+import { facetsOf } from "@/components/FacetSelect";
+import { FilterBar } from "@/components/FilterBar";
+import { SummaryStrip } from "@/components/SummaryStrip";
 import { money, unitCost, units } from "@/lib/format";
 
 /**
@@ -156,11 +158,6 @@ function AwardPageInner() {
 
   const setStatus = (v: string) => setParam("status", v);
   const setRegion = (v: string) => setParam("cooRegion", v);
-  const setDivision = (v: string) => setParam("division", v);
-  const setDepartment = (v: string) => setParam("department", v);
-  const setSubDepartment = (v: string) => setParam("subDepartment", v);
-  const setMaterial = (v: string) => setParam("material", v);
-  const setVendor = (v: string) => setParam("vendor", v);
   /**
    * Search is the one filter that stays LOCAL, mirrored to the URL on a
    * debounce.
@@ -332,18 +329,20 @@ function AwardPageInner() {
       ) : null}
 
       <div className="page-hd">
-        <h1>Award summary</h1>
-        <div className="acts">
-          <span className="aw-summary">
-            <span className="k">Savings potential</span>
-            <span className="v">{money(totalPotential)}</span>
-          </span>
-          <span className="aw-summary">
-            <span className="k">Placed</span>
-            <span className="v">{money(placed)}</span>
-          </span>
+        <div className="row">
+          <div className="grow">
+            <h1 className="ttl">Award summary</h1>
+          </div>
         </div>
       </div>
+
+      {/* Flat, equal cards across the width (Aravind, C40). */}
+      <SummaryStrip
+        items={[
+          { label: "Savings potential", value: money(totalPotential) },
+          { label: "Placed", value: money(placed) },
+        ]}
+      />
 
       {error ? (
         <div className="bar bar--danger">
@@ -354,78 +353,41 @@ function AwardPageInner() {
         </div>
       ) : null}
 
-      {/* Filters in one row above the grid. */}
 
-      <div className="aw-filters">
-        <div className="control search sm aw-search">
-          <Icon name="search" size="sm" />
-          {/* Keyed on the URL value: a Back press or a pasted link remounts
-              this with the new text, without an effect painting a stale frame
-              first. */}
-          <input
-            key={urlQuery}
-            placeholder="Search products"
-            aria-label="Search products"
-            defaultValue={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-
-        <FacetSelect
-          label="status"
-          allLabel="All statuses"
-          value={status}
-          onChange={setStatus}
-          options={facets.status}
-        />
-        <FacetSelect
-          label="division"
-          value={division}
-          onChange={setDivision}
-          options={facets.division}
-        />
-        <FacetSelect
-          label="department"
-          value={department}
-          onChange={setDepartment}
-          options={facets.department}
-        />
-        <FacetSelect
-          label="sub-department"
-          value={subDepartment}
-          onChange={setSubDepartment}
-          options={facets.subDepartment}
-        />
-        <FacetSelect
-          label="material"
-          value={material}
-          onChange={setMaterial}
-          options={facets.material}
-        />
-        <FacetSelect
-          label="region"
-          value={region}
-          onChange={setRegion}
-          options={facets.region}
-        />
-        <FacetSelect
-          label="vendor"
-          value={vendor}
-          onChange={setVendor}
-          options={facets.vendor}
-        />
-
-        {anyFilter ? (
-          <button className="btn btn--ghost sm" onClick={clearAll}>
-            Clear filters
-          </button>
-        ) : null}
-
-        <span className="aw-filter-count">
-          {`${rows.length} of ${data?.length ?? 0} products`}
-        </span>
-
-      </div>
+      {/* Filter & sort pattern (Aravind, C39): search, Status facet,
+          the rest in the More filters panel (6 groups). */}
+      <FilterBar
+        search={{ value: query, onChange: setQuery, placeholder: "Search products" }}
+        facet={{
+          label: "status",
+          placeholder: "Select status",
+          value: status,
+          onChange: setStatus,
+          options: facets.status,
+          format: (v) => STATUS_LABEL[v as AwardRow["status"]] ?? v,
+        }}
+        groups={[
+          { key: "division", label: "Division", single: true, options: facets.division, selected: division ? [division] : [] },
+          { key: "department", label: "Department", single: true, options: facets.department, selected: department ? [department] : [] },
+          { key: "subDepartment", label: "Sub-department", single: true, options: facets.subDepartment, selected: subDepartment ? [subDepartment] : [] },
+          { key: "material", label: "Material", single: true, options: facets.material, selected: material ? [material] : [] },
+          { key: "region", label: "Region", single: true, options: facets.region, selected: region ? [region] : [] },
+          { key: "vendor", label: "Vendor", single: true, options: facets.vendor, selected: vendor ? [vendor] : [] },
+        ]}
+        onGroupsChange={(next) => {
+          const q = new URLSearchParams(params.toString());
+          for (const k of ["division", "department", "subDepartment", "material", "cooRegion", "vendor"]) q.delete(k);
+          const put = (k: string, v?: string) => { if (v) q.set(k, v); };
+          put("division", next.division?.[0]);
+          put("department", next.department?.[0]);
+          put("subDepartment", next.subDepartment?.[0]);
+          put("material", next.material?.[0]);
+          put("cooRegion", next.region?.[0]);
+          put("vendor", next.vendor?.[0]);
+          router.replace(q.toString() ? `/award?${q}` : "/award", { scroll: false });
+        }}
+        meta={`${rows.length} product${rows.length === 1 ? "" : "s"}`}
+      />
 
       <div className="data-grid-surface">
           <table className="data-grid aw-grid">
@@ -471,6 +433,13 @@ function AwardPageInner() {
                           ? "Try a different filter or search."
                           : "Once vendors submit bids, their products appear here."}
                       </div>
+                      {anyFilter ? (
+                        <div className="acts">
+                          <button type="button" className="btn btn--secondary" onClick={clearAll}>
+                            Clear filters
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
