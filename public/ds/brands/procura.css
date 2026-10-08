@@ -82,11 +82,18 @@
   --color-fg-nav-item-selected: var(--ref-neutral-0);
 
   /* — Shadow ink: a navy-tinted shadow rather than neutral grey, so a raised
-       card lifts within the palette. */
-  --ref-shadow-key-on-light: 220 45% 16%;
-  --ref-shadow-ambient-on-light: 220 45% 16%;
-  --ref-shadow-raised-key-on-light: 220 45% 16%;
-  --ref-shadow-raised-ambient-on-light: 220 45% 16%;
+       card lifts within the palette.
+
+       These MUST be complete colours. They were bare HSL channels
+       ("220 45% 16%"), which the foundation drops straight into box-shadow —
+       an invalid value, so EVERY shadow in Procura (tables, cards, menus,
+       popovers, drawers) silently rendered as none. That is the root of
+       Aravind's dozen "needs a drop shadow" comments (C12, C22–C26, C41,
+       C42, C52, C61, C63, C68). Alphas match default.css. */
+  --ref-shadow-key-on-light: hsl(220 45% 16% / 0.14);
+  --ref-shadow-ambient-on-light: hsl(220 45% 16% / 0.10);
+  --ref-shadow-raised-key-on-light: hsl(220 45% 16% / 0.105);
+  --ref-shadow-raised-ambient-on-light: hsl(220 45% 16% / 0.075);
 
   /* — Radius: softer than Default's crisp operational corners. A product
        card carrying photography wants a rounder frame; a control stays
