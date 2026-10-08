@@ -207,7 +207,7 @@ export function StrategiesTab({
                   <span className="pd-chip-current">current</span>
                 ) : (
                   <button
-                    className="btn btn--ghost sm"
+                    className="btn btn--secondary sm"
                     onClick={() => onApply(c.key, c.split)}
                   >
                     Apply
@@ -270,7 +270,7 @@ export function StrategiesTab({
                 <span className="pd-chip-current">current</span>
               ) : (
                 <button
-                  className="btn btn--ghost sm"
+                  className="btn btn--secondary sm"
                   onClick={() => onApply(c.id, c.split)}
                 >
                   Apply

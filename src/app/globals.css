@@ -6581,3 +6581,68 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .vv-trigger {
   box-shadow: inset 0 0 0 var(--border-width-default) currentColor;
 }
+
+/* ── PRODUCT AWARD PAGE (UX v2: C37, C38, Open Questions 03) ──────────────── */
+/* Header figures are plain meta beside the title — no bordered box; the
+   hairlines between them are the only structure. */
+.pd-facts {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+/* The Allocate readout as flat, equal cards (the summary-strip pattern). */
+.pd-readout {
+  border-block: 0;
+  padding: 0;
+}
+.pd-ro,
+.pd-ro + .pd-ro {
+  border-inline-start: 0;
+  background: var(--color-bg-surface-raised);
+  border-radius: var(--radius-container);
+  box-shadow: var(--elevation-raised);
+  padding: var(--space-md) var(--space-lg);
+}
+/* The floating allocation bar replaces the full-width footer; leave room
+   under the content so the last row can scroll clear of it. */
+.pd-alloc-bar .pd-valid,
+.pd-alloc-bar .pd-invalid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  color: inherit;
+}
+/* Compare bids: the label column AND the clean-sheet column stay put while the
+   vendor columns scroll sideways (Open Questions 03/04: "Compare Bids Table |
+   Sticky / Scroll"). The rule after the clean sheet is the hinge. */
+.bc-rowhead {
+  inline-size: 240px;
+  min-inline-size: 240px;
+  max-inline-size: 240px;
+  white-space: normal;
+}
+.bc-table .bc-clean {
+  position: sticky;
+  inset-inline-start: 240px;
+  z-index: var(--z-sticky);
+  box-shadow: inset calc(-1 * var(--border-width-default)) 0 0 var(--color-border-default);
+}
+/* Strategy cards (C44, D9): Apply is the heavier action (secondary), Apply to
+   all the lighter (ghost), and both sit at the BOTTOM of the card. The header
+   is flattened so its action group can be ordered last. */
+.pd-strat {
+  display: flex;
+  flex-direction: column;
+}
+.pd-strat-h {
+  display: contents;
+}
+.pd-strat-acts {
+  order: 99;
+  margin-block-start: auto;
+  padding-block-start: var(--space-md);
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-start;
+}

@@ -83,7 +83,7 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
         <thead>
           <tr>
             <th scope="col" className="bc-rowhead">
-              Cost bucket
+              Vendor name
             </th>
             {cleanSheet ? (
               <th scope="col" className="bc-clean">

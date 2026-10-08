@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { SelBarMenu } from "@/components/SelBarMenu";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
@@ -587,38 +588,32 @@ export function ProductAward({
             — so clicking Award looked like nothing happening. The question now
             appears exactly where the click landed.
           */}
-          <div className="pd-footer">
+          {/* The floating allocation bar (Aravind, C35 / C43; Open Questions
+              03): inverse, centred on the content, sized to what it says.
+              State on the left; Ready for review; ONE Save menu holding the
+              two commits. Awarding still asks first. */}
+          <div className="sel-bar fixed pd-alloc-bar">
             {confirmAward ? (
               <>
-                <div className="pd-footer-state pd-confirm-q">
-                  <Icon name="alert_triangle" size="sm" />
-                  <span>
-                    <strong>Award this product?</strong> Winners and losers are
-                    both told.
-                  </span>
+                <span className="cnt">
+                  <Icon name="alert_triangle" size="sm" />{" "}
+                  <strong>Award this product?</strong> Winners and losers are both told.
+                </span>
+                <div className="acts">
+                  <button className="btn btn--ghost" onClick={() => setConfirmAward(false)} disabled={saving}>
+                    Cancel
+                  </button>
+                  <button className="btn btn--primary sm" onClick={() => save("AWARDED")} disabled={saving}>
+                    {saving ? "Awarding…" : "Yes, award it"}
+                  </button>
                 </div>
-                <button
-                  className="btn btn--ghost"
-                  onClick={() => setConfirmAward(false)}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn--primary"
-                  onClick={() => save("AWARDED")}
-                  disabled={saving}
-                >
-                  {saving ? "Awarding…" : "Yes, award it"}
-                </button>
               </>
             ) : (
               <>
-                <div className="pd-footer-state">
+                <span className="cnt">
                   {result?.isValid ? (
                     <span className="pd-valid">
-                      <Icon name="check" size="sm" />
-                      100% allocated
+                      <Icon name="check" size="sm" /> 100% allocated
                     </span>
                   ) : (
                     <span className="pd-invalid">
@@ -628,41 +623,30 @@ export function ProductAward({
                     </span>
                   )}
                   {result?.isValid ? (
-                    <span className="pd-footer-sav">
-                      {/* No leading separator here — `.pd-footer-sav::before`
-                          draws it, so writing one too gave a double gap. */}
-                      saves {money(result.totalSavingsDollars)} ·{" "}
-                      {percent(result.savingsPercent)}
-                    </span>
+                    <> · saves {money(result.totalSavingsDollars)} · {percent(result.savingsPercent)}</>
                   ) : null}
+                </span>
+                <div className="acts">
+                  {/* The middle state of §11.10's allocate -> review -> award. */}
+                  <button
+                    className="btn btn--ghost"
+                    onClick={() => save("READY_FOR_REVIEW")}
+                    disabled={!result?.isValid || saving}
+                    title="Hand this split to the reviewer. Vendors are told nothing yet."
+                  >
+                    Ready for review
+                  </button>
+                  <SelBarMenu
+                    label={saving ? "Saving…" : "Save"}
+                    busy={saving || !result?.isValid}
+                    items={[
+                      { label: "Save allocation", onSelect: () => save("ALLOCATED") },
+                      // Awarding is the RELEASE — it tells vendors, winners and
+                      // losers both — so it confirms before it goes.
+                      { label: "Award…", onSelect: () => setConfirmAward(true) },
+                    ]}
+                  />
                 </div>
-
-                <button
-                  className="btn btn--ghost"
-                  onClick={() => save("ALLOCATED")}
-                  disabled={!result?.isValid || saving}
-                >
-                  {saving ? "Saving…" : "Save allocation"}
-                </button>
-                {/* The middle state of §11.10's allocate -> review -> award. */}
-                <button
-                  className="btn btn--secondary"
-                  onClick={() => save("READY_FOR_REVIEW")}
-                  disabled={!result?.isValid || saving}
-                  title="Hand this split to the reviewer. Vendors are told nothing yet."
-                >
-                  Ready for review
-                </button>
-                {/* Awarding is the RELEASE — it is what tells vendors, winners
-                    and losers both. Separate from Save because an allocation is
-                    still a working decision. */}
-                <button
-                  className="btn btn--primary"
-                  onClick={() => setConfirmAward(true)}
-                  disabled={!result?.isValid || saving}
-                >
-                  Award
-                </button>
               </>
             )}
           </div>
