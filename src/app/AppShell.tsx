@@ -139,7 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <>
             <NavGroup title="Sourcing" items={MAIN} pathname={pathname} />
             <NavGroup title="Award" items={AWARD} pathname={pathname} />
-            <NavGroup title="Setup" items={SETUP} pathname={pathname} />
+            <NavGroup title="Account" items={SETUP} pathname={pathname} />
           </>
         )}
       </nav>
