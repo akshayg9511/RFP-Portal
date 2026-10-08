@@ -8,6 +8,8 @@ import { useApi } from "@/lib/useApi";
 import { useSelection } from "@/lib/selection";
 import { money } from "@/lib/format";
 import { StyleCard, type StyleSummary } from "../StyleCard";
+import { FilterBar } from "@/components/FilterBar";
+import { facetsOf } from "@/components/FacetSelect";
 import { StyleDetail } from "../StyleDetail";
 import { SelectionTray } from "../SelectionTray";
 import { ReviewVariationsModal } from "../ReviewVariationsModal";
@@ -48,6 +50,11 @@ export default function StyleSetPage() {
   const [reviewOpen, setReviewOpen] = React.useState(false);
 
   const [query, setQuery] = React.useState("");
+  // A filter here too (Aravind, C8), on what a set varies by.
+  const [more, setMore] = React.useState<{ subDepartment: string[]; material: string[] }>({
+    subDepartment: [],
+    material: [],
+  });
   const [openStyle, setOpenStyle] = React.useState<string | null>(null);
 
   const visible = React.useMemo(() => {
@@ -60,14 +67,17 @@ export default function StyleSetPage() {
       memberVariationIds: fromSet.get(s.id)?.memberVariationIds ?? [],
       variations: fromSet.get(s.id)?.variations ?? [],
     }));
-    if (!query.trim()) return list;
-    const q = query.toLowerCase();
+    const q = query.trim().toLowerCase();
     return list.filter(
       (s) =>
-        s.styleNumber.toLowerCase().includes(q) ||
-        s.name.toLowerCase().includes(q),
+        (!q || s.styleNumber.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)) &&
+        (!more.subDepartment.length || more.subDepartment.includes(s.subDepartment)) &&
+        (!more.material.length || more.material.includes(s.material ?? "")),
     );
-  }, [styles.data, set.data, query]);
+  }, [styles.data, set.data, query, more]);
+
+  const facetOf = (key: "subDepartment" | "material") =>
+    facetsOf(styles.data?.styles ?? [], (s) => s[key]);
 
   const openIndex = visible.findIndex((s) => s.id === openStyle);
 
@@ -123,23 +133,25 @@ export default function StyleSetPage() {
         </div>
       </div>
 
-      <div className="filter-bar">
-        <div className="fb-filters">
-          <div className="control search sm">
-            <Icon name="search" size="sm" />
-            <input
-              placeholder="Search this set"
-              aria-label="Search styles in this set"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="fb-actions">
-          <button className="btn btn--ghost sm" onClick={selectAllVisible}>
-            {allSelected ? "Deselect all" : `Select all ${visible.length}`}
-          </button>
-        </div>
+      {/* One row, held at the top while the cards scroll (Open Questions
+          02): search, the set's figures, Select all and a filter (C8). */}
+      <div className="ss-toolbar">
+        <FilterBar
+          search={{ value: query, onChange: setQuery, placeholder: "Search this set" }}
+          groups={[
+            { key: "subDepartment", label: "Sub-department", options: facetOf("subDepartment"), selected: more.subDepartment },
+            { key: "material", label: "Material", options: facetOf("material"), selected: more.material },
+          ]}
+          onGroupsChange={(next) =>
+            setMore({ subDepartment: next.subDepartment ?? [], material: next.material ?? [] })
+          }
+        />
+        <span className="ss-meta">
+          {visible.length} of {set.data?.styleCount ?? visible.length} styles
+        </span>
+        <button className="btn btn--ghost sm" onClick={selectAllVisible}>
+          {allSelected ? "Deselect all" : `Select all ${visible.length}`}
+        </button>
       </div>
 
       {styles.error ? (

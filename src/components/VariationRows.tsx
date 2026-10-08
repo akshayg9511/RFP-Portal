@@ -147,19 +147,27 @@ export function VariationRows({
                 </span>
               </span>
             </td>
+            {/* One cell per host column, so every figure sits under its own
+                header and the row spans the whole table (Aravind, C5). It
+                used to be one cell short: plan units landed under Bid grain
+                and the row's fill stopped before the last column. */}
+            <td />
             <td />
             <td className="num">{units(group.planUnits)}</td>
-            <td className="num">{money(group.revenue)}</td>
             <td className="num">
-              {group.baselineFobLow === null ? (
-                "—"
-              ) : group.baselineFobLow === group.baselineFobHigh ? (
-                money(group.baselineFobLow)
-              ) : (
-                <>
-                  {money(group.baselineFobLow)}–{money(group.baselineFobHigh!)}
-                </>
-              )}
+              {money(group.revenue)}
+              <span className="pc-var-meta">
+                {group.baselineFobLow === null
+                  ? ""
+                  : group.baselineFobLow === group.baselineFobHigh
+                    ? `@ ${money(group.baselineFobLow)}`
+                    : `@ ${money(group.baselineFobLow)}–${money(group.baselineFobHigh!)}`}
+              </span>
+            </td>
+            <td className="num">
+              {group.baselineFobLow !== null && group.baselineFobLow === group.baselineFobHigh
+                ? money(group.planUnits * group.baselineFobLow)
+                : "—"}
             </td>
             <td />
           </tr>

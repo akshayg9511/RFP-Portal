@@ -93,6 +93,27 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
    * without this component having to seed state from the fetch.
    */
   const [dropped, setDropped] = React.useState<Record<string, string[]>>({});
+  // Products taken off this RFP with their own checkbox.
+  const [removed, setRemoved] = React.useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = React.useState<string | null>(null);
+
+  function toggleProduct(styleId: string, isRemoved: boolean) {
+    if (isRemoved) {
+      // Back in, whole: every variation included again.
+      setRemoved((prev) => {
+        const next = new Set(prev);
+        next.delete(styleId);
+        return next;
+      });
+      setDropped((prev) => {
+        const copy = { ...prev };
+        delete copy[styleId];
+        return copy;
+      });
+    } else {
+      setRemoved((prev) => new Set(prev).add(styleId));
+    }
+  }
 
   function toggle(styleId: string, variationId: string) {
     setDropped((prev) => {
@@ -107,15 +128,15 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
     });
   }
 
-  // A product with every variation unchecked would go out as nothing, so the
-  // commit is blocked rather than silently sending an empty product.
-  const emptied = products.filter((p) => {
+  // A product with every variation unticked, or its own box unticked, does
+  // not go out at all — it leaves the selection rather than blocking Create.
+  const isOut = (p: (typeof products)[number]) => {
     const groups = loaded[p.id]?.groups ?? [];
-    if (groups.length < 2) return false;
-    return (dropped[p.id] ?? []).length === groups.length;
-  });
+    return removed.has(p.id) || (groups.length >= 2 && (dropped[p.id] ?? []).length === groups.length);
+  };
+  const included = products.filter((p) => !isOut(p));
 
-  const skuTotal = products.reduce((total, p) => {
+  const skuTotal = included.reduce((total, p) => {
     const groups = loaded[p.id]?.groups ?? [];
     if (groups.length < 2) return total;
     return total + groups.length - (dropped[p.id] ?? []).length;
@@ -126,6 +147,10 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
     // modal and the plain Create RFP path converge on ONE payload. Two code
     // paths for one decision is how they drift.
     for (const product of products) {
+      if (isOut(product)) {
+        if (selection.isSelected(product.id)) selection.toggle(product);
+        continue;
+      }
       const groups = loaded[product.id]?.groups ?? [];
       if (groups.length < 2) continue;
       const out = dropped[product.id] ?? [];
@@ -170,74 +195,93 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
           {loading ? (
             <div className="sk" style={{ blockSize: 120 }} />
           ) : (
-            products.map((product) => {
-              const payload = loaded[product.id];
-              const groups = payload?.groups ?? [];
-              const out = dropped[product.id] ?? [];
-              // A STYLE-grain product has nothing finer to choose.
-              const atStyleLevel = groups.length < 2;
+            /* An accordion per product (Aravind, C10): a product-level
+               tri-state checkbox, the name, "N of M", and a chevron on the
+               right that opens its variations. Unchecking the product takes
+               it off this RFP; unticking every variation does the same. */
+            <div className="acc rv-acc">
+              {products.map((product) => {
+                const payload = loaded[product.id];
+                const groups = payload?.groups ?? [];
+                const out = dropped[product.id] ?? [];
+                const atStyleLevel = groups.length < 2;
+                const isRemoved = removed.has(product.id) || (!atStyleLevel && out.length === groups.length);
+                const isOpen = expanded === product.id;
+                const kept = groups.length - out.length;
 
-              return (
-                <div className="rv-product" key={`p-${product.id}`}>
-                  <div className="rv-product-h">
-                    <span className="id">{product.styleNumber}</span>
-                    <span className="rv-name">{product.name}</span>
-                    {!atStyleLevel ? (
-                      <span className="rv-count">
-                        {groups.length - out.length} of {groups.length}
-                      </span>
+                return (
+                  <div className={isOpen ? "acc-item open" : "acc-item"} key={`p-${product.id}`}>
+                    <div className="rv-acc-h">
+                      <Checkbox
+                        checked={!isRemoved}
+                        mixed={!isRemoved && !atStyleLevel && out.length > 0}
+                        onChange={() => toggleProduct(product.id, isRemoved)}
+                        aria-label={`Include ${product.name}`}
+                      />
+                      <button
+                        type="button"
+                        className="acc-h"
+                        aria-expanded={isOpen}
+                        onClick={() => setExpanded(isOpen ? null : product.id)}
+                      >
+                        <span className="rv-name">
+                          <span className="id">{product.styleNumber}</span> {product.name}
+                        </span>
+                        <span className="trail">
+                          {atStyleLevel
+                            ? "Whole product"
+                            : isRemoved
+                              ? "Not included"
+                              : `${kept} of ${groups.length}`}
+                        </span>
+                        <Icon name="chevron_down" className="chev" />
+                      </button>
+                    </div>
+                    {isOpen ? (
+                      <div className="acc-b">
+                        {atStyleLevel ? (
+                          <p className="rv-whole">Bid at product level — nothing to choose.</p>
+                        ) : (
+                          <div className="rv-vars">
+                            {groups.map((g) => (
+                              <label className="rv-var" key={`${product.id}-${g.key}`}>
+                                <Checkbox
+                                  checked={!out.includes(g.key)}
+                                  onChange={() => toggle(product.id, g.key)}
+                                  aria-label={`Include ${g.label} of ${product.name}`}
+                                />
+                                <span className="rv-var-label">{g.label}</span>
+                                <span className="rv-var-meta">{units(g.planUnits)} units</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ) : null}
                   </div>
-
-                  {atStyleLevel ? (
-                    <p className="rv-whole">
-                      Bid at product level — nothing to choose.
-                    </p>
-                  ) : (
-                    <div className="rv-vars">
-                      {groups.map((g) => (
-                        <label className="rv-var" key={`${product.id}-${g.key}`}>
-                          <Checkbox
-                            checked={!out.includes(g.key)}
-                            onChange={() => toggle(product.id, g.key)}
-                            aria-label={`Include ${g.label} of ${product.name}`}
-                          />
-                          <span className="rv-var-label">{g.label}</span>
-                          <span className="rv-var-meta">
-                            {units(g.planUnits)} units
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
 
-          {emptied.length ? (
-            <div className="bar bar--danger">
-              <span>
-                {emptied.map((p) => p.styleNumber).join(", ")} would go out with
-                no variations. Keep at least one, or remove the product from
-                the selection.
-              </span>
-            </div>
-          ) : null}
         </div>
 
-        {/* No Cancel — the header x dismisses, and the footer is spent on the
-            commit. Two dismissals for one job is the thing the system's own
-            guidance warns against. */}
-        <div className="modal-f">
+        {/* Summary as footer meta on the left, Cancel + a plain "Create RFP"
+            on the right (Aravind, C9). */}
+        <div className="modal-f spread">
+          <span className="note">
+            {included.length} product{included.length === 1 ? "" : "s"}
+            {skuTotal ? ` · ${skuTotal} SKUs` : ""}
+          </span>
+          <button className="btn btn--secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn btn--primary"
             onClick={create}
-            disabled={loading || emptied.length > 0 || products.length === 0}
+            disabled={loading || included.length === 0}
           >
-            Create RFP · {products.length} product
-            {products.length === 1 ? "" : "s"}
-            {skuTotal ? ` · ${skuTotal} SKUs` : ""}
+            Create RFP
           </button>
         </div>
       </div>

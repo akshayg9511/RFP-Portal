@@ -36,6 +36,10 @@ body > div:first-of-type {
 .set-card {
   overflow: hidden;
 }
+/* At least 12px between the image and the set title (Aravind, C7). */
+.set-card > .card-b {
+  padding-block-start: var(--space-lg);
+}
 
 /* A fixed media band, so a row of cards does not ripple as images of different
    aspect ratios load. */
@@ -85,9 +89,12 @@ body > div:first-of-type {
   margin-block: var(--space-xs) 0;
 }
 
+/* Styles, annual spend and last used spread across the card's width as
+   three equal columns (Aravind, C7), rather than bunched at the left. */
 .set-card-stats {
-  display: flex;
-  gap: var(--space-xl);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
   margin-block-start: var(--space-lg);
 }
 
@@ -6529,4 +6536,48 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .vs-rule {
   margin-block-end: 0;
+}
+.pc-var-row td.num .pc-var-meta {
+  display: block;
+}
+/* Style set detail: toolbar row held at the top while cards scroll (C8, G7). */
+.ss-toolbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--color-bg-canvas);
+  padding-block: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+.ss-toolbar > .filter-bar {
+  margin: 0;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+.ss-meta {
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}
+/* Review variation level: accordion rows with a product checkbox before the
+   expanding header (C10). */
+.rv-acc-h {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-inline-start: var(--space-sm);
+}
+.rv-acc-h > .acc-h {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+.rv-acc .trail {
+  margin-inline-start: auto;
+  color: var(--color-fg-muted);
+}
+/* Header Vendor view trigger: outlined in the header's own ink. */
+.vv-trigger {
+  box-shadow: inset 0 0 0 var(--border-width-default) currentColor;
 }

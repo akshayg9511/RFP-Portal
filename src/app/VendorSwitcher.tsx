@@ -79,14 +79,16 @@ export function VendorSwitcher() {
 
   return (
     <div className="vv-wrap" ref={wrap}>
+      {/* Outlined "Vendor view ▾" with no eye glyph (Aravind, C23; Open
+          Questions shell): it opens a menu, so the chevron is the signal. */}
       <button
-        className="btn btn--ghost sm"
+        className="btn btn--ghost sm vv-trigger"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <Icon name="eye_on" size="sm" />
-        Vendor View
+        Vendor view
+        <Icon name="chevron_down" size="sm" />
       </button>
 
       {open ? (
