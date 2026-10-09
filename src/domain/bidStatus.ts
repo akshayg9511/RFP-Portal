@@ -530,3 +530,44 @@ export function resumeTarget(exit: BidStatus, before: BidStatus | null): BidStat
   };
   return vendorTurn[before] ?? before;
 }
+
+/**
+ * What a status change MEANT, in a sentence (ux/15b). Replaces "now Initial
+ * quote · With Quince", which read as if the bid had moved backwards when it
+ * had only been submitted. `from` is the status the bid was in; old rows that
+ * never recorded it are inferred from where they landed.
+ */
+export function decisionText(from: BidStatus | null, to: BidStatus): string {
+  const f = from ?? inferFrom(to);
+  const lower = (st: BidStatus) => stageOf(st).toLowerCase();
+  if (to === "NOT_PROCEEDING") return f ? `Declined at ${lower(f)}` : "Declined";
+  if (f === "NOT_PROCEEDING") return `Reopened — back to ${lower(to)}, with the vendor`;
+  if (to === "WITHDRAWN") return f ? `Withdrew at ${lower(f)}` : "Withdrew";
+  if (f === "WITHDRAWN") return `Reinstated — back to ${lower(to)}`;
+  if (to === "INITIAL_IN_REVIEW" || to === "FULL_IN_REVIEW" || to === "FINAL_IN_REVIEW") {
+    return `${stageOf(to)} submitted for Quince's review`;
+  }
+  if (to === "CHANGES_REQUESTED" || to === "IN_NEGOTIATION") return `Revision requested on the ${lower(to)}`;
+  if (to === "FINAL_REQUESTED") {
+    return f === "FINAL_IN_REVIEW" ? "Revision requested on the final bid" : "Final bid requested";
+  }
+  if (to === "INITIAL_CLEARED") return "Advanced to full costing";
+  if (to === "BID_ACCEPTED") return "Final bid accepted";
+  return quinceLabel(to);
+}
+
+/** The usual status a move came FROM, for rows written before statusFrom. */
+function inferFrom(to: BidStatus): BidStatus | null {
+  switch (to) {
+    case "CHANGES_REQUESTED":
+    case "INITIAL_CLEARED":
+      return "INITIAL_IN_REVIEW";
+    case "IN_NEGOTIATION":
+    case "FINAL_REQUESTED":
+      return "FULL_IN_REVIEW";
+    case "BID_ACCEPTED":
+      return "FINAL_IN_REVIEW";
+    default:
+      return null;
+  }
+}

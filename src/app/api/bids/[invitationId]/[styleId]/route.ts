@@ -113,6 +113,7 @@ export async function GET(
         body: c.body,
         statusChange: c.statusChange,
         kind: c.kind,
+        authorEmail: c.authorEmail,
         statusFrom: c.statusFrom,
         createdAt: c.createdAt,
       })),
@@ -140,7 +141,11 @@ export async function PATCH(
   try {
     const invitation = await db.invitation.findUnique({
       where: { id: invitationId },
-      select: { id: true, styles: { where: { styleId }, select: { styleId: true } } },
+      select: {
+        id: true,
+        vendor: { select: { email: true } },
+        styles: { where: { styleId }, select: { styleId: true } },
+      },
     });
     if (!invitation) return notFound(`Invitation ${invitationId}`);
     if (!invitation.styles.length) {
@@ -150,6 +155,10 @@ export async function PATCH(
     const existing = await loadBid(invitationId, styleId);
     const from = (existing?.status ?? FLOOR) as BidStatus;
     const authorSide: Actor = body.authorSide ?? "QUINCE";
+    // Who wrote it (ux/15b). No login yet (T6): Quince is the configured user,
+    // the vendor is their email on file.
+    const authorEmail =
+      authorSide === "QUINCE" ? process.env.QUINCE_USER_EMAIL || null : invitation.vendor.email ?? null;
 
     /**
      * A COMMENT WITH NO TRANSITION is legal and common — it is how the two
@@ -167,6 +176,7 @@ export async function PATCH(
           productBidId: bid.id,
           authorSide,
           authorName: body.authorName ?? null,
+          authorEmail,
           body: body.note.trim(),
           kind: "MESSAGE",
           statusFrom: from,
@@ -237,6 +247,7 @@ export async function PATCH(
         productBidId: bid.id,
         authorSide,
         authorName: body.authorName ?? null,
+        authorEmail,
         // FEEDBACK is what Quince writes when it takes its turn on a stage;
         // a vendor-side move (withdraw, reinstate) is an UPDATE.
         body: note ?? `${actionLabel(from, body.to)} · now ${quinceLabel(to)}`,

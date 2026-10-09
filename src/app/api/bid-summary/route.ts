@@ -223,7 +223,10 @@ export function GET() {
             return a.price.bestCost - b.price.bestCost;
           });
 
-        const priced = rows.filter((r) => r.price);
+        // A declined or withdrawn bid is kept for the record but never "best" (ux/15b).
+        const priced = rows.filter(
+          (r) => r.price && r.stage.status !== "NOT_PROCEEDING" && r.stage.status !== "WITHDRAWN",
+        );
         const lowest = priced.length ? Math.min(...priced.map((r) => r.price!.bestCost)) : null;
         // The headline "current" on the variant row: at the incumbent's COO.
         const incumbentIso =

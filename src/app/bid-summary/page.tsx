@@ -739,7 +739,7 @@ function BidRowView({
 
   return (
     <tr
-      className={`bs-row${row.hasBid ? "" : " is-nobid"}${isOpen ? " is-open" : ""}${isLowest ? " is-lowest" : ""}`}
+      className={`bs-row${row.hasBid ? "" : " is-nobid"}${isOpen ? " is-open" : ""}${isLowest ? " is-lowest" : ""}${row.stage.status === "NOT_PROCEEDING" || row.stage.status === "WITHDRAWN" ? " is-exited" : ""}`}
       onClick={onOpen}
       tabIndex={0}
       role="button"

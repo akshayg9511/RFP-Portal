@@ -192,6 +192,20 @@ export function PUT(
             groups[0]!,
         ];
 
+    /**
+     * A DECLINED or WITHDRAWN bid cannot take volume (ux/15b). Reopen (Quince)
+     * or reinstate (vendor) first. Checked here, not only in the UI, so a
+     * strategy or a stale screen cannot allocate to an exited vendor.
+     */
+    const exited = new Map(
+      (
+        await db.productBid.findMany({
+          where: { styleId: id, status: { in: ["NOT_PROCEEDING", "WITHDRAWN"] } },
+          select: { status: true, invitation: { select: { vendorId: true, vendor: { select: { name: true } } } } },
+        })
+      ).map((b) => [b.invitation.vendorId, `${b.invitation.vendor.name} (${b.status === "WITHDRAWN" ? "withdrawn" : "declined"})`]),
+    );
+
     if (body.allocations || body.strategyKey) {
       for (const group of targets) {
         const split = body.strategyKey
@@ -203,6 +217,12 @@ export function PUT(
             reason: "this strategy is not available here",
           });
           continue;
+        }
+        const blocked = split.filter((x) => x.awardPct > 0 && exited.has(x.vendorId));
+        if (blocked.length) {
+          return badRequest(
+            `Cannot allocate to ${blocked.map((x) => exited.get(x.vendorId)).join(", ")}. Reopen the bid first.`,
+          );
         }
         const priced = priceGroup(group, split);
         if (!priced.ok) {

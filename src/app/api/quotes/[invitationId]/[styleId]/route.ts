@@ -370,7 +370,7 @@ export async function PUT(
   try {
     const invitation = await db.invitation.findUnique({
       where: { id: invitationId },
-      select: { id: true, vendorId: true },
+      select: { id: true, vendorId: true, vendor: { select: { email: true } } },
     });
     if (!invitation) return badRequest("No such invitation");
 
@@ -700,6 +700,7 @@ export async function PUT(
           data: {
             productBidId: row.id,
             authorSide: "VENDOR",
+            authorEmail: invitation.vendor.email ?? null,
             body:
               variationId === null
                 ? "Submitted this quote."

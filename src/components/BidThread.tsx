@@ -3,13 +3,7 @@
 import * as React from "react";
 import { Icon } from "@/ds/components";
 import { SideDrawer } from "@/components/SideDrawer";
-import {
-  actionLabel,
-  quinceLabel,
-  stageOf,
-  vendorLabel,
-  type BidStatus,
-} from "@/domain/bidStatus";
+import { decisionText, stageOf, type BidStatus } from "@/domain/bidStatus";
 
 /**
  * The conversation for one vendor x product — decision J3, 4 Oct.
@@ -40,6 +34,8 @@ export type ThreadMessage = {
   kind?: string | null;
   /** The status the bid was in when this was written. */
   statusFrom?: string | null;
+  /** Who wrote it — the signed-in Quince user, or the vendor's email. */
+  authorEmail?: string | null;
   createdAt: string;
 };
 
@@ -91,7 +87,17 @@ export function BidThread({
     UPDATE: messages.filter((m) => kindOf(m) === "UPDATE").length,
   };
   const shown = filter === "ALL" ? messages : messages.filter((m) => kindOf(m) === filter);
-  const label = (s: string) => (side === "VENDOR" ? vendorLabel(s as BidStatus) : quinceLabel(s as BidStatus));
+  // Date AND time, so the order of a back-and-forth on one day is clear.
+  const stamp = (iso: string) =>
+    new Date(iso).toLocaleString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  const decision = (m: ThreadMessage) =>
+    m.statusChange ? decisionText((m.statusFrom ?? null) as BidStatus | null, m.statusChange as BidStatus) : null;
   const endRef = React.useRef<HTMLDivElement | null>(null);
 
   // A chat opens at the LATEST message, not the oldest — the newest is what
@@ -133,16 +139,21 @@ export function BidThread({
           {shown.map((m) => {
             const mine = m.authorSide === side;
             const kind = kindOf(m);
-            const date = new Date(m.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-            const who = mine ? "You" : (m.authorName ?? (m.authorSide === "VENDOR" ? "Vendor" : "Quince"));
+            const date = stamp(m.createdAt);
+            const party = m.authorSide === "VENDOR" ? "Vendor" : "Quince";
+            const who = m.authorEmail ?? m.authorName ?? party;
 
             if (kind === "UPDATE") {
               return (
                 <li key={m.id} className="bt-update">
                   <Icon name="arrow_right" size="sm" />
                   <span>
-                    <strong>{who}</strong> · {m.body}
-                    {m.statusChange ? <> · now <em>{label(m.statusChange)}</em></> : null}
+                    <strong>{decision(m) ?? m.body}</strong>
+                    {/* A withdrawal's reason is the vendor's own words. */}
+                    {m.statusChange === "WITHDRAWN" && m.body ? `: ${m.body}` : ""}
+                    {/variation/i.test(m.body) && m.statusChange !== "WITHDRAWN" ? ` (${m.body.replace(/^Submitted (a quote for )?/i, "").replace(/\.$/, "")})` : ""}
+                    {" · "}
+                    {party === "Vendor" ? who : `${who}${mine ? " (you)" : ""}`}
                   </span>
                   <time dateTime={m.createdAt}>{date}</time>
                 </li>
@@ -152,7 +163,10 @@ export function BidThread({
             return (
               <li key={m.id} className={`bt-msg${mine ? " mine" : ""}${kind === "FEEDBACK" ? " is-feedback" : ""}`}>
                 <div className="bt-msg-h">
-                  <strong>{who}</strong>
+                  <strong>
+                    {who}
+                    {mine ? " (you)" : ""}
+                  </strong>
                   {kind === "FEEDBACK" ? (
                     <span className="bt-tag bt-tag--feedback">
                       Feedback{reviewedStage(m) ? ` · ${reviewedStage(m)} review` : ""}
@@ -162,10 +176,7 @@ export function BidThread({
                 </div>
                 <p className="bt-msg-b">{m.body}</p>
                 {kind === "FEEDBACK" && m.statusChange ? (
-                  <p className="bt-msg-f">
-                    {m.statusFrom ? `${actionLabel(m.statusFrom as BidStatus, m.statusChange as BidStatus)} · ` : ""}
-                    now {label(m.statusChange)}
-                  </p>
+                  <p className="bt-msg-f">Decision: {decision(m)}</p>
                 ) : null}
               </li>
             );

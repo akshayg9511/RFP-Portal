@@ -581,6 +581,9 @@ model BidComment {
   /// this is the axis. It becomes a real FK when auth lands.
   authorSide String
   authorName String?
+  /// Who wrote it (ux/15b). Quince: QUINCE_USER_EMAIL until Okta (T6);
+  /// vendor: the vendor's email on file.
+  authorEmail String?
 
   body String @db.Text
 
