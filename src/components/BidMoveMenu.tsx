@@ -3,7 +3,9 @@
 import * as React from "react";
 import { Icon } from "@/ds/components";
 import {
-  quinceLabel,
+  actionLabel,
+  noteRequired,
+  resumeTarget,
   transitionsFrom,
   vendorLabel,
   type BidStatus,
@@ -26,7 +28,7 @@ export function BidMoveMenu({
   status,
   onMoved,
   size = "sm",
-  label = "Move",
+  label = "Review",
 }: {
   invitationId: string;
   styleId: string;
@@ -68,8 +70,13 @@ export function BidMoveMenu({
     setError(null);
   }
 
+  // ux/15: Revision and Decline need feedback; Advance and Accept may carry it.
+  const required = to ? noteRequired(status, to) : false;
+  // Where the bid will actually land — Reopen goes back to its stage.
+  const lands = to && status === "NOT_PROCEEDING" ? resumeTarget(status, null) : to;
+
   async function confirm() {
-    if (!to || !note.trim()) return;
+    if (!to || (required && !note.trim())) return;
     setBusy(true);
     setError(null);
     try {
@@ -106,7 +113,7 @@ export function BidMoveMenu({
 
       {open && !to ? (
         <div className="bm-menu" role="menu">
-          <div className="menu-label">Move this bid to</div>
+          <div className="menu-label">Your review</div>
           {moves.map((m) => (
             <button
               key={m.to}
@@ -118,7 +125,7 @@ export function BidMoveMenu({
                 setOpen(false);
               }}
             >
-              {quinceLabel(m.to)}
+              {actionLabel(status, m.to)}
             </button>
           ))}
         </div>
@@ -126,18 +133,28 @@ export function BidMoveMenu({
 
       {to ? (
         <div className="popover divided bm-note" role="dialog" aria-label="Add a note">
-          <div className="popover-h">Move to {quinceLabel(to)}</div>
+          <div className="popover-h">{actionLabel(status, to)}</div>
           <div className="popover-b">
-            <p className="bm-will">
-              The vendor will see <strong>{vendorLabel(to)}</strong>
-            </p>
+            {status !== "NOT_PROCEEDING" && lands ? (
+              <p className="bm-will">
+                The vendor will see <strong>{vendorLabel(lands)}</strong>
+              </p>
+            ) : (
+              <p className="bm-will">Returns the bid to the stage it was declined at, with the vendor.</p>
+            )}
             <div className="control textarea">
               <textarea
                 rows={3}
                 autoFocus
                 value={note}
-                aria-label="Note to the vendor"
-                placeholder="Tell them why — this is what they read"
+                aria-label="Feedback for the vendor"
+                placeholder={
+                  to === "NOT_PROCEEDING"
+                    ? "Why you are declining — the vendor reads this, so keep it vendor-safe"
+                    : required
+                      ? "Your feedback — what should change, and why"
+                      : "Feedback for the vendor (optional)"
+                }
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
@@ -150,10 +167,10 @@ export function BidMoveMenu({
             <button
               type="button"
               className="btn btn--primary sm"
-              disabled={busy || !note.trim()}
+              disabled={busy || (required && !note.trim())}
               onClick={confirm}
             >
-              {busy ? "Moving…" : "Move bid"}
+              {busy ? "Saving…" : actionLabel(status, to)}
             </button>
           </div>
         </div>

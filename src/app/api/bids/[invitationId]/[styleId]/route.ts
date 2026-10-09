@@ -1,8 +1,12 @@
 import { db } from "@/lib/db";
 import { badRequest, notFound, ok } from "@/lib/api";
 import {
+  actionLabel,
   canTransition,
+  noteRequired,
   quinceLabel,
+  resumeTarget,
+  stageOf,
   transitionsFrom,
   vendorLabel,
   type Actor,
@@ -84,8 +88,13 @@ export async function GET(
       statusChangedAt: bid?.statusChangedAt ?? null,
       /** What Quince may do from here. The UI offers only these. */
       side,
+      stage: stageOf(status),
       transitions: transitionsFrom(status, side).map((t) => ({
         to: t.to,
+        /** The action's name (ux/15): "Request revision", "Decline", "Reopen". */
+        action: actionLabel(status, t.to),
+        /** Revision and Decline need feedback; Advance and Accept may carry it. */
+        noteRequired: noteRequired(status, t.to),
         /**
          * Each side reads its OWN wording in the picker. Offering the vendor
          * "Full costing in review" — Quince's internal phrasing — described
@@ -103,6 +112,8 @@ export async function GET(
         authorName: c.authorName,
         body: c.body,
         statusChange: c.statusChange,
+        kind: c.kind,
+        statusFrom: c.statusFrom,
         createdAt: c.createdAt,
       })),
     });
@@ -157,6 +168,8 @@ export async function PATCH(
           authorSide,
           authorName: body.authorName ?? null,
           body: body.note.trim(),
+          kind: "MESSAGE",
+          statusFrom: from,
         },
       });
       return ok({ status: from, posted: true });
@@ -184,9 +197,20 @@ export async function PATCH(
      * place they reply.
      */
     const note = body.note?.trim() || null;
-    if (authorSide === "QUINCE" && !note) {
-      return badRequest("Tell the vendor why — a one-line note is required");
+    if (noteRequired(from, body.to) && !note) {
+      return badRequest("Add your feedback for the vendor — it is required for this action");
     }
+
+    /**
+     * RESUME (ux/15). INVITED from Declined / Withdrawn is not "back to the
+     * start": Reopen returns to the stage it was declined at, with the vendor
+     * to act; Reinstate returns to the exact status the vendor left.
+     */
+    const exiting = body.to === "NOT_PROCEEDING" || body.to === "WITHDRAWN";
+    const resuming = from === "NOT_PROCEEDING" || from === "WITHDRAWN";
+    const to: BidStatus = resuming
+      ? resumeTarget(from, (existing?.statusBeforeExit ?? null) as BidStatus | null)
+      : body.to;
 
     const bid = await db.productBid.upsert({
       where: existing
@@ -195,14 +219,16 @@ export async function PATCH(
       create: {
         invitationId,
         styleId,
-        status: body.to,
+        status: to,
         statusNote: note,
         statusChangedAt: new Date(),
+        statusBeforeExit: exiting ? from : null,
       },
       update: {
-        status: body.to,
+        status: to,
         statusNote: note,
         statusChangedAt: new Date(),
+        ...(exiting ? { statusBeforeExit: from } : resuming ? { statusBeforeExit: null } : {}),
       },
     });
 
@@ -211,17 +237,19 @@ export async function PATCH(
         productBidId: bid.id,
         authorSide,
         authorName: body.authorName ?? null,
-        // A transition with no note is only reachable vendor-side, where the
-        // move itself is the message.
-        body: note ?? `Moved to ${quinceLabel(body.to)}`,
-        statusChange: body.to,
+        // FEEDBACK is what Quince writes when it takes its turn on a stage;
+        // a vendor-side move (withdraw, reinstate) is an UPDATE.
+        body: note ?? `${actionLabel(from, body.to)} · now ${quinceLabel(to)}`,
+        statusChange: to,
+        statusFrom: from,
+        kind: authorSide === "QUINCE" ? (note ? "FEEDBACK" : "UPDATE") : "UPDATE",
       },
     });
 
     return ok({
       status: bid.status,
-      quinceLabel: quinceLabel(body.to),
-      vendorLabel: vendorLabel(body.to),
+      quinceLabel: quinceLabel(to),
+      vendorLabel: vendorLabel(to),
     });
   } catch (error) {
     console.error(error);

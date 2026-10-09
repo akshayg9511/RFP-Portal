@@ -7201,3 +7201,76 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
 /* The pinned Clean sheet header sits at the corner too: above both the
    scrolling vendor headers and the pinned body cells. */
 .bc-table thead th.bc-clean { z-index: calc(var(--z-sticky) + 2); }
+
+/* ══ ux/15 · one thread, three kinds ═══════════════════════════════════════ */
+.bt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding-block-end: var(--space-sm);
+}
+.chip-n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+/* Feedback: Quince's note from its review. A quiet tint and a label saying
+   which stage it reviewed — not a different colour system. */
+.bt-msg.is-feedback {
+  background: var(--color-neutral-background-muted-enabled);
+  border-inline-start: 3px solid var(--color-neutral-foreground-default-enabled);
+}
+.bt-tag--feedback {
+  font-weight: var(--type-emphasis-weight);
+  color: var(--color-neutral-foreground-default-enabled);
+}
+.bt-msg-f {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+}
+/* Updates: one muted line each — the record, not the conversation. */
+.bt-update {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-xs);
+  align-items: baseline;
+  padding-block: var(--space-2xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+  list-style: none;
+}
+.bt-update strong { color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
+.bt-none {
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+}
+.fb-bar { align-items: center; margin-block: var(--space-md); }
+.fb-bar-b { flex: 1; min-inline-size: 0; }
+.fb-bar-acts { display: inline-flex; gap: var(--space-2xs); }
+
+/* ══ ux/15 · Excel templates (placeholder) ═════════════════════════════════ */
+.tf-lede { margin: 0 0 var(--space-md); }
+.tf-files { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-xs); }
+.tf-files li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-sm);
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
+  border-radius: var(--radius-inner);
+}
+.tf-name { font-weight: var(--type-emphasis-weight); }
+.tf-meta { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); }
+.tf-drop {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-xl);
+  border: 1px dashed var(--color-neutral-stroke-control-enabled);
+  border-radius: var(--radius-inner);
+  color: var(--color-neutral-foreground-muted-enabled);
+  background: var(--color-neutral-background-muted-enabled);
+}
+.tf-drop strong { color: var(--color-neutral-foreground-default-enabled); }
+.tf-steps { margin: var(--space-md) 0 0; padding-inline-start: var(--space-lg); display: grid; gap: var(--space-2xs); font-size: var(--type-body-sm-size); }

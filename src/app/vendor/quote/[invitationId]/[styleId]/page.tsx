@@ -7,11 +7,9 @@ import { Badge, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { ProductGallery, type Colourway } from "@/components/ProductGallery";
 import { BidStatusPanel } from "@/components/BidStatusPanel";
-import { BidThread, type ThreadMessage } from "@/components/BidThread";
+import { BidThread, FeedbackBar, type ThreadMessage } from "@/components/BidThread";
 import { computeQuote, missingInputs, type QuoteValues } from "@/domain/quote";
 import {
-  askSummary,
-  targetLabel,
   type AskAnchor,
   type AskStatus,
   type AskType,
@@ -27,6 +25,7 @@ import {
 } from "@/domain/bidStatus";
 import { WithdrawAction } from "@/components/WithdrawAction";
 import { QuoteActionsMenu } from "@/components/QuoteActionsMenu";
+import { ExcelMenu, TemplateDownloadDialog, TemplateUploadDialog } from "@/components/TemplateFiles";
 import { SubmitQuoteModal } from "@/components/SubmitQuoteModal";
 
 /**
@@ -373,6 +372,10 @@ export default function QuotePage() {
   }, []);
   // UX v2: Bid details · Comments, with Quince's latest note in the panel.
   const [tab, setTab] = React.useState<"details" | "comments">("details");
+  // "View feedback" opens Comments already filtered to Feedback.
+  const [threadFilter, setThreadFilter] = React.useState<"ALL" | "FEEDBACK">("ALL");
+  const [threadKey, setThreadKey] = React.useState(0);
+  const [excel, setExcel] = React.useState<"download" | "upload" | null>(null);
   const [sending, setSending] = React.useState(false);
   const bid = useApi<{ statusNote: string | null; statusChangedAt: string | null; comments: ThreadMessage[] }>(
     `/api/bids/${invitationId}/${styleId}?side=VENDOR`,
@@ -743,6 +746,12 @@ export default function QuotePage() {
             
                 So: everything secondary goes behind "More", and Submit opens
                 the modal where the scope is the content (L2). */}
+            {/* ux/15 — Excel template for this product's variants (placeholder). */}
+            <ExcelMenu
+              canUpload={canEdit}
+              onDownload={() => setExcel("download")}
+              onUpload={() => setExcel("upload")}
+            />
             {canEdit || canWithdraw ? (
               <QuoteActionsMenu
                 canEdit={canEdit}
@@ -857,56 +866,8 @@ export default function QuotePage() {
         </div>
       ) : null}
 
-      {/* ASKS FIRST. Feedback the vendor has not seen is the reason they opened
-          this page in round two, and burying it under the form means they
-          re-submit without addressing it. */}
-      {data.asks.length ? (
-        <div className={askSummary(data.asks).outstanding ? "bar bar--warning" : "bar bar--success"}>
-          <Icon name={askSummary(data.asks).outstanding ? "alert_triangle" : "check"} />
-          <div>
-            <strong>
-              {askSummary(data.asks).outstanding
-                ? `Quince has ${askSummary(data.asks).outstanding} request${askSummary(data.asks).outstanding === 1 ? "" : "s"} on this product.`
-                : "All requests on this product are resolved."}
-            </strong>
-            <ul className="ask-list">
-              {data.asks.map((a) => (
-                <li className={`ask ask--${a.status.toLowerCase()}`} key={a.id}>
-                  <span className="ask-state">
-                    {a.status === "ADDRESSED"
-                      ? "Updated"
-                      : a.status === "RESOLVED"
-                        ? "Resolved"
-                        : a.status === "REOPENED"
-                          ? "Reopened"
-                          : "Open"}
-                  </span>
-                  <span className="ask-text">
-                    {a.bucket ? (
-                      <strong>{BUCKET_LABEL[a.bucket] ?? a.bucket}</strong>
-                    ) : null}{" "}
-                    {a.body}
-                    {targetLabel(a) ? (
-                      <span className="ask-target"> — {targetLabel(a)}</span>
-                    ) : null}
-                    {/* Before/after, recorded automatically. The vendor can
-                        see exactly what their change did. */}
-                    {a.valueBefore && a.valueAfter ? (
-                      <span className="ask-delta">
-                        {" "}
-                        was {a.valueBefore} · now {a.valueAfter}
-                      </span>
-                    ) : null}
-                    {a.reply ? (
-                      <span className="ask-reply">Quince: {a.reply}</span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ) : null}
+      {/* ux/15: the old action-item banner is gone. Quince's feedback is a
+          comment, surfaced once by the bar above the tabs. */}
 
       {/* THE TWO MODAL SURFACES (L1/L2).
       
@@ -975,20 +936,35 @@ export default function QuotePage() {
         status={bidStatus}
         label={vendorStatus(bidStatus)}
         changedAt={bid.data?.statusChangedAt ?? null}
-        note={
-          bid.data?.statusNote
-            ? {
-                body: bid.data.statusNote,
-                author: "Quince",
-                at:
-                  [...(bid.data.comments ?? [])].reverse().find((c) => c.statusChange)?.createdAt ??
-                  bid.data.statusChangedAt ??
-                  null,
-              }
-            : null
-        }
+        // Feedback shows ONCE, in the bar below — not here as well (ux/15).
+        note={null}
         tone={turnOf(bidStatus) === "VENDOR" ? "attention" : "neutral"}
         onViewConversation={tab !== "comments" ? () => setTab("comments") : undefined}
+      />
+
+      {excel === "download" ? (
+        <TemplateDownloadDialog
+          items={[{
+            styleNumber: data.style.styleNumber,
+            name: data.style.name,
+            templateName: data.template.name,
+            rows: priced.length || 1,
+          }]}
+          onClose={() => setExcel(null)}
+        />
+      ) : null}
+      {excel === "upload" ? <TemplateUploadDialog onClose={() => setExcel(null)} /> : null}
+
+      {/* FEEDBACK BAR (Aravind, 8 Oct; ux/15): Quince's latest feedback since
+          the vendor last submitted, dismissible, with a way to the thread. */}
+      <FeedbackBar
+        comments={bid.data?.comments ?? []}
+        storageKey={`procura.fb.${invitationId}.${styleId}`}
+        onView={() => {
+          setThreadFilter("FEEDBACK");
+          setThreadKey((k) => k + 1);
+          setTab("comments");
+        }}
       />
 
       {/* Two tabs, the same as Quince's side (decision D5; no Activity, D3). */}
@@ -1017,6 +993,8 @@ export default function QuotePage() {
         <div className="card">
           <div className="card-b">
             <BidThread
+              key={threadKey}
+              defaultFilter={threadFilter}
               messages={bid.data?.comments ?? []}
               side="VENDOR"
               as="inline"

@@ -65,43 +65,43 @@ type Meta = {
 
 const META: Record<BidStatus, Meta> = {
   INVITED: {
-    quince: "Invited",
+    quince: "Initial quote · With vendor",
     vendor: "Quote needed",
     cue: "act",
     template: "LIGHT",
     onStrip: true,
   },
   INITIAL_IN_REVIEW: {
-    quince: "Initial quote in review",
+    quince: "Initial quote · With Quince",
     vendor: "Initial quote submitted — with Quince",
     cue: "wait",
     template: "LIGHT",
     onStrip: true,
   },
   CHANGES_REQUESTED: {
-    quince: "Changes requested",
-    vendor: "Changes requested",
+    quince: "Initial quote · Revision requested",
+    vendor: "Initial quote · Revision requested",
     cue: "act",
     template: "LIGHT",
     onStrip: false,
   },
   INITIAL_CLEARED: {
-    quince: "Initial quote cleared",
+    quince: "Full costing · With vendor",
     vendor: "Full costing needed",
     cue: "act",
     template: "FULL",
     onStrip: true,
   },
   FULL_IN_REVIEW: {
-    quince: "Full costing in review",
+    quince: "Full costing · With Quince",
     vendor: "Full costing submitted — with Quince",
     cue: "wait",
     template: "FULL",
     onStrip: true,
   },
   IN_NEGOTIATION: {
-    quince: "In negotiation",
-    vendor: "Revised quote requested",
+    quince: "Full costing · Revision requested",
+    vendor: "Full costing · Revision requested",
     cue: "act",
     template: "FULL",
     // OFF the strip. Negotiation is a LOOP, not a forward step — it can
@@ -110,21 +110,21 @@ const META: Record<BidStatus, Meta> = {
     onStrip: false,
   },
   FINAL_REQUESTED: {
-    quince: "Final bid requested",
+    quince: "Final bid · With vendor",
     vendor: "Final bid needed — all variants",
     cue: "act",
     template: "FULL",
     onStrip: true,
   },
   FINAL_IN_REVIEW: {
-    quince: "Final bid in review",
+    quince: "Final bid · With Quince",
     vendor: "Final bid submitted — with Quince",
     cue: "wait",
     template: "FULL",
     onStrip: true,
   },
   BID_ACCEPTED: {
-    quince: "Bid accepted",
+    quince: "Accepted",
     vendor: "Bid accepted",
     cue: "done",
     template: "NONE",
@@ -138,7 +138,7 @@ const META: Record<BidStatus, Meta> = {
     onStrip: false,
   },
   NOT_PROCEEDING: {
-    quince: "Not proceeding",
+    quince: "Declined",
     vendor: "Not proceeding",
     cue: "done",
     template: "NONE",
@@ -230,8 +230,10 @@ const MOVES: Record<BidStatus, { to: BidStatus; by: Actor }[]> = {
     { to: "FINAL_IN_REVIEW", by: "VENDOR" },
     { to: "WITHDRAWN", by: "VENDOR" },
   ],
+  // A revision on a FINAL bid stays at Final bid (ux/15) — it used to drop
+  // back to Full costing review.
   FINAL_IN_REVIEW: [
-    { to: "IN_NEGOTIATION", by: "QUINCE" },
+    { to: "FINAL_REQUESTED", by: "QUINCE" },
     { to: "BID_ACCEPTED", by: "QUINCE" },
     { to: "WITHDRAWN", by: "VENDOR" },
   ],
@@ -240,8 +242,10 @@ const MOVES: Record<BidStatus, { to: BidStatus; by: Actor }[]> = {
   BID_ACCEPTED: [],
   // Reinstatement returns the vendor to the start of the ladder: their old
   // quote survives, so they resume rather than restart.
+  // INVITED here is the "resume" move: the route sends the bid back to where
+  // it was (resumeTarget), not to the start (ux/15).
   WITHDRAWN: [{ to: "INVITED", by: "VENDOR" }],
-  NOT_PROCEEDING: [],
+  NOT_PROCEEDING: [{ to: "INVITED", by: "QUINCE" }],
 };
 
 /** Every live state can be dropped by Quince. */
@@ -331,10 +335,10 @@ const VENDOR_STATUS: Record<BidStatus, string> = {
   // stage "Reviewed" while Quince was still looking at it, which claimed
   // something untrue. A stage is only reviewed once it has been.
   INITIAL_IN_REVIEW: "Under review",
-  CHANGES_REQUESTED: "Changes needed",
+  CHANGES_REQUESTED: "Revision requested",
   INITIAL_CLEARED: "Full costing",
   FULL_IN_REVIEW: "Under review",
-  IN_NEGOTIATION: "Revision needed",
+  IN_NEGOTIATION: "Revision requested",
   FINAL_REQUESTED: "Final bid",
   FINAL_IN_REVIEW: "Under review",
   BID_ACCEPTED: "Accepted",
@@ -372,17 +376,17 @@ const VENDOR_HINT: Record<BidStatus, string> = {
   INITIAL_IN_REVIEW:
     "Quince is reviewing your initial quote. Nothing needed from you.",
   CHANGES_REQUESTED:
-    "Quince has asked for changes — open the conversation to see what.",
+    "Quince requested a revision — see their feedback in Comments.",
   INITIAL_CLEARED: "Send the full cost breakdown for each variation.",
   FULL_IN_REVIEW:
     "Quince is reviewing your full costing. Nothing needed from you.",
   IN_NEGOTIATION:
-    "Quince has asked you to revise — open the conversation to see why.",
+    "Quince requested a revision — see their feedback in Comments.",
   FINAL_REQUESTED: "Final bid needed, on every variation.",
   FINAL_IN_REVIEW:
     "Quince is reviewing your final bid. Nothing needed from you.",
   BID_ACCEPTED: "Quince has accepted this bid.",
-  NOT_PROCEEDING: "Quince is not proceeding on this product.",
+  NOT_PROCEEDING: "Quince is not proceeding on this product. Their feedback is in Comments.",
   WITHDRAWN: "You withdrew from this product. You can reinstate at any time.",
 };
 
@@ -455,4 +459,74 @@ export function submitAdvancesTo(status: BidStatus): BidStatus | null {
     .map((t) => t.to)
     .filter((to) => to !== VENDOR_EXIT);
   return forward.length === 1 ? forward[0]! : null;
+}
+
+
+/* ══ ux/15 — stages, turns and the names of Quince's actions ═══════════════ */
+
+export type Stage = "Initial quote" | "Full costing" | "Final bid" | "Accepted" | "Declined" | "Withdrawn";
+
+/** The STAGE a status belongs to — where the bid is, regardless of whose turn. */
+export function stageOf(status: BidStatus): Stage {
+  switch (status) {
+    case "INVITED":
+    case "INITIAL_IN_REVIEW":
+    case "CHANGES_REQUESTED":
+      return "Initial quote";
+    case "INITIAL_CLEARED":
+    case "FULL_IN_REVIEW":
+    case "IN_NEGOTIATION":
+      return "Full costing";
+    case "FINAL_REQUESTED":
+    case "FINAL_IN_REVIEW":
+      return "Final bid";
+    case "BID_ACCEPTED":
+      return "Accepted";
+    case "NOT_PROCEEDING":
+      return "Declined";
+    case "WITHDRAWN":
+      return "Withdrawn";
+  }
+}
+
+/**
+ * What a move is CALLED — the action, not the destination. Quince reads
+ * "Advance to full costing", "Request revision", "Decline"; the vendor reads
+ * "Withdraw" / "Reinstate".
+ */
+export function actionLabel(from: BidStatus, to: BidStatus): string {
+  if (to === "NOT_PROCEEDING") return "Decline";
+  if (to === "WITHDRAWN") return "Withdraw";
+  if (from === "NOT_PROCEEDING") return "Reopen";
+  if (from === "WITHDRAWN") return "Reinstate";
+  if (to === "BID_ACCEPTED") return "Accept bid";
+  if (to === "INITIAL_CLEARED") return "Advance to full costing";
+  if (to === "CHANGES_REQUESTED" || to === "IN_NEGOTIATION") return "Request revision";
+  if (to === "FINAL_REQUESTED") return from === "FINAL_IN_REVIEW" ? "Request revision" : "Request final bid";
+  return quinceLabel(to);
+}
+
+/** A Decline or a revision needs feedback; advancing or accepting may carry it. */
+export function noteRequired(from: BidStatus, to: BidStatus): boolean {
+  if (to === "NOT_PROCEEDING" || to === "CHANGES_REQUESTED" || to === "IN_NEGOTIATION") return true;
+  if (from === "FINAL_IN_REVIEW" && to === "FINAL_REQUESTED") return true;
+  if (from === "NOT_PROCEEDING") return true;
+  return false;
+}
+
+/**
+ * Where Reopen (Quince, from Declined) and Reinstate (vendor, from Withdrawn)
+ * land. Reinstate returns to the EXACT status the vendor left. Reopen returns
+ * to the stage it was declined at, with the vendor to act.
+ */
+export function resumeTarget(exit: BidStatus, before: BidStatus | null): BidStatus {
+  if (!before || before === "NOT_PROCEEDING" || before === "WITHDRAWN") return "INVITED";
+  if (exit === "WITHDRAWN") return before;
+  const vendorTurn: Partial<Record<BidStatus, BidStatus>> = {
+    INITIAL_IN_REVIEW: "CHANGES_REQUESTED",
+    FULL_IN_REVIEW: "IN_NEGOTIATION",
+    FINAL_IN_REVIEW: "FINAL_REQUESTED",
+    BID_ACCEPTED: "FINAL_REQUESTED",
+  };
+  return vendorTurn[before] ?? before;
 }

@@ -99,7 +99,7 @@ export function BidTabs({
               invitationId={invitationId}
               styleId={styleId}
               status={data.status}
-              label="Move this bid"
+              label="Review"
               onMoved={changed}
             />
           }

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Badge, Icon } from "@/ds/components";
+import * as React from "react";
+import { Badge, Checkbox, Icon } from "@/ds/components";
+import { TemplateDownloadDialog, TemplateUploadDialog } from "@/components/TemplateFiles";
 import { useApi } from "@/lib/useApi";
 import { useVendorView } from "@/lib/vendorView";
 import { unitCost } from "@/lib/format";
@@ -77,8 +79,21 @@ export default function VendorDashboard() {
       ...p,
       invitationId: inv.id,
       dueDate: inv.rfp.dueDate,
+      templateName: inv.rfp.templateName,
     })),
   );
+
+  // ux/15 — pick rows to download their Excel templates together.
+  const [picked, setPicked] = React.useState<Set<string>>(() => new Set());
+  const [dialog, setDialog] = React.useState<"download" | "upload" | null>(null);
+  const keyOf = (r: { invitationId: string; id: string }) => `${r.invitationId}-${r.id}`;
+  const chosen = flat.filter((r) => picked.has(keyOf(r)));
+  const forDownload = (chosen.length ? chosen : flat).map((r) => ({
+    styleNumber: r.styleNumber,
+    name: r.name,
+    templateName: r.templateName,
+    rows: r.variations.length || 1,
+  }));
 
   /* Instructions, deduped. Two RFPs can legitimately carry the same wording,
      and the vendor should read it once. */
@@ -128,6 +143,18 @@ export default function VendorDashboard() {
               {vendorName} · everything Quince has asked you to quote
             </p>
           </div>
+          {flat.length ? (
+            <div className="acts">
+              <button type="button" className="btn btn--secondary" onClick={() => setDialog("upload")}>
+                <Icon name="upload" size="sm" />
+                Upload quotations
+              </button>
+              <button type="button" className="btn btn--secondary" onClick={() => setDialog("download")}>
+                <Icon name="download" size="sm" />
+                {chosen.length ? `Download templates (${chosen.length})` : "Download all templates"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -182,6 +209,7 @@ export default function VendorDashboard() {
             <div className="data-grid-surface">
               <table className="data-grid">
                 <colgroup>
+                  <col style={{ width: "44px" }} />
                   <col style={{ width: "34%" }} />
                   <col style={{ width: "26%" }} />
                   <col style={{ width: "12%" }} />
@@ -190,6 +218,16 @@ export default function VendorDashboard() {
                 </colgroup>
                 <thead>
                   <tr>
+                    <th>
+                      <Checkbox
+                        aria-label="Select all products"
+                        checked={flat.length > 0 && picked.size === flat.length}
+                        mixed={picked.size > 0 && picked.size < flat.length}
+                        onChange={() =>
+                          setPicked(picked.size === flat.length ? new Set() : new Set(flat.map(keyOf)))
+                        }
+                      />
+                    </th>
                     <th>Product</th>
                     {/* The ladder position, in the VENDOR's words. */}
                     <th>Status</th>
@@ -203,6 +241,21 @@ export default function VendorDashboard() {
                     const cue = cueOf(row.bidStatus);
                     return (
                       <tr key={`${row.invitationId}-${row.id}`}>
+                        <td>
+                          <Checkbox
+                            aria-label={`Select ${row.name}`}
+                            checked={picked.has(keyOf(row))}
+                            onChange={() =>
+                              setPicked((prev) => {
+                                const next = new Set(prev);
+                                const k = keyOf(row);
+                                if (next.has(k)) next.delete(k);
+                                else next.add(k);
+                                return next;
+                              })
+                            }
+                          />
+                        </td>
                         <td>
                           <span className="id">{row.styleNumber}</span>{" "}
                           {row.name}
@@ -268,6 +321,10 @@ export default function VendorDashboard() {
             </div>
       ) : null}
 
+      {dialog === "download" ? (
+        <TemplateDownloadDialog items={forDownload} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === "upload" ? <TemplateUploadDialog onClose={() => setDialog(null)} /> : null}
     </>
   );
 }

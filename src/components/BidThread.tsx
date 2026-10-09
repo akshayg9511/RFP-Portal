@@ -3,6 +3,13 @@
 import * as React from "react";
 import { Icon } from "@/ds/components";
 import { SideDrawer } from "@/components/SideDrawer";
+import {
+  actionLabel,
+  quinceLabel,
+  stageOf,
+  vendorLabel,
+  type BidStatus,
+} from "@/domain/bidStatus";
 
 /**
  * The conversation for one vendor x product — decision J3, 4 Oct.
@@ -29,8 +36,31 @@ export type ThreadMessage = {
   authorName: string | null;
   body: string;
   statusChange: string | null;
+  /** ux/15: MESSAGE | FEEDBACK | UPDATE. Absent on old payloads = MESSAGE. */
+  kind?: string | null;
+  /** The status the bid was in when this was written. */
+  statusFrom?: string | null;
   createdAt: string;
 };
+
+type Filter = "ALL" | "FEEDBACK" | "MESSAGE" | "UPDATE";
+
+/** Older rows have no kind: a Quince status change was feedback, a vendor one an update. */
+export function kindOf(m: ThreadMessage): "MESSAGE" | "FEEDBACK" | "UPDATE" {
+  if (m.kind === "FEEDBACK" || m.kind === "UPDATE" || m.kind === "MESSAGE") return m.kind;
+  if (m.statusChange) return m.authorSide === "QUINCE" ? "FEEDBACK" : "UPDATE";
+  return "MESSAGE";
+}
+
+/** The stage Quince was reviewing when it wrote this feedback. */
+function reviewedStage(m: ThreadMessage): string {
+  if (m.statusFrom) return stageOf(m.statusFrom as BidStatus);
+  const to = m.statusChange as BidStatus | null;
+  if (to === "CHANGES_REQUESTED" || to === "INITIAL_CLEARED") return "Initial quote";
+  if (to === "IN_NEGOTIATION" || to === "FINAL_REQUESTED") return "Full costing";
+  if (to === "BID_ACCEPTED") return "Final bid";
+  return to ? stageOf(to) : "";
+}
 
 export function BidThread({
   messages,
@@ -40,7 +70,10 @@ export function BidThread({
   onClose,
   onSend,
   busy,
+  defaultFilter = "ALL",
 }: {
+  /** Open on one kind — "View feedback" opens on Feedback. */
+  defaultFilter?: Filter;
   messages: ThreadMessage[];
   /** Whose screen this is — decides which messages read as "you". */
   side: "QUINCE" | "VENDOR";
@@ -51,6 +84,14 @@ export function BidThread({
   busy?: boolean;
 }) {
   const [draft, setDraft] = React.useState("");
+  const [filter, setFilter] = React.useState<Filter>(defaultFilter);
+  const counts = {
+    FEEDBACK: messages.filter((m) => kindOf(m) === "FEEDBACK").length,
+    MESSAGE: messages.filter((m) => kindOf(m) === "MESSAGE").length,
+    UPDATE: messages.filter((m) => kindOf(m) === "UPDATE").length,
+  };
+  const shown = filter === "ALL" ? messages : messages.filter((m) => kindOf(m) === filter);
+  const label = (s: string) => (side === "VENDOR" ? vendorLabel(s as BidStatus) : quinceLabel(s as BidStatus));
   const endRef = React.useRef<HTMLDivElement | null>(null);
 
   // A chat opens at the LATEST message, not the oldest — the newest is what
@@ -68,39 +109,70 @@ export function BidThread({
 
   const body = (
     <>
+      {/* ONE thread, three kinds (ux/15). Feedback is what Quince wrote
+          when it took its turn on a stage; Messages are chat; Updates are
+          the system's record of submits and withdrawals. */}
       {messages.length ? (
+        <div className="bt-chips" role="group" aria-label="Show">
+          {(["ALL", "FEEDBACK", "MESSAGE", "UPDATE"] as Filter[]).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={`chip${filter === f ? " on" : ""}`}
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+            >
+              {f === "ALL" ? "All" : f === "FEEDBACK" ? "Feedback" : f === "MESSAGE" ? "Messages" : "Updates"}
+              {f !== "ALL" ? <span className="chip-n">{counts[f]}</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {shown.length ? (
         <ol className="bt-list">
-          {messages.map((m) => {
+          {shown.map((m) => {
             const mine = m.authorSide === side;
+            const kind = kindOf(m);
+            const date = new Date(m.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+            const who = mine ? "You" : (m.authorName ?? (m.authorSide === "VENDOR" ? "Vendor" : "Quince"));
+
+            if (kind === "UPDATE") {
+              return (
+                <li key={m.id} className="bt-update">
+                  <Icon name="arrow_right" size="sm" />
+                  <span>
+                    <strong>{who}</strong> · {m.body}
+                    {m.statusChange ? <> · now <em>{label(m.statusChange)}</em></> : null}
+                  </span>
+                  <time dateTime={m.createdAt}>{date}</time>
+                </li>
+              );
+            }
+
             return (
-              <li key={m.id} className={`bt-msg${mine ? " mine" : ""}`}>
+              <li key={m.id} className={`bt-msg${mine ? " mine" : ""}${kind === "FEEDBACK" ? " is-feedback" : ""}`}>
                 <div className="bt-msg-h">
-                  <strong>
-                    {mine
-                      ? "You"
-                      : (m.authorName ??
-                        (m.authorSide === "VENDOR" ? "Vendor" : "Quince"))}
-                  </strong>
-                  {/* A status change shows in the SAME thread, so the
-                      decisions and the chat read as one history (H6). */}
-                  {m.statusChange ? (
-                    <span className="bt-tag">
-                      <Icon name="arrow_right" size="sm" />
-                      changed the status
+                  <strong>{who}</strong>
+                  {kind === "FEEDBACK" ? (
+                    <span className="bt-tag bt-tag--feedback">
+                      Feedback{reviewedStage(m) ? ` · ${reviewedStage(m)} review` : ""}
                     </span>
                   ) : null}
-                  <time dateTime={m.createdAt}>
-                    {new Date(m.createdAt).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </time>
+                  <time dateTime={m.createdAt}>{date}</time>
                 </div>
                 <p className="bt-msg-b">{m.body}</p>
+                {kind === "FEEDBACK" && m.statusChange ? (
+                  <p className="bt-msg-f">
+                    {m.statusFrom ? `${actionLabel(m.statusFrom as BidStatus, m.statusChange as BidStatus)} · ` : ""}
+                    now {label(m.statusChange)}
+                  </p>
+                ) : null}
               </li>
             );
           })}
         </ol>
+      ) : messages.length ? (
+        <p className="bt-none">Nothing of this kind yet.</p>
       ) : (
         <div className="empty compact">
           <span className="glyph">
@@ -177,5 +249,67 @@ export function BidThread({
     >
       <div className="bt">{body}</div>
     </SideDrawer>
+  );
+}
+
+/**
+ * The vendor's FEEDBACK BAR (Aravind, 8 Oct; ux/15): Quince's latest feedback
+ * since the vendor last submitted, below the title and above the tabs.
+ * Dismissible, because once read it is digested; the thread keeps it.
+ */
+export function FeedbackBar({
+  comments,
+  storageKey,
+  onView,
+}: {
+  comments: ThreadMessage[];
+  storageKey: string;
+  onView: () => void;
+}) {
+  // Read once at mount. The bar only renders after the thread has loaded,
+  // which is always client-side, so there is no server/client mismatch.
+  const [dismissed, setDismissed] = React.useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.localStorage.getItem(storageKey);
+    } catch {
+      return null; // storage blocked: the bar simply shows
+    }
+  });
+
+  const latest = [...comments].reverse().find((c) => kindOf(c) === "FEEDBACK" && c.authorSide === "QUINCE");
+  const lastSubmit = [...comments].reverse().find((c) => c.authorSide === "VENDOR" && c.statusChange);
+  if (!latest || dismissed === latest.id) return null;
+  if (lastSubmit && new Date(lastSubmit.createdAt) > new Date(latest.createdAt)) return null;
+
+  const stage = reviewedStage(latest);
+  const text = latest.body.length > 160 ? `${latest.body.slice(0, 157)}…` : latest.body;
+  return (
+    <div className="bar bar--warning fb-bar" role="status">
+      <Icon name="chat" />
+      <div className="fb-bar-b">
+        <strong>Quince left feedback{stage ? ` on your ${stage.toLowerCase()}` : ""}.</strong> &ldquo;{text}&rdquo;
+      </div>
+      <div className="fb-bar-acts">
+        <button type="button" className="btn btn--secondary sm" onClick={onView}>
+          View feedback
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost sm icon"
+          aria-label="Dismiss"
+          onClick={() => {
+            setDismissed(latest.id);
+            try {
+              window.localStorage.setItem(storageKey, latest.id);
+            } catch {
+              /* ignore */
+            }
+          }}
+        >
+          <Icon name="close" size="sm" />
+        </button>
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,10 @@ import {
   detailFor,
   hintFor,
   turnLabel,
+  actionLabel,
+  noteRequired,
+  resumeTarget,
+  stageOf,
   turnOf,
   vendorStatus,
   vendorStripLabel,
@@ -98,7 +102,9 @@ describe("legal transitions", () => {
   it("lets negotiation bounce back and forth without a counter", () => {
     expect(canTransition("FULL_IN_REVIEW", "IN_NEGOTIATION", "QUINCE")).toBe(true);
     expect(canTransition("IN_NEGOTIATION", "FULL_IN_REVIEW", "VENDOR")).toBe(true);
-    expect(canTransition("FINAL_IN_REVIEW", "IN_NEGOTIATION", "QUINCE")).toBe(true);
+    // ux/15: a revision on a FINAL bid stays at Final bid.
+    expect(canTransition("FINAL_IN_REVIEW", "FINAL_REQUESTED", "QUINCE")).toBe(true);
+    expect(canTransition("FINAL_IN_REVIEW", "IN_NEGOTIATION", "QUINCE")).toBe(false);
   });
 
   it("lets Quince drop a vendor from EVERY live state", () => {
@@ -108,8 +114,10 @@ describe("legal transitions", () => {
     }
   });
 
-  it("does not let a dropped or accepted bid move on", () => {
-    expect(transitionsFrom("NOT_PROCEEDING")).toEqual([]);
+  it("lets Quince only REOPEN a declined bid, and nothing moves an accepted one", () => {
+    // ux/15 (Akshay, 9 Oct): a Decline can be reversed by Quince.
+    expect(transitionsFrom("NOT_PROCEEDING")).toEqual([{ to: "INVITED", by: "QUINCE" }]);
+    expect(transitionsFrom("NOT_PROCEEDING", "VENDOR")).toEqual([]);
     expect(transitionsFrom("BID_ACCEPTED")).toEqual([]);
   });
 
@@ -127,10 +135,9 @@ describe("withdrawal is reversible — the only state that is", () => {
     }
   });
 
-  it("lets them REINSTATE, unlike every other terminal state", () => {
+  it("lets them REINSTATE — and only Quince can reopen a Decline", () => {
     expect(canTransition("WITHDRAWN", "INVITED", "VENDOR")).toBe(true);
-    // The contrast that makes withdrawal different from being dropped.
-    expect(transitionsFrom("NOT_PROCEEDING")).toEqual([]);
+    expect(canTransition("NOT_PROCEEDING", "INVITED", "VENDOR")).toBe(false);
   });
 
   it("is the vendor's move, never Quince's", () => {
@@ -194,7 +201,7 @@ describe("no status is a dead end by accident", () => {
     const dead = BID_STATUSES.filter(
       (s: BidStatus) => transitionsFrom(s).length === 0,
     );
-    expect(dead).toEqual(["BID_ACCEPTED", "NOT_PROCEEDING"]);
+    expect(dead).toEqual(["BID_ACCEPTED"]);
   });
 });
 
@@ -340,5 +347,32 @@ describe("submitting advances the ladder", () => {
       const next = submitAdvancesTo(s);
       if (next) expect(turnOf(next)).toBe("QUINCE");
     }
+  });
+});
+
+describe("ux/15 — stages, action names and resume targets", () => {
+  it("names actions, not destinations", () => {
+    expect(actionLabel("INITIAL_IN_REVIEW", "INITIAL_CLEARED")).toBe("Advance to full costing");
+    expect(actionLabel("FULL_IN_REVIEW", "IN_NEGOTIATION")).toBe("Request revision");
+    expect(actionLabel("FINAL_IN_REVIEW", "FINAL_REQUESTED")).toBe("Request revision");
+    expect(actionLabel("FULL_IN_REVIEW", "FINAL_REQUESTED")).toBe("Request final bid");
+    expect(actionLabel("FULL_IN_REVIEW", "NOT_PROCEEDING")).toBe("Decline");
+    expect(actionLabel("NOT_PROCEEDING", "INVITED")).toBe("Reopen");
+  });
+  it("puts every status in exactly one stage", () => {
+    expect(stageOf("CHANGES_REQUESTED")).toBe("Initial quote");
+    expect(stageOf("IN_NEGOTIATION")).toBe("Full costing");
+    expect(stageOf("FINAL_IN_REVIEW")).toBe("Final bid");
+  });
+  it("reinstates to the exact status left, and reopens with the vendor to act", () => {
+    expect(resumeTarget("WITHDRAWN", "FULL_IN_REVIEW")).toBe("FULL_IN_REVIEW");
+    expect(resumeTarget("NOT_PROCEEDING", "FULL_IN_REVIEW")).toBe("IN_NEGOTIATION");
+    expect(resumeTarget("NOT_PROCEEDING", "INITIAL_CLEARED")).toBe("INITIAL_CLEARED");
+    expect(resumeTarget("NOT_PROCEEDING", null)).toBe("INVITED");
+  });
+  it("requires feedback on a revision or a decline, not on advancing", () => {
+    expect(noteRequired("FULL_IN_REVIEW", "IN_NEGOTIATION")).toBe(true);
+    expect(noteRequired("FULL_IN_REVIEW", "NOT_PROCEEDING")).toBe(true);
+    expect(noteRequired("INITIAL_IN_REVIEW", "INITIAL_CLEARED")).toBe(false);
   });
 });

@@ -705,6 +705,8 @@ export async function PUT(
                 ? "Submitted this quote."
                 : "Submitted a quote for one variation.",
             statusChange: to,
+            statusFrom: from,
+            kind: "UPDATE",
           },
         });
       }

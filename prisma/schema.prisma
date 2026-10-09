@@ -550,6 +550,10 @@ model ProductBid {
   /// is cleared on reinstatement rather than being a terminal flag.
   withdrawnAt DateTime?
 
+  /// The status a bid was in when it was Declined (NOT_PROCEEDING) or
+  /// Withdrawn, so Reopen / Reinstate return it to the same stage (ux/15).
+  statusBeforeExit String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -583,6 +587,15 @@ model BidComment {
   /// Set when this comment IS a status change, so the thread reads as
   /// history rather than needing a separate audit rail.
   statusChange String?
+
+  /// MESSAGE (chat, either side) | FEEDBACK (Quince's note when it takes its
+  /// turn on a stage — advance, revise, decline, accept, reopen) | UPDATE
+  /// (system: submitted, withdrew, reinstated). ux/15.
+  kind String @default("MESSAGE")
+
+  /// The status the bid was IN when this was written — for feedback, the
+  /// stage Quince was reviewing ("Feedback · Full costing review").
+  statusFrom String?
 
   createdAt DateTime @default(now())
 
