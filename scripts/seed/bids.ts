@@ -6,6 +6,7 @@ import {
   type Grain,
 } from "../../src/domain/grain";
 import { computeCost } from "../../src/domain/cost";
+import { reconcileToBuckets } from "../../src/domain/quote";
 import { weightedBaseline } from "../../src/domain/award";
 import { between, pick, round, step, type rng } from "./lib";
 import { buildLineItems, floorOverhead, type TemplateSpec } from "./lineItems";
@@ -542,8 +543,10 @@ export async function seedBids(
             round: 1,
             status: "SUBMITTED",
             submittedAt: new Date("2026-09-20"),
+            // Lines rescaled to THIS variant's buckets, so they add up on
+            // Compare bids (Tony, 9 Oct) — FOB is unchanged.
             values: {
-              ...line.values,
+              ...reconcileToBuckets(line.values, spec, gBuckets as never),
               maxVolumeCapacity: terms.maxVolumeCapacity,
               productionLeadTime: terms.productionLeadTime,
               moq: terms.moq,

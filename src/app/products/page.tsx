@@ -100,7 +100,15 @@ export default function ProductCatalogPage() {
   // ONE row open at a time. The catalog has no pagination, so several open
   // SKU-grain products would push a very long page; and it matches how the
   // RFP Products tab already behaves.
-  const [openRow, setOpenRow] = React.useState<string | null>(null);
+  // Several styles open at once, plus Expand all / Collapse all (Tony, 9 Oct).
+  const [openRows, setOpenRows] = React.useState<Set<string>>(() => new Set());
+  const toggleOpen = (id: string) =>
+    setOpenRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [grain, setGrain] = React.useState("");
   const [saveOpen, setSaveOpen] = React.useState(false);
 
@@ -241,7 +249,34 @@ export default function ProductCatalogPage() {
           setInSet(next.inSet?.[0] ?? "");
           setGrain(next.grain?.[0] ?? "");
         }}
-        meta={`${rows.length} product${rows.length === 1 ? "" : "s"}${selection.count ? ` · ${selection.count} selected` : ""}`}
+        meta={
+          <span className="fb-meta-row">
+            {`${rows.length} style${rows.length === 1 ? "" : "s"}${selection.count ? ` · ${selection.count} selected` : ""}`}
+            {rows.some((r) => isExpandable(r.variationLevel)) ? (
+              <span className="fb-meta-acts">
+                <button
+                  type="button"
+                  className="btn btn--ghost sm"
+                  onClick={() =>
+                    setOpenRows(new Set(rows.filter((r) => isExpandable(r.variationLevel)).map((r) => r.id)))
+                  }
+                >
+                  <Icon name="chevron_down" size="sm" />
+                  Expand all
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--ghost sm"
+                  disabled={openRows.size === 0}
+                  onClick={() => setOpenRows(new Set())}
+                >
+                  <Icon name="chevron_up" size="sm" />
+                  Collapse all
+                </button>
+              </span>
+            ) : null}
+          </span>
+        }
       />
 
       <div className="data-grid-surface sticky-head">
@@ -329,8 +364,8 @@ export default function ProductCatalogPage() {
               <ProductRow
                 key={r.id}
                 row={r}
-                open={openRow === r.id}
-                onOpen={() => setOpenRow(openRow === r.id ? null : r.id)}
+                open={openRows.has(r.id)}
+                onOpen={() => toggleOpen(r.id)}
               />
             ))}
           </tbody>

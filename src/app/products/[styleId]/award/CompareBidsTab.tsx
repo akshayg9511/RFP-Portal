@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
 import { money, unitCost, units } from "@/lib/format";
+import { computeQuote, type BucketTotals, type QuoteValues } from "@/domain/quote";
 import {
   BASIS_LABEL,
   BUCKET_LABEL,
@@ -42,6 +43,22 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
   /** Which buckets are expanded. Several may be open at once — comparing
    *  Materials and Crafting together is a real thing to want. */
   const [open, setOpen] = React.useState<Set<string>>(new Set());
+
+  // The vendor form's own spec, so "calculated from these lines" is exactly
+  // the arithmetic the vendor saw when they submitted (Tony, 9 Oct).
+  const def = template?.definition;
+  const spec = React.useMemo(() => {
+    const keysOf = (key: string) =>
+      (def?.sections?.find((s) => s.key === key)?.lines ?? [])
+        .filter((l) => !l.derived && l.inputType === "currency")
+        .map((l) => l.key);
+    return {
+      craftingFormula: def?.craftingFormula ?? "CPM_OVER_EFFICIENCY",
+      materialFormula: def?.materialFormula ?? "ADDITIVE_PER_METER",
+      trimKeys: keysOf("TRIM_HARDWARE"),
+      packagingKeys: keysOf("PACKAGING"),
+    } as const;
+  }, [def]);
 
   if (bids.length === 0) {
     return (
@@ -192,6 +209,30 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
                         cleanSheet={!!cleanSheet}
                       />
                     ) : null}
+                    <tr className="bc-calc">
+                      <th scope="row" className="bc-rowhead">
+                        = {BUCKET_LABEL[bucket] ?? bucket} from these lines
+                        <span className="bc-sub">{formulaOf(bucket, spec)}</span>
+                      </th>
+                      {cleanSheet ? <td className="bc-clean" /> : null}
+                      {bids.map((b) => {
+                        const calc =
+                          computeQuote(b.values as QuoteValues, {
+                            ...spec,
+                            trimKeys: [...spec.trimKeys],
+                            packagingKeys: [...spec.packagingKeys],
+                          }).buckets[bucket as keyof BucketTotals] ?? 0;
+                        const off = Math.abs(calc - (b.bucketTotals[bucket] ?? 0)) > 0.01;
+                        return (
+                          <td key={b.vendorId} className="bc-num">
+                            <span className={off ? "bc-warn" : undefined} title={off ? "Does not match the bucket total the vendor submitted" : undefined}>
+                              {unitCost(calc)}
+                              {off ? <Icon name="alert_triangle" size="sm" /> : null}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
                   </>
                 ) : null}
               </React.Fragment>
@@ -411,4 +452,25 @@ function TermRow({
       })}
     </tr>
   );
+}
+
+/** How a bucket is built from its lines, in words the template uses. */
+function formulaOf(
+  bucket: string,
+  spec: { craftingFormula: string; materialFormula: string },
+): string {
+  switch (bucket) {
+    case "BASE_MATERIALS":
+      return spec.materialFormula === "ADDITIVE_PER_METER"
+        ? "consumption × (grey + dyeing + printing per m) × (1 + wastage) + other"
+        : "consumption × cost per unit × (1 + wastage) + other";
+    case "CRAFTING":
+      return spec.craftingFormula === "CPM_OVER_EFFICIENCY"
+        ? "labour rate ÷ line efficiency × SAM + wash, embellishing, other"
+        : "hourly wage ÷ 60 × SAM + wash, embellishing, other";
+    case "OVERHEAD_SGA_PROFIT":
+      return "the overhead line";
+    default:
+      return "sum of the cost lines";
+  }
 }

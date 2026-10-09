@@ -59,6 +59,8 @@ export type TemplateSection = {
 
 export type TemplateDefinition = {
   sections?: TemplateSection[];
+  craftingFormula?: "CPM_OVER_EFFICIENCY" | "HOURLY_OVER_60";
+  materialFormula?: "ADDITIVE_PER_METER" | "COST_PER_UOM";
   additionalInformation?: TemplateLine[] | null;
 };
 

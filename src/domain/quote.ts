@@ -341,3 +341,84 @@ function bucketHasDetail(
   }
   return false;
 }
+
+/**
+ * Rescale a quote's LINE values so they add up to the given bucket totals,
+ * leaving FOB (and so every landed figure) untouched.
+ *
+ * Why: the seed priced each variant by scaling the style's bucket totals and
+ * FOB, but kept the style-level line values — so on Compare bids a bucket's
+ * lines did not add up to the bucket (Tony, 9 Oct). Real vendor quotes never
+ * drift: the form derives buckets from lines through computeQuote. This
+ * brings stored data to the same identity.
+ *
+ * - Trim / packaging: every line scaled by target ÷ current sum.
+ * - Overhead: the one line IS the bucket.
+ * - Materials: the core rate(s) scaled so core + other = target.
+ * - Crafting: the labour rate scaled so core + extras = target.
+ */
+export function reconcileToBuckets(
+  values: QuoteValues,
+  spec: Parameters<typeof computeQuote>[1],
+  target: Partial<BucketTotals>,
+): QuoteValues {
+  const out: QuoteValues = { ...values };
+  const r4 = (v: number) => Math.round(v * 10000) / 10000;
+  const scale = (keys: string[], k: number) => {
+    for (const key of keys) {
+      if (n(out, key) > 0) out[key] = r4(n(out, key) * k);
+    }
+  };
+
+  const sumTo = (keys: string[], t: number | undefined, fallbackKey: string) => {
+    if (t === undefined || !keys.length) return;
+    const current = keys.reduce((s, key) => s + n(out, key), 0);
+    if (current > 0) scale(keys, t / current);
+    else if (t > 0) out[keys.includes(fallbackKey) ? fallbackKey : keys[0]!] = r4(t);
+  };
+  sumTo(spec.trimKeys, target.TRIM_HARDWARE, "otherTrimCost");
+  sumTo(spec.packagingKeys, target.PACKAGING, "otherPackagingCost");
+
+  if (target.OVERHEAD_SGA_PROFIT !== undefined) out.overheadCost = r4(target.OVERHEAD_SGA_PROFIT);
+
+  if (target.BASE_MATERIALS !== undefined) {
+    const t = target.BASE_MATERIALS;
+    let other = n(out, "otherMaterialsCost");
+    if (other >= t) {
+      other = r4(t * 0.1);
+      out.otherMaterialsCost = other;
+    }
+    const core = materialCost(out, spec.materialFormula).core;
+    if (core > 0) {
+      scale(
+        spec.materialFormula === "ADDITIVE_PER_METER"
+          ? ["greyCostPerMeter", "dyeingCostPerMeter", "printingCostPerMeter"]
+          : ["costPerUom"],
+        (t - other) / core,
+      );
+    } else {
+      out.otherMaterialsCost = r4(t);
+    }
+  }
+
+  if (target.CRAFTING !== undefined) {
+    const t = target.CRAFTING;
+    const extraKeys = ["washCost", "embellishingCost", "otherCraftingCost"];
+    let extras = extraKeys.reduce((s, key) => s + n(out, key), 0);
+    if (extras >= t && extras > 0) {
+      scale(extraKeys, (t * 0.3) / extras);
+      extras = extraKeys.reduce((s, key) => s + n(out, key), 0);
+    }
+    const core = craftingCost(out, spec.craftingFormula).core;
+    if (core > 0) {
+      scale(
+        [spec.craftingFormula === "CPM_OVER_EFFICIENCY" ? "directLaborRate" : "hourlyWage"],
+        (t - extras) / core,
+      );
+    } else {
+      out.otherCraftingCost = r4(n(out, "otherCraftingCost") + t - extras);
+    }
+  }
+
+  return out;
+}

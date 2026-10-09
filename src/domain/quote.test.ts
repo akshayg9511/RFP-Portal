@@ -4,6 +4,7 @@ import {
   craftingCost,
   materialCost,
   missingInputs,
+  reconcileToBuckets,
 } from "./quote";
 
 /**
@@ -410,5 +411,28 @@ describe("the submit gate knows which template it is asking for", () => {
     const a = missingInputs({}, spec);
     const b = missingInputs({}, { ...spec, template: "FULL" });
     expect(a).toEqual(b);
+  });
+});
+
+describe("reconcileToBuckets", () => {
+  const spec = {
+    craftingFormula: "CPM_OVER_EFFICIENCY" as const,
+    materialFormula: "ADDITIVE_PER_METER" as const,
+    trimKeys: ["sewingThread", "buttons"],
+    packagingKeys: ["polyBag", "cartonBox"],
+  };
+  const values = {
+    consumption: 5.38, greyCostPerMeter: 1.7066, dyeingCostPerMeter: 0.7707, printingCostPerMeter: 0.2754,
+    wastage: 7.8, otherMaterialsCost: 0.56, sam: 3.3, directLaborRate: 0.138, lineEfficiency: 92,
+    otherCraftingCost: 0.02, sewingThread: 0.0109, buttons: 0.014, polyBag: 0.1793, cartonBox: 0.0751,
+    overheadCost: 1.3445,
+  };
+  const target = { BASE_MATERIALS: 12.5442, TRIM_HARDWARE: 0.0658, PACKAGING: 0.4477, CRAFTING: 0.3909, OVERHEAD_SGA_PROFIT: 1.0206 };
+
+  it("makes every bucket's lines add up to its total", () => {
+    const r = computeQuote(reconcileToBuckets(values, spec, target), spec);
+    for (const [k, v] of Object.entries(target)) {
+      expect(r.buckets[k as keyof typeof r.buckets]).toBeCloseTo(v, 2);
+    }
   });
 });

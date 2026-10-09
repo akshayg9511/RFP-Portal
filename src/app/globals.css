@@ -7139,3 +7139,18 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
 .bs-grid thead th.bs-q,
 .bs-grid thead th.bs-band-q { background: var(--color-neutral-background-table-head-enabled); }
 .bs-grid thead .bs-sticky { z-index: calc(var(--z-sticky) + 3); }
+
+/* Catalog: Expand all / Collapse all beside the count (Tony, 9 Oct). */
+.fb-meta-row { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-md); }
+.fb-meta-acts { display: inline-flex; gap: var(--space-2xs); }
+/* A variation's label starts under its style number: past the chevron AND
+   the thumbnail, not under the thumbnail. */
+.pc-var-label { padding-inline-start: calc(var(--size-control-sm) + 44px + 2 * var(--space-sm)); }
+
+/* Compare bids: the line that proves an opened bucket adds up (Tony, 9 Oct). */
+.bc-calc th,
+.bc-calc td {
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
+  font-weight: var(--type-emphasis-weight);
+}
+.bc-calc .bc-sub { font-weight: var(--type-body-weight); }
