@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
-import { money, unitCost, units } from "@/lib/format";
+import { money, percent, unitCost, units } from "@/lib/format";
 import { computeQuote, type BucketTotals, type QuoteValues } from "@/domain/quote";
 import {
   BASIS_LABEL,
@@ -260,10 +260,17 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
 
               These rows do NOT expand: they are computed by domain/cost.ts
               from one FOB, so there is nothing underneath to show. */}
-          <ChainRow label="Landed · ocean" bids={bids} pick={(b) => b.landedOcean} cleanSheet={!!cleanSheet} />
-          <ChainRow label="Landed · air" bids={bids} pick={(b) => b.landedAir} cleanSheet={!!cleanSheet} />
-          <ChainRow label="Quince blend 70/30" bids={bids} pick={(b) => b.quinceBlend} cleanSheet={!!cleanSheet} />
-          <ChainRow label="Vendor DDP" bids={bids} pick={(b) => b.ddpBlend} cleanSheet={!!cleanSheet} />
+          {/* ux/14 — the sum written out: FOB + tariff + logistics = landed,
+              then the vendor's DDP beside it, in both modes and the blend. */}
+          <ChainRow label="+ Tariff" bids={bids} pick={(b) => b.tariff} sub={(b) => percent(b.tariffRate)} cleanSheet={!!cleanSheet} />
+          <ChainRow label="+ Logistics · ocean" bids={bids} pick={(b) => b.logistics.ocean} cleanSheet={!!cleanSheet} />
+          <ChainRow label="+ Logistics · air" bids={bids} pick={(b) => b.logistics.air} cleanSheet={!!cleanSheet} />
+          <ChainRow label="= Landed · ocean" bids={bids} pick={(b) => b.landedOcean} cleanSheet={!!cleanSheet} />
+          <ChainRow label="= Landed · air" bids={bids} pick={(b) => b.landedAir} cleanSheet={!!cleanSheet} />
+          <ChainRow label="= Landed · blend" labelSub={`${style.airPct}% air`} strong bids={bids} pick={(b) => b.quinceBlend} cleanSheet={!!cleanSheet} />
+          <ChainRow label="DDP · ocean" bids={bids} pick={(b) => b.ddpOcean} cleanSheet={!!cleanSheet} />
+          <ChainRow label="DDP · air" bids={bids} pick={(b) => b.ddpAir} cleanSheet={!!cleanSheet} />
+          <ChainRow label="DDP · blend" strong bids={bids} pick={(b) => b.ddpBlend} cleanSheet={!!cleanSheet} />
 
           <tr className="bc-best">
             <th scope="row" className="bc-rowhead">
@@ -279,14 +286,34 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
             ))}
           </tr>
 
-          <tr className="bc-save">
+          <tr className="bc-chain">
             <th scope="row" className="bc-rowhead">
-              Saving vs baseline
-              <span className="bc-sub">at full volume</span>
+              Current landed
+              <span className="bc-sub">PCOGS + tariff + logistics, blend</span>
             </th>
             {cleanSheet ? <td className="bc-clean" /> : null}
             {bids.map((b) => {
-              const per = baseline - b.bestCost;
+              const d = b.current.blend ? (b.bestCost - b.current.blend) / b.current.blend : null;
+              return (
+                <td key={b.vendorId} className="bc-num">
+                  {unitCost(b.current.blend)}
+                  <span className="bc-sub">
+                    {b.current.countryIso ? `at ${b.current.countryIso}` : ""}
+                    {d !== null ? ` · ${d > 0 ? "+" : ""}${(d * 100).toFixed(1)}%` : ""}
+                  </span>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="bc-save">
+            <th scope="row" className="bc-rowhead">
+              Saving vs current landed
+              <span className="bc-sub">at full volume · today&rsquo;s cost at the vendor&rsquo;s COO</span>
+            </th>
+            {cleanSheet ? <td className="bc-clean" /> : null}
+            {bids.map((b) => {
+              const per = (b.current.blend || baseline) - b.bestCost;
               return (
                 <td key={b.vendorId} className="bc-num">
                   <span className={per >= 0 ? "bc-pos" : "bc-neg"}>
@@ -388,19 +415,28 @@ function LineGroup({
 /** One row of the cost chain. Null renders as an em dash, never as $0.00. */
 function ChainRow({
   label,
+  labelSub,
   bids,
   pick,
+  sub,
+  strong,
   cleanSheet,
 }: {
   label: string;
+  labelSub?: string;
   bids: Bid[];
   pick: (b: Bid) => number | null;
+  /** A second line under each value, e.g. the tariff rate. */
+  sub?: (b: Bid) => string;
+  /** A subtotal of the sum: landed blend, DDP blend. */
+  strong?: boolean;
   cleanSheet: boolean;
 }) {
   return (
-    <tr className="bc-chain">
+    <tr className={`bc-chain${strong ? " bc-chain-sum" : ""}`}>
       <th scope="row" className="bc-rowhead">
         {label}
+        {labelSub ? <span className="bc-sub">{labelSub}</span> : null}
       </th>
       {cleanSheet ? <td className="bc-clean" /> : null}
       {bids.map((b) => {
@@ -408,6 +444,7 @@ function ChainRow({
         return (
           <td key={b.vendorId} className="bc-num">
             {v === null ? <span className="bc-none">—</span> : unitCost(v)}
+            {v !== null && sub ? <span className="bc-sub">{sub(b)}</span> : null}
           </td>
         );
       })}

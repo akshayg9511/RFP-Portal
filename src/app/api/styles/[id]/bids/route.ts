@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { handle, notFound, num, numOr } from "@/lib/api";
 import { strategies } from "@/domain/strategies";
 import { bucketFlags } from "@/domain/scoring";
-import { resolveBestCost } from "@/lib/bestCost";
+import { ddpByMode, resolveBestCost } from "@/lib/bestCost";
+import { costParts, currentAt } from "@/lib/landed";
 import { loadRateBook } from "@/lib/rateBook";
 import { variationKeyOf } from "@/domain/grain";
 import { awardGroups, FREIGHT_SPLIT_SELECT, VARIATION_SELECT } from "@/lib/variationGroups";
@@ -72,7 +73,7 @@ export function GET(
           },
           currentSuppliers: {
             where: { variationId: null },
-            select: { vendorId: true },
+            select: { vendorId: true, vendor: { select: { countryIso: true } } },
           },
           variations: VARIATION_SELECT,
           freightSplits: FREIGHT_SPLIT_SELECT,
@@ -212,6 +213,10 @@ export function GET(
       .map((q) => {
         const cost = resolveBestCost(q, style, q.vendor, rates, selected.size, selected.blend);
         if (!cost) return null;
+        // The landed sum and today's cost at THIS vendor's COO (ux/14).
+        const parts = costParts(rates, style, q.vendor.countryIso, selected.size, selected.blend);
+        const current = currentAt(parts, selected.baselineFob, selected.baselineLanded, selected.blend);
+        const ddp = ddpByMode(q);
         return {
           quoteId: q.id,
           invitationId: q.invitationId,
@@ -257,6 +262,12 @@ export function GET(
 
           // The whole chain, not just the answer — the Playground shows which
           // side min() picked, and a reader should be able to see why.
+          tariffRate: parts.tariffRate,
+          tariff: (num(q.fob) ?? 0) * parts.tariffRate,
+          logistics: parts.logistics,
+          ddpOcean: ddp.ddpOcean,
+          ddpAir: ddp.ddpAir,
+          current: { ...current, countryIso: q.vendor.countryIso },
           landedOcean: cost.landedOcean,
           landedAir: cost.landedAir,
           quinceBlend: cost.quinceBlend,
@@ -314,6 +325,18 @@ export function GET(
         planUnits: selected.planUnits,
         baselineFob: selected.baselineFob,
         baselineLanded: num(style.baselineLanded) === null ? null : selected.baselineLanded,
+        /** Today's cost built from Baseline PCOGS, at the incumbent's COO. */
+        current: (() => {
+          const iso = style.currentSuppliers.find((c) => c.vendor.countryIso)?.vendor.countryIso ?? null;
+          const parts = costParts(rates, style, iso, selected.size, selected.blend);
+          return {
+            ...currentAt(parts, selected.baselineFob, selected.baselineLanded, selected.blend),
+            countryIso: iso,
+            tariffRate: parts.tariffRate,
+            logistics: parts.logistics,
+          };
+        })(),
+        airPct: Math.round(selected.blend.air * 100),
       },
 
       /** Every group of this product, for the header dropdown (N2). */

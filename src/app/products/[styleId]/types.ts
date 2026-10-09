@@ -24,6 +24,14 @@ export type Bid = {
   maxVolumeCapacity: number | null;
   productionLeadTime: number | null;
   moq: number | null;
+  /** The landed sum (ux/14): tariff at the vendor's COO, logistics by mode. */
+  tariffRate: number;
+  tariff: number;
+  logistics: { ocean: number; air: number; blend: number };
+  ddpOcean: number | null;
+  ddpAir: number | null;
+  /** Current landed at THIS vendor's COO. */
+  current: { ocean: number; air: number; blend: number; countryIso: string | null };
   landedOcean: number | null;
   landedAir: number | null;
   quinceBlend: number | null;
@@ -80,6 +88,15 @@ export type ProductBids = {
     planUnits: number | null;
     baselineFob: number | null;
     baselineLanded: number | null;
+    current: {
+      ocean: number;
+      air: number;
+      blend: number;
+      countryIso: string | null;
+      tariffRate: number;
+      logistics: { ocean: number; air: number; blend: number };
+    };
+    airPct: number;
   };
   /**
    * Every award group of the product, for the header dropdown. One entry,

@@ -54,7 +54,7 @@ export function ProductHeader({
 }) {
   const s = data.style;
   const baseline = s.baselineLanded ?? s.baselineFob ?? 0;
-  const annual = (s.planUnits ?? 0) * baseline;
+  const annual = (s.planUnits ?? 0) * (s.current.blend || baseline);
   const imageCount = s.images.length;
 
   return (
@@ -134,9 +134,20 @@ export function ProductHeader({
                 <span className="u">/yr</span>
               </dd>
             </div>
+            {/* ux/14 — today's cost, built the same way bids are:
+                Baseline PCOGS + tariff + logistics. */}
             <div className="pd-fact">
-              <dt>Baseline landed</dt>
-              <dd>{unitCost(baseline)}</dd>
+              <dt>Baseline PCOGS</dt>
+              <dd>{s.baselineFob ? unitCost(s.baselineFob) : "—"}</dd>
+            </div>
+            <div className="pd-fact">
+              <dt>Current landed{s.current.countryIso ? ` · ${s.current.countryIso}` : ""}</dt>
+              <dd>
+                {unitCost(s.current.blend || baseline)}
+                <span className="u">
+                  {" "}O {unitCost(s.current.ocean)} · A {unitCost(s.current.air)}
+                </span>
+              </dd>
             </div>
             <div className="pd-fact">
               <dt>Annual value</dt>

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { handle, num, numOr } from "@/lib/api";
-import { resolveBestCost, resolveLogistics, resolveTariff, type RateBook } from "@/lib/bestCost";
-import { blended, type Blend } from "@/domain/cost";
+import { resolveBestCost } from "@/lib/bestCost";
+import { costParts, currentAt } from "@/lib/landed";
 import { loadRateBook } from "@/lib/rateBook";
 import {
   awardGroups,
@@ -304,36 +304,3 @@ function deliveredDdp(
   return f === null || !present.length ? null : f + Math.max(...present);
 }
 
-type Modes = { ocean: number; air: number; blend: number };
-
-/** Tariff rate and per-unit logistics for one product x variant x COO. */
-function costParts(
-  rates: RateBook,
-  style: { styleNumber: string; htsCode: string | null },
-  countryIso: string | null,
-  size: string | null,
-  blend: Blend,
-): { tariffRate: number; logistics: Modes } {
-  const l = resolveLogistics(rates, style.styleNumber, countryIso, size);
-  return {
-    tariffRate: resolveTariff(rates, style.htsCode, countryIso),
-    logistics: { ocean: l.ocean, air: l.air, blend: blended(l.air, l.ocean, blend) },
-  };
-}
-
-/**
- * Current landed = Baseline PCOGS x (1 + tariff) + logistics, per mode. Falls
- * back to the imported landed baseline when there is no PCOGS to build from.
- */
-function currentAt(
-  parts: { tariffRate: number; logistics: Modes },
-  pcogs: number,
-  fallback: number,
-  blend: Blend,
-): Modes {
-  if (!pcogs) return { ocean: fallback, air: fallback, blend: fallback };
-  const base = pcogs * (1 + parts.tariffRate);
-  const ocean = base + parts.logistics.ocean;
-  const air = base + parts.logistics.air;
-  return { ocean, air, blend: blended(air, ocean, blend) };
-}

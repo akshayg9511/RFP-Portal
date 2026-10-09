@@ -7154,3 +7154,6 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
   font-weight: var(--type-emphasis-weight);
 }
 .bc-calc .bc-sub { font-weight: var(--type-body-weight); }
+/* The landed and DDP blends are the subtotals the sum arrives at. */
+.bc-chain-sum th,
+.bc-chain-sum td { font-weight: var(--type-emphasis-weight); color: var(--color-neutral-foreground-default-enabled); }
