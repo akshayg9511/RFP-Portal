@@ -46,6 +46,7 @@ export function GET(request: Request) {
       vendorCode: v.vendorCode,
       name: v.name,
       countryIso: v.countryIso,
+      country: v.country,
       cooRegion: v.cooRegion,
       isNewToQuince: v.isNewToQuince,
       isTemp: v.isTemp,

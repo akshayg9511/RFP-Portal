@@ -31,6 +31,7 @@ type Vendor = {
   vendorCode: string;
   name: string;
   countryIso: string | null;
+  country: string | null;
   cooRegion: string | null;
   isNewToQuince: boolean;
   isTemp: boolean;
@@ -60,6 +61,8 @@ export default function VendorsPage() {
   const { data, loading, error } = useApi<Vendor[]>("/api/vendors");
   const [query, setQuery] = React.useState("");
   const [region, setRegion] = React.useState("");
+  // Country is the facet; region moves behind More filters (Tony, 9 Oct).
+  const [country, setCountry] = React.useState("");
   const [type, setType] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [sort, setSort] = React.useState<SortState<"name" | "supplies" | "bids" | "awarded">>(null);
@@ -68,6 +71,7 @@ export default function VendorsPage() {
     const q = query.trim().toLowerCase();
     const list = (data ?? []).filter((v) => {
       if (region && v.cooRegion !== region) return false;
+      if (country && countryOf(v) !== country) return false;
       if (type && v.type !== type) return false;
       if (
         q &&
@@ -87,7 +91,7 @@ export default function VendorsPage() {
             ? v.quoteCount
             : v.awardedDollars,
     );
-  }, [data, query, region, type, sort]);
+  }, [data, query, region, country, type, sort]);
 
   const open = rows.find((v) => v.id === openId) ?? null;
 
@@ -99,6 +103,15 @@ export default function VendorsPage() {
       if (v.cooRegion) m.set(v.cooRegion, (m.get(v.cooRegion) ?? 0) + 1);
     }
     return m;
+  }, [data]);
+
+  const byCountry = React.useMemo(() => {
+    const m = new Map<string, number>();
+    for (const v of data ?? []) {
+      const c = countryOf(v);
+      if (c) m.set(c, (m.get(c) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [data]);
 
   const placed = rows.reduce((s, v) => s + v.awardedDollars, 0);
@@ -136,16 +149,23 @@ export default function VendorsPage() {
           sticky
         search={{ value: query, onChange: setQuery, placeholder: "Search vendors" }}
         facet={{
-          label: "region",
-          placeholder: "Select region",
-          value: region,
-          onChange: setRegion,
-          options: REGION_ORDER.filter((r) => byRegion.has(r)).map((r) => ({
-            value: r,
-            count: byRegion.get(r) ?? 0,
-          })),
+          label: "country",
+          placeholder: "Select country",
+          value: country,
+          onChange: setCountry,
+          options: byCountry.map(([value, count]) => ({ value, count })),
         }}
         groups={[
+          {
+            key: "region",
+            label: "Region",
+            single: true,
+            options: REGION_ORDER.filter((r) => byRegion.has(r)).map((r) => ({
+              value: r,
+              count: byRegion.get(r) ?? 0,
+            })),
+            selected: region ? [region] : [],
+          },
           {
             key: "type",
             label: "Vendor type",
@@ -158,7 +178,10 @@ export default function VendorsPage() {
             format: (v) => TYPE_LABEL[v as Vendor["type"]] ?? v,
           },
         ]}
-        onGroupsChange={(next) => setType(next.type?.[0] ?? "")}
+        onGroupsChange={(next) => {
+          setType(next.type?.[0] ?? "");
+          setRegion(next.region?.[0] ?? "");
+        }}
         meta={`${rows.length} vendor${rows.length === 1 ? "" : "s"}`}
       />
 
@@ -175,7 +198,7 @@ export default function VendorsPage() {
           <thead>
             <tr>
               <SortTh sortKey="name" sort={sort} onSort={setSort}>Vendor</SortTh>
-              <th>Region</th>
+              <th>Country</th>
               <th>Type</th>
               <SortTh sortKey="supplies" sort={sort} onSort={setSort} num>Supplies</SortTh>
               <SortTh sortKey="bids" sort={sort} onSort={setSort} num>Bids</SortTh>
@@ -235,10 +258,13 @@ export default function VendorsPage() {
                   </div>
                 </td>
                 <td>
-                  {v.cooRegion ? (
+                  {countryOf(v) ? (
                     // Plain text: the colour dot was not a status and did not
                     // need a system of its own (Aravind, C20).
-                    <span className="vm-region">{v.cooRegion}</span>
+                    <span className="vm-region">
+                      {countryOf(v)}
+                      {v.cooRegion ? <span className="vm-meta"> · {v.cooRegion}</span> : null}
+                    </span>
                   ) : (
                     <span className="aw-muted">—</span>
                   )}
@@ -392,4 +418,20 @@ function VendorDrawerInner({
       ) : null}
     </SideDrawer>
   );
+}
+
+const REGION_NAMES =
+  typeof Intl !== "undefined" && "DisplayNames" in Intl
+    ? new Intl.DisplayNames(["en"], { type: "region" })
+    : null;
+
+/** The country a vendor produces in, by name: stored name, else the ISO code's. */
+function countryOf(v: { country: string | null; countryIso: string | null }): string {
+  if (v.country?.trim()) return v.country.trim();
+  if (!v.countryIso) return "";
+  try {
+    return REGION_NAMES?.of(v.countryIso) ?? v.countryIso;
+  } catch {
+    return v.countryIso;
+  }
 }
