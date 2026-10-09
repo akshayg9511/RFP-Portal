@@ -195,6 +195,7 @@ export default function ProductCatalogPage() {
       {/* Filter & sort pattern (Aravind, C4): search, ONE facet
           (department), and everything else in the More filters panel. */}
       <FilterBar
+          sticky
         search={{ value: query, onChange: setQuery, placeholder: "Search style number or name" }}
         facet={{
           label: "department",
@@ -243,7 +244,7 @@ export default function ProductCatalogPage() {
         meta={`${rows.length} product${rows.length === 1 ? "" : "s"}${selection.count ? ` · ${selection.count} selected` : ""}`}
       />
 
-      <div className="data-grid-surface">
+      <div className="data-grid-surface sticky-head">
         <table className="data-grid aw-grid">
           {/* Grain sits after Category and BEFORE the numeric run, so the
               right-aligned figures stay contiguous — splitting them is the

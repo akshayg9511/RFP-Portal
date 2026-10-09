@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { grainGroups, type Grain } from "@/domain/grain";
 import { notFound, num, ok } from "@/lib/api";
-import { cleanOwners, ownerList, ownersData } from "@/lib/owners";
+import { cleanOwners, ownerList, ownersData, procurementData } from "@/lib/owners";
 
 /**
  * @openapi
@@ -138,6 +138,7 @@ export async function GET(
       gm: rfp.gm,
       sourcingPartners: ownerList(rfp.sourcingPartners, rfp.sourcingPartner),
       gms: ownerList(rfp.gms, rfp.gm),
+      procurementOwners: ownerList(rfp.procurementOwners, null),
       templateId: rfp.templateId,
       templateName: rfp.template.name,
       waveName: rfp.wave.name,
@@ -279,6 +280,7 @@ export async function PATCH(
     /** Lists win over the single fields when both are sent. */
     sourcingPartners?: string[];
     gms?: string[];
+    procurementOwners?: string[];
   };
 
   try {
@@ -288,6 +290,9 @@ export async function PATCH(
         ...ownersData(
           body.sourcingPartners !== undefined ? cleanOwners(body.sourcingPartners) : undefined,
           body.gms !== undefined ? cleanOwners(body.gms) : undefined,
+        ),
+        ...procurementData(
+          body.procurementOwners !== undefined ? cleanOwners(body.procurementOwners) : undefined,
         ),
         ...(body.name !== undefined ? { name: body.name.trim() } : {}),
         ...(body.instructions !== undefined

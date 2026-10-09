@@ -32,6 +32,7 @@ type RfpDetail = {
   gm: string | null;
   sourcingPartners?: string[];
   gms?: string[];
+  procurementOwners?: string[];
   templateId?: string;
   templateName: string;
   styles: {
@@ -182,12 +183,14 @@ export default function RfpDetailPage() {
    * from `data` at read time and a local edit overrides it, so a reload
    * mid-edit cannot wipe what was just picked.
    */
-  const owners = useApi<{ sourcingPartners: string[]; gms: string[] }>("/api/rfps/owners");
+  const owners = useApi<{ sourcingPartners: string[]; gms: string[]; procurementOwners: string[] }>("/api/rfps/owners");
   const [partnerEdit, setPartnersNow] = React.useState<string[] | null>(null);
   const [gmEdit, setGmsNow] = React.useState<string[] | null>(null);
   const partnersNow =
     partnerEdit ?? data?.sourcingPartners ?? (data?.sourcingPartner ? [data.sourcingPartner] : []);
   const gmsNow = gmEdit ?? data?.gms ?? (data?.gm ? [data.gm] : []);
+  const [procEdit, setProcNow] = React.useState<string[] | null>(null);
+  const procNow = procEdit ?? data?.procurementOwners ?? [];
 
   // A create that nominated vendors may report some held back (clash with
   // another RFP); the create page passes that along in the URL once.
@@ -462,7 +465,7 @@ export default function RfpDetailPage() {
     });
   }
 
-  async function patchOwners(body: { sourcingPartners?: string[]; gms?: string[] }) {
+  async function patchOwners(body: { sourcingPartners?: string[]; gms?: string[]; procurementOwners?: string[] }) {
     const res = await fetch(`/api/rfps/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -712,6 +715,18 @@ export default function RfpDetailPage() {
                     onChange={(next) => {
                       setGmsNow(next);
                       patchOwners({ gms: next });
+                    }}
+                  />
+
+                  <PeoplePicker
+                    id="po"
+                    label="Procurement owners"
+                    addLabel="Add procurement owner"
+                    options={owners.data?.procurementOwners ?? []}
+                    value={procNow}
+                    onChange={(next) => {
+                      setProcNow(next);
+                      patchOwners({ procurementOwners: next });
                     }}
                   />
 

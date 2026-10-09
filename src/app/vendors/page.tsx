@@ -133,6 +133,7 @@ export default function VendorsPage() {
       {/* Filter & sort pattern (Aravind, C19): search, Region facet,
           vendor type behind More filters. */}
       <FilterBar
+          sticky
         search={{ value: query, onChange: setQuery, placeholder: "Search vendors" }}
         facet={{
           label: "region",
@@ -161,7 +162,7 @@ export default function VendorsPage() {
         meta={`${rows.length} vendor${rows.length === 1 ? "" : "s"}`}
       />
 
-      <div className="data-grid-surface">
+      <div className="data-grid-surface sticky-head">
         <table className="data-grid">
           <colgroup>
             <col style={{ width: "30%" }} />

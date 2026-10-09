@@ -343,6 +343,9 @@ model Rfp {
   /// dual-written with the first entry, so code that reads them keeps working.
   sourcingPartners Json?
   gms              Json?
+  /// Procurement owners (PRD 3.4, MVP): a third owner role beside sourcing
+  /// partners and GMs. JSON string array; no single-value mirror.
+  procurementOwners Json?
 
   comment   String?   @db.Text
   issuedAt  DateTime?

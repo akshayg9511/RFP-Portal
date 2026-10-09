@@ -6912,3 +6912,32 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/* ── FIXED TOOLBAR + COLUMN HEADERS ON LONG LISTS (G7, Open Questions 02) ──
+   The filter bar sticks flush to the top of the scroller (pulled over the
+   content inset and padded back, so nothing shows through above it), and a
+   `.sticky-head` table's header row sticks directly beneath it. Only the
+   rows move. */
+.fb-sticky {
+  position: sticky;
+  inset-block-start: calc(-1 * var(--page-inset));
+  margin-block-start: calc(-1 * var(--page-inset));
+  padding-block-start: var(--page-inset);
+  z-index: var(--z-sticky);
+  background: var(--color-bg-canvas);
+}
+.fb-sticky > .filter-bar {
+  margin-block: 0;
+  padding-block-end: var(--space-md);
+}
+/* clip, not hidden: `overflow: hidden` makes the surface a scroll container,
+   and a sticky header inside one sticks to IT rather than to the page. */
+.data-grid-surface.sticky-head {
+  overflow: clip;
+}
+.data-grid-surface.sticky-head thead th {
+  position: sticky;
+  inset-block-start: calc(var(--fb-h, 0px) - var(--page-inset));
+  z-index: calc(var(--z-sticky) - 1);
+  background: var(--color-bg-table-head);
+}

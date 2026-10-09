@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { badRequest, handle, num, ok } from "@/lib/api";
 import { variationKeyOf, WHOLE_STYLE_KEY } from "@/domain/grain";
-import { cleanOwners, ownerList, ownersData } from "@/lib/owners";
+import { cleanOwners, ownerList, ownersData, procurementData } from "@/lib/owners";
 /**
  * @openapi
  * /api/rfps:
@@ -95,6 +95,7 @@ export function GET() {
         gm: r.gm,
         sourcingPartners: ownerList(r.sourcingPartners, r.sourcingPartner),
         gms: ownerList(r.gms, r.gm),
+        procurementOwners: ownerList(r.procurementOwners, null),
         createdAt: r.createdAt,
       };
     });
@@ -122,6 +123,7 @@ type CreateBody = {
    */
   sourcingPartners?: string[];
   gms?: string[];
+  procurementOwners?: string[];
   /** ISO date. Absent falls back to the wave's due date, as before. */
   dueDate?: string | null;
 };
@@ -158,6 +160,7 @@ export async function POST(request: Request) {
           status: "DRAFT",
           dueDate: body.dueDate ? new Date(body.dueDate) : wave.dueDate,
           ...ownersData(cleanOwners(body.sourcingPartners), cleanOwners(body.gms)),
+          ...procurementData(cleanOwners(body.procurementOwners)),
           styles: { create: rfpStyleRows(group) },
         },
         // Rows, not products — a style out to bid on 3 sizes makes 3 rows.

@@ -357,6 +357,7 @@ function AwardPageInner() {
       {/* Filter & sort pattern (Aravind, C39): search, Status facet,
           the rest in the More filters panel (6 groups). */}
       <FilterBar
+          sticky
         search={{ value: query, onChange: setQuery, placeholder: "Search products" }}
         facet={{
           label: "status",
@@ -389,7 +390,7 @@ function AwardPageInner() {
         meta={`${rows.length} product${rows.length === 1 ? "" : "s"}`}
       />
 
-      <div className="data-grid-surface">
+      <div className="data-grid-surface sticky-head">
           <table className="data-grid aw-grid">
             <colgroup>
               <col style={{ width: "38%" }} />

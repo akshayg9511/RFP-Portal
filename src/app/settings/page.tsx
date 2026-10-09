@@ -201,6 +201,7 @@ export default function VariationSetupPage() {
       {/* Filters sit on the canvas, outside the surface (C66); only the table
           is on a card (C68). */}
       <FilterBar
+          sticky
         search={{ value: query, onChange: setQuery, placeholder: "Search style number or name" }}
         facet={{
           label: "grain",
@@ -241,7 +242,7 @@ export default function VariationSetupPage() {
             </div>
           ) : null}
 
-          <div className="data-grid-surface">
+          <div className="data-grid-surface sticky-head">
             <table className="data-grid aw-grid">
               <colgroup>
                 <col style={{ width: "4%" }} />

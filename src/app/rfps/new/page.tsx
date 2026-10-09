@@ -41,9 +41,10 @@ export default function NewRfpPage() {
    * Owners and due date are shared by every RFP this create makes; name and
    * instructions are per RFP. Vendors are added on the RFP page itself.
    */
-  const owners = useApi<{ sourcingPartners: string[]; gms: string[] }>("/api/rfps/owners");
+  const owners = useApi<{ sourcingPartners: string[]; gms: string[]; procurementOwners: string[] }>("/api/rfps/owners");
   const [partners, setPartners] = React.useState<string[]>([]);
   const [gms, setGms] = React.useState<string[]>([]);
+  const [procurement, setProcurement] = React.useState<string[]>([]);
   const [dueDate, setDueDate] = React.useState("");
 
   /**
@@ -181,6 +182,7 @@ export default function NewRfpPage() {
           })),
           sourcingPartners: partners,
           gms,
+          procurementOwners: procurement,
           dueDate: dueDate || null,
         }),
       });
@@ -341,6 +343,14 @@ export default function NewRfpPage() {
                 options={owners.data?.gms ?? []}
                 value={gms}
                 onChange={setGms}
+              />
+              <PeoplePicker
+                id="rfp-procurement"
+                label="Procurement owners (optional)"
+                addLabel="Add procurement owner"
+                options={owners.data?.procurementOwners ?? []}
+                value={procurement}
+                onChange={setProcurement}
               />
               <div className="field">
                 <label className="lbl" htmlFor="rfp-due">

@@ -39,6 +39,7 @@ export function FilterBar({
   groups,
   onGroupsChange,
   meta,
+  sticky,
 }: {
   search: {
     value: string;
@@ -61,7 +62,14 @@ export function FilterBar({
   onGroupsChange?: (next: Record<string, string[]>) => void;
   /** The count, when the collection has no pager to carry it. */
   meta?: React.ReactNode;
+  /**
+   * Hold the bar (and, with `.sticky-head` on the table surface, the column
+   * headers under it) at the top while only the rows scroll — Open
+   * Questions 02: "Only row items in the table should scroll."
+   */
+  sticky?: boolean;
 }) {
+  const stickyRef = useStickyHeight("--fb-h", sticky);
   const applied = (groups ?? []).flatMap((g) =>
     g.selected.map((value) => ({ group: g, value })),
   );
@@ -83,7 +91,7 @@ export function FilterBar({
     onGroupsChange(Object.fromEntries(groups.map((g) => [g.key, []])));
   }
 
-  return (
+  const bar = (
     <div className="filter-bar">
       <div className="fb-controls">
         <div className="control search">
@@ -149,6 +157,40 @@ export function FilterBar({
 
       {meta ? <div className="filter-meta">{meta}</div> : null}
     </div>
+  );
+
+  return sticky ? (
+    <div className="fb-sticky" ref={stickyRef}>
+      {bar}
+    </div>
+  ) : (
+    bar
+  );
+}
+
+/**
+ * Writes an element's live height to a CSS variable on the page's scroll
+ * container, so things that stick BELOW it (a table's header row) know where
+ * to stop. A callback ref, so it attaches when the element mounts.
+ */
+export function useStickyHeight(variable: string, enabled = true) {
+  const observer = React.useRef<ResizeObserver | null>(null);
+  return React.useCallback(
+    (el: HTMLElement | null) => {
+      observer.current?.disconnect();
+      observer.current = null;
+      if (!enabled) return;
+      const root = (el?.closest(".ct") ?? document.querySelector(".shell > .ct")) as HTMLElement | null;
+      if (!el) {
+        root?.style.removeProperty(variable);
+        return;
+      }
+      const write = () => root?.style.setProperty(variable, `${el.offsetHeight}px`);
+      write();
+      observer.current = new ResizeObserver(write);
+      observer.current.observe(el);
+    },
+    [variable, enabled],
   );
 }
 

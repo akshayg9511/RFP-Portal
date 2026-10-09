@@ -36,3 +36,8 @@ export function ownersData(partners: string[] | undefined, gms: string[] | undef
     ...(gms !== undefined ? { gms, gm: gms[0] ?? null } : {}),
   };
 }
+
+/** Prisma data for the procurement-owner list (no single-column mirror). */
+export function procurementData(owners: string[] | undefined) {
+  return owners !== undefined ? { procurementOwners: owners } : {};
+}

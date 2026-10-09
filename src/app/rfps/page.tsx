@@ -29,6 +29,7 @@ type RfpRow = {
   /** Owners as lists (ux/rfp-2). Absent on older API responses. */
   sourcingPartners?: string[];
   gms?: string[];
+  procurementOwners?: string[];
 };
 
 /**
@@ -98,14 +99,15 @@ function RfpsList() {
    */
   const [query, setQuery] = React.useState("");
   const [status, setStatus] = React.useState("");
-  const [more, setMore] = React.useState<{ partner: string[]; gm: string[] }>({
+  const [more, setMore] = React.useState<{ partner: string[]; gm: string[]; procurement: string[] }>({
     partner: [],
     gm: [],
+    procurement: [],
   });
   const [sort, setSort] = React.useState<SortState<SortKey>>(null);
 
   const matches = React.useCallback(
-    (r: RfpRow, skip?: "status" | "partner" | "gm") => {
+    (r: RfpRow, skip?: "status" | "partner" | "gm" | "procurement") => {
       const q = query.trim().toLowerCase();
       if (q && !`${r.name} ${r.templateName}`.toLowerCase().includes(q)) return false;
       if (skip !== "status" && status && r.status !== status) return false;
@@ -117,6 +119,13 @@ function RfpsList() {
         return false;
       }
       if (skip !== "gm" && more.gm.length && !gmsOf(r).some((g) => more.gm.includes(g))) {
+        return false;
+      }
+      if (
+        skip !== "procurement" &&
+        more.procurement.length &&
+        !(r.procurementOwners ?? []).some((o) => more.procurement.includes(o))
+      ) {
         return false;
       }
       return true;
@@ -156,15 +165,18 @@ function RfpsList() {
       status: facetsOf(all.filter((r) => matches(r, "status")), (r) => r.status),
       partner: facetsOf(all.filter((r) => matches(r, "partner")), partnersOf),
       gm: facetsOf(all.filter((r) => matches(r, "gm")), gmsOf),
+      procurement: facetsOf(all.filter((r) => matches(r, "procurement")), (r) => r.procurementOwners ?? []),
     };
   }, [data, matches]);
 
-  const filtered = Boolean(query || status || more.partner.length || more.gm.length);
+  const filtered = Boolean(
+    query || status || more.partner.length || more.gm.length || more.procurement.length,
+  );
 
   function clearFilters() {
     setQuery("");
     setStatus("");
-    setMore({ partner: [], gm: [] });
+    setMore({ partner: [], gm: [], procurement: [] });
   }
 
   return (
@@ -208,6 +220,7 @@ function RfpsList() {
 
       {data && data.length ? (
         <FilterBar
+          sticky
           search={{ value: query, onChange: setQuery, placeholder: "Search RFPs" }}
           facet={{
             label: "status",
@@ -225,9 +238,19 @@ function RfpsList() {
               selected: more.partner,
             },
             { key: "gm", label: "GM", options: facets.gm, selected: more.gm },
+            {
+              key: "procurement",
+              label: "Procurement owner",
+              options: facets.procurement,
+              selected: more.procurement,
+            },
           ]}
           onGroupsChange={(next) =>
-            setMore({ partner: next.partner ?? [], gm: next.gm ?? [] })
+            setMore({
+              partner: next.partner ?? [],
+              gm: next.gm ?? [],
+              procurement: next.procurement ?? [],
+            })
           }
           // No pager here, so the count lives once, under the bar.
           meta={`${rows.length} RFP${rows.length === 1 ? "" : "s"}`}
@@ -243,7 +266,7 @@ function RfpsList() {
         </div>
       ) : null}
 
-      <div className="data-grid-surface">
+      <div className="data-grid-surface sticky-head">
         <table className="data-grid">
           {/* Column ORDER carries the spacing. `Responses` used to sit at
               position 5, left-aligned, splitting the right-aligned numeric run
