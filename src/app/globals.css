@@ -6946,22 +6946,12 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
    One freight mode at a time, and the landed sum (FOB + tariff + logistics
    = landed) opened for every product at once. Ocean / air / blend for any
    cost cell sit in one hover card instead of six columns. */
-.bs-grid { min-inline-size: 1080px; }
-.bs-grid.is-breakdown { min-inline-size: 1260px; }
-.bs-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-sm) var(--space-md);
-  margin-block: var(--space-sm);
-}
-.bs-toolbar-note {
-  font-size: var(--type-caption-size);
-  color: var(--color-neutral-foreground-muted-enabled);
-}
-.bs-toolbar-end { margin-inline-start: auto; }
+.bs-grid { min-inline-size: 1040px; }
+.bs-grid.is-landed { min-inline-size: 1400px; }
+.bs-grid.is-landed.is-ddp { min-inline-size: 1560px; }
 
-/* The sum reads as a sum: operators in the header, a seam around it. */
+/* The sum reads as a sum: operators in the header, seams between bands, and
+   the Quince-paid band on a faint fill so FOB -> landed reads as one block. */
 .bs-op {
   display: inline-block;
   min-inline-size: 1.1em;
@@ -6969,11 +6959,52 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
   color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
 }
-.bs-grid.is-breakdown th.bs-sum,
-.bs-grid.is-breakdown td.bs-sum { background: var(--color-neutral-background-muted-enabled); }
-.bs-grid.is-breakdown .bs-group > td { background: var(--color-neutral-background-muted-enabled); }
-.bs-grid.is-breakdown td.bs-sum-end,
-.bs-grid.is-breakdown th.bs-sum-end { box-shadow: inset -1px 0 0 var(--color-neutral-stroke-default-enabled); }
+.bs-grid th.bs-q,
+.bs-grid td.bs-q { background: var(--color-neutral-background-muted-enabled); }
+.bs-grid th.bs-band-start,
+.bs-grid td.bs-band-start { box-shadow: inset 1px 0 0 var(--color-neutral-stroke-default-enabled); }
+.bs-band-q { background: var(--color-neutral-background-muted-enabled); }
+.bs-sub-band {
+  text-align: center;
+  font-weight: var(--type-body-weight);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
+}
+.bs-grid thead th { vertical-align: bottom; }
+
+/* Accordion header (Aravind, 8 Oct): bigger, calmer, actions to the end. */
+.bs-group > td {
+  background: var(--color-neutral-background-surface-enabled);
+  padding-block: var(--space-md) var(--space-sm);
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
+}
+.bs-group .bs-group-in { background: var(--color-neutral-background-surface-enabled); }
+.bs-group.is-collapsed > td { padding-block: var(--space-md); }
+.bs-title { display: inline-flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; }
+.bs-title-id { font-family: var(--ref-font-family-mono); font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); }
+.bs-title-name { font-size: var(--type-body-lg-size); font-weight: var(--type-emphasis-weight); }
+.bs-group-meta {
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+}
+.bs-group-meta strong { color: var(--color-neutral-foreground-default-enabled); }
+
+/* TODAY: the variant's own costs in the bids' columns. */
+.bs-today > td {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-neutral-foreground-default-enabled);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
+}
+.bs-today > td.bs-sticky { background: var(--color-neutral-background-surface-enabled); }
+.bs-today-l {
+  display: inline-block;
+  padding: 1px var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-background-muted-enabled);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-emphasis-weight);
+}
+/* The variant's cheapest bid gets one quiet mark on its vendor cell. */
+.bs-row.is-lowest > td.bs-c-vendor { box-shadow: inset 3px 0 0 var(--color-status-success-foreground-default-enabled), inset -1px 0 0 var(--color-neutral-stroke-default-enabled); }
 .bs-th-btn {
   display: inline-flex;
   align-items: center;
@@ -7076,3 +7107,35 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
   font-weight: var(--type-emphasis-weight);
 }
 .bs-tip-note { color: var(--color-neutral-foreground-muted-enabled); }
+.bs-waiting > td {
+  padding-block: var(--space-xs);
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+}
+.bs-waiting-in {
+  position: sticky;
+  inset-inline-start: 0;
+  max-inline-size: calc(100cqi - 2 * var(--space-md));
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  white-space: normal;
+}
+
+/* The grid is its own scroll area (both axes), so the three-tier header
+   stays put while you scroll through styles and the pinned columns stay put
+   while you scroll across the cost bands. */
+.bs-scroll {
+  overflow: auto;
+  max-block-size: calc(100dvh - 210px);
+  overscroll-behavior: contain;
+}
+.bs-grid thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: calc(var(--z-sticky) + 2);
+}
+.bs-grid thead th { background: var(--color-neutral-background-table-head-enabled); }
+.bs-grid thead th.bs-q,
+.bs-grid thead th.bs-band-q { background: var(--color-neutral-background-table-head-enabled); }
+.bs-grid thead .bs-sticky { z-index: calc(var(--z-sticky) + 3); }

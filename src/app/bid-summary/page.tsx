@@ -6,7 +6,7 @@ import { Badge, Checkbox, Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
 import { moneyCompact, percent, unitCost, units } from "@/lib/format";
 import { facetsOf } from "@/components/FacetSelect";
-import type { BidGroup, BidSummary, CostMode, FlatRow, Modes } from "./types";
+import type { BidGroup, BidSummary, FlatRow, Modes } from "./types";
 import { CostTipProvider, TipTarget } from "./CostTip";
 import { BidDrawer } from "./BidDrawer";
 import { BulkBar } from "./BulkBar";
@@ -76,10 +76,10 @@ function BidSummaryInner() {
 
   // ── filters, all in the URL (P12) ───────────────────────────────────────
   const view = (params.get("view") as View | null) ?? "review";
-  // 14 — one freight mode at a time, and the landed sum opened for ALL
-  // products at once (Akshay, 9 Oct). Both live in the URL like the filters.
-  const mode = (["ocean", "air"].includes(params.get("mode") ?? "") ? params.get("mode") : "blend") as CostMode;
-  const breakdown = params.get("lb") === "1";
+  // 14 — the landed sum and DDP are OPEN by default, for every style at
+  // once; each folds to its blend (Akshay, 9 Oct). Kept in the URL.
+  const landedOpen = params.get("lb") !== "0";
+  const ddpOpen = params.get("dd") !== "0";
   const get = (k: string) => params.get(k) ?? "";
   const f = {
     q: get("q"),
@@ -314,7 +314,7 @@ function BidSummaryInner() {
               control (Akshay, 5 Oct), and the other eleven filters in the
               More filters side panel — they used to take three rows. */}
           <FilterBar
-            search={{ value: f.q, onChange: (v) => setParam("q", v), placeholder: "Search product or vendor" }}
+            search={{ value: f.q, onChange: (v) => setParam("q", v), placeholder: "Search style or vendor" }}
             facet={{
               label: "view",
               placeholder: "Show",
@@ -362,68 +362,59 @@ function BidSummaryInner() {
             </div>
           ) : (
             <CostTipProvider>
-            <div className="bs-toolbar">
-              <div className="seg" role="group" aria-label="Freight mode">
-                {(["blend", "ocean", "air"] as CostMode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={mode === m ? "on" : undefined}
-                    aria-pressed={mode === m}
-                    onClick={() => setParam("mode", m === "blend" ? "" : m)}
-                  >
-                    {MODE_LABEL[m]}
-                  </button>
-                ))}
-              </div>
-              <span className="bs-toolbar-note">
-                {mode === "blend"
-                  ? "Blend uses each variant's air / ocean split."
-                  : `Unit costs shown by ${mode}. Savings / yr stays on the blend.`}
-              </span>
-              <button
-                type="button"
-                className="btn btn--ghost sm bs-toolbar-end"
-                aria-pressed={breakdown}
-                onClick={() => setParam("lb", breakdown ? "" : "1")}
-              >
-                <Icon name={breakdown ? "chevron_left" : "chevron_right"} size="sm" />
-                {breakdown ? "Hide landed breakdown" : "Show landed breakdown"}
-              </button>
-            </div>
             <div className="data-grid-surface bs-scroll">
-              <table className={`data-grid bs-grid${breakdown ? " is-breakdown" : ""}`}>
+              <table className={`data-grid bs-grid${landedOpen ? " is-landed" : ""}${ddpOpen ? " is-ddp" : ""}`}>
+                {/* The header reads as the sum: FOB + tariff + logistics =
+                    landed, beside DDP. Both bands open by default and each
+                    folds to its blend (Aravind, 8 Oct; Akshay, 9 Oct). */}
                 <thead>
                   <tr>
-                    <th className="bs-sticky bs-c-check" aria-label="Select" />
-                    <th className="bs-sticky bs-c-product">Product</th>
-                    <th className="bs-sticky bs-c-vendor">Vendor · COO</th>
-                    <th className="num">FOB</th>
-                    {breakdown ? (
+                    <th rowSpan={3} className="bs-sticky bs-c-check" aria-label="Select" />
+                    <th rowSpan={3} className="bs-sticky bs-c-product">Style</th>
+                    <th rowSpan={3} className="bs-sticky bs-c-vendor">Vendor · COO</th>
+                    <th rowSpan={3} className="num bs-band-start">FOB</th>
+                    <th colSpan={landedOpen ? 6 : 1} className="bs-band bs-band-q bs-band-start">
+                      <BandToggle open={landedOpen} onToggle={() => setParam("lb", landedOpen ? "0" : "")} label="Quince-paid landed" />
+                    </th>
+                    <th colSpan={ddpOpen ? 3 : 1} className="bs-band bs-band-start">
+                      <BandToggle open={ddpOpen} onToggle={() => setParam("dd", ddpOpen ? "0" : "")} label="DDP" />
+                    </th>
+                    <th rowSpan={3} className="num bs-band-start">Best</th>
+                    <th rowSpan={3} className="num">vs current</th>
+                    <th rowSpan={3} className="num">Savings / yr</th>
+                    <th rowSpan={3} className="num">Award</th>
+                    <th rowSpan={3}>Stage</th>
+                  </tr>
+                  <tr>
+                    {landedOpen ? (
                       <>
-                        <th className="num bs-sum"><span className="bs-op" aria-hidden>+</span>Tariff</th>
-                        <th className="num bs-sum"><span className="bs-op" aria-hidden>+</span>Logistics</th>
+                        <th rowSpan={2} className="num bs-q bs-band-start"><span className="bs-op" aria-hidden>+</span>Tariff</th>
+                        <th colSpan={2} className="bs-sub-band bs-q"><span className="bs-op" aria-hidden>+</span>Logistics</th>
+                        <th colSpan={3} className="bs-sub-band bs-q"><span className="bs-op" aria-hidden>=</span>Landed</th>
+                      </>
+                    ) : (
+                      <th rowSpan={2} className="num bs-q bs-band-start bs-sub">Blend</th>
+                    )}
+                    {ddpOpen ? null : <th rowSpan={2} className="num bs-band-start bs-sub">Blend</th>}
+                    {ddpOpen ? <th colSpan={3} className="bs-sub-band bs-band-start">Vendor-delivered</th> : null}
+                  </tr>
+                  <tr>
+                    {landedOpen ? (
+                      <>
+                        <th className="num bs-sub bs-q">Ocean</th>
+                        <th className="num bs-sub bs-q">Air</th>
+                        <th className="num bs-sub bs-q">Ocean</th>
+                        <th className="num bs-sub bs-q">Air</th>
+                        <th className="num bs-sub bs-q">Blend</th>
                       </>
                     ) : null}
-                    <th className={`num${breakdown ? " bs-sum bs-sum-end" : ""}`}>
-                      <button
-                        type="button"
-                        className="bs-th-btn"
-                        aria-expanded={breakdown}
-                        title={breakdown ? "Hide the landed breakdown" : "Show FOB + tariff + logistics"}
-                        onClick={() => setParam("lb", breakdown ? "" : "1")}
-                      >
-                        {breakdown ? <span className="bs-op" aria-hidden>=</span> : null}
-                        Landed
-                        <Icon name={breakdown ? "chevron_left" : "chevron_right"} size="sm" />
-                      </button>
-                    </th>
-                    <th className="num">DDP</th>
-                    <th className="num">Best</th>
-                    <th className="num">vs current</th>
-                    <th className="num">Savings / yr</th>
-                    <th className="num">Award</th>
-                    <th>Stage</th>
+                    {ddpOpen ? (
+                      <>
+                        <th className="num bs-sub bs-band-start">Ocean</th>
+                        <th className="num bs-sub">Air</th>
+                        <th className="num bs-sub">Blend</th>
+                      </>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -440,8 +431,8 @@ function BidSummaryInner() {
                       onOpen={openBid}
                       onAllocate={openAllocate}
                       openKey={openKey}
-                      mode={mode}
-                      breakdown={breakdown}
+                      landedOpen={landedOpen}
+                      ddpOpen={ddpOpen}
                     />
                   ))}
                 </tbody>
@@ -485,21 +476,8 @@ function BidSummaryInner() {
   );
 }
 
-const MODE_LABEL: Record<CostMode, string> = { blend: "Blend", ocean: "Ocean", air: "Air" };
-
 type Price = NonNullable<FlatRow["price"]>;
-
-/**
- * Best cost in one freight mode. Blend keeps the basis in use, overrides
- * included. Ocean and air take whichever is cheaper in that mode, landed or
- * DDP, which can differ from the blend's winner.
- */
-function bestIn(p: Price, mode: CostMode): { value: number; ddp: boolean } {
-  if (mode === "blend") return { value: p.bestCost, ddp: p.basis === "DDP_BLEND" };
-  const landed = p.quincePaid[mode];
-  const ddp = p.ddp?.[mode] ?? null;
-  return ddp !== null && ddp < landed ? { value: ddp, ddp: true } : { value: landed, ddp: false };
-}
+type MaybeModes = { ocean: number | null; air: number | null; blend: number | null };
 
 function signedPct(v: number | null) {
   if (v === null) return "—";
@@ -508,6 +486,89 @@ function signedPct(v: number | null) {
       {v > 0 ? "+" : ""}
       {(v * 100).toFixed(1)}%
     </span>
+  );
+}
+
+/** A band header that folds its columns down to the blend. */
+function BandToggle({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      className="bs-th-btn"
+      aria-expanded={open}
+      title={open ? `Show only the ${label} blend` : `Show ${label} by ocean and air`}
+      onClick={onToggle}
+    >
+      {label}
+      <Icon name={open ? "chevron_left" : "chevron_right"} size="sm" />
+    </button>
+  );
+}
+
+/**
+ * The cost columns, shared by the Today row and every bid row so the two
+ * always line up: FOB | + tariff | + logistics O/A | = landed O/A/B | DDP.
+ */
+function CostCells({
+  fob,
+  tariff,
+  tariffRate,
+  logistics,
+  landed,
+  ddp,
+  useDdp,
+  landedOpen,
+  ddpOpen,
+  landedTip,
+  ddpTip,
+}: {
+  fob: number | null;
+  tariff: number;
+  tariffRate: number;
+  logistics: Modes;
+  landed: Modes;
+  ddp: MaybeModes | null;
+  /** Which basis won; null on the Today row, where nothing competes. */
+  useDdp: boolean | null;
+  landedOpen: boolean;
+  ddpOpen: boolean;
+  landedTip?: React.ReactNode;
+  ddpTip?: React.ReactNode;
+}) {
+  const q = useDdp === true ? " bs-muted" : useDdp === false ? " bs-used" : "";
+  const d = useDdp === false ? " bs-muted" : useDdp === true ? " bs-used" : "";
+  const money = (v: number | null | undefined) => (v === null || v === undefined ? "—" : unitCost(v));
+  const withTip = (node: React.ReactNode, tip?: React.ReactNode) =>
+    tip ? <TipTarget tip={tip}>{node}</TipTarget> : node;
+
+  return (
+    <>
+      <td className="num bs-band-start">{money(fob)}</td>
+      {landedOpen ? (
+        <>
+          <td className="num bs-q bs-band-start">
+            {money(tariff)}
+            <span className="bs-vendor-meta">{percent(tariffRate)}</span>
+          </td>
+          <td className="num bs-q">{money(logistics.ocean)}</td>
+          <td className="num bs-q">{money(logistics.air)}</td>
+          <td className="num bs-q">{money(landed.ocean)}</td>
+          <td className="num bs-q">{money(landed.air)}</td>
+          <td className={`num bs-q${q}`}>{money(landed.blend)}</td>
+        </>
+      ) : (
+        <td className={`num bs-q bs-band-start${q}`}>{withTip(money(landed.blend), landedTip)}</td>
+      )}
+      {ddpOpen ? (
+        <>
+          <td className={`num bs-band-start${d}`}>{ddp ? money(ddp.ocean) : ""}</td>
+          <td className={`num${d}`}>{ddp ? money(ddp.air) : ""}</td>
+          <td className={`num${d}`}>{ddp ? money(ddp.blend) : ""}</td>
+        </>
+      ) : (
+        <td className={`num bs-band-start${d}`}>{ddp ? withTip(money(ddp.blend), ddpTip) : ""}</td>
+      )}
+    </>
   );
 }
 
@@ -522,8 +583,8 @@ function GroupRows({
   onOpen,
   onAllocate,
   openKey,
-  mode,
-  breakdown,
+  landedOpen,
+  ddpOpen,
 }: {
   group: BidGroup;
   rows: FlatRow[];
@@ -536,15 +597,17 @@ function GroupRows({
   onOpen: (row: FlatRow) => void;
   onAllocate: (group: BidGroup) => void;
   openKey: string | null;
-  mode: CostMode;
-  breakdown: boolean;
+  landedOpen: boolean;
+  ddpOpen: boolean;
 }) {
   const [details, setDetails] = React.useState(false);
-  const cols = breakdown ? 13 : 11;
+  const [showWaiting, setShowWaiting] = React.useState(false);
+  const cols = 3 + 1 + (landedOpen ? 6 : 1) + (ddpOpen ? 3 : 1) + 5;
   const bids = rows.filter((r) => r.hasBid).length;
   const awaiting = rows.filter((r) => r.hasBid && r.stage.awaitingReview).length;
-  const bests = rows.filter((r) => r.price).map((r) => bestIn(r.price!, mode).value);
-  const lowest = bests.length ? Math.min(...bests) : null;
+  const lowest = group.lowestBestCost;
+  const bestDelta =
+    lowest !== null && group.current.blend ? (lowest - group.current.blend) / group.current.blend : null;
   const inp = group.inputs;
   const dims =
     inp.lengthIn && inp.widthIn && inp.heightIn
@@ -553,9 +616,9 @@ function GroupRows({
 
   return (
     <>
-      {/* THE VARIANT HEADER (U1). Baseline and current landed lead; every
-          other input sits behind Details (Akshay, 9 Oct: not P0). */}
-      <tr className="bs-group">
+      {/* THE ACCORDION HEADER (Aravind, 8 Oct): identity and state, with
+          room to breathe; every cost lives in the Today row beneath. */}
+      <tr className={`bs-group${collapsed ? " is-collapsed" : ""}`}>
         <td colSpan={cols}>
           <div className="bs-group-in">
             <button
@@ -567,60 +630,40 @@ function GroupRows({
             >
               <Icon name={collapsed ? "chevron_right" : "chevron_down"} size="sm" />
             </button>
-            <span className="bs-group-id">
-              <span className="id">{group.styleNumber}</span>
-              <span className="bs-group-name">{group.name}</span>
+            <span className="bs-title">
+              <span className="bs-title-id">{group.styleNumber}</span>
+              <span className="bs-title-name">{group.name}</span>
               <span className="bs-group-var">{group.variationLabel}</span>
             </span>
-            <span className="bs-fact">
-              Baseline PCOGS <strong>{group.baselinePcogs ? unitCost(group.baselinePcogs) : "—"}</strong>
+            <span className="bs-group-meta">
+              {units(group.planUnits)} units / yr · {bids} bid{bids === 1 ? "" : "s"}
+              {awaiting ? (
+                <>
+                  {" · "}
+                  <strong className="bs-await">{awaiting} awaiting review</strong>
+                </>
+              ) : null}
+              {collapsed && lowest !== null ? (
+                <>
+                  {" · best "}
+                  <strong>{unitCost(lowest)}</strong> {signedPct(bestDelta)}
+                </>
+              ) : null}
             </span>
-            <span className="bs-fact">
-              Current landed{" "}
-              <TipTarget
-                tip={
-                  <CurrentTip
-                    c={group.current}
-                    pcogs={group.baselinePcogs}
-                    rate={inp.tariffRate}
-                    logistics={inp.logistics}
-                    iso={group.current.countryIso}
-                    mode={mode}
-                  />
-                }
-              >
-                <strong>{unitCost(group.current[mode])}</strong>
-              </TipTarget>
-              {group.current.countryIso ? <span className="bs-fact-meta"> at {group.current.countryIso}</span> : null}
-            </span>
-            {collapsed ? (
-              <span className="bs-fact">
-                {bids} bid{bids === 1 ? "" : "s"}
-                {lowest !== null ? ` · best ${unitCost(lowest)}` : ""}
-                {awaiting ? (
-                  <>
-                    {" · "}
-                    <strong className="bs-await">{awaiting} awaiting review</strong>
-                  </>
-                ) : null}
-              </span>
-            ) : null}
-            <button
-              type="button"
-              className="btn btn--ghost sm"
-              aria-expanded={details}
-              onClick={() => setDetails((v) => !v)}
-            >
-              Details
-              <Icon name={details ? "chevron_up" : "chevron_down"} size="sm" />
-            </button>
             <span className="bs-group-alloc">
+              <button
+                type="button"
+                className="btn btn--ghost sm"
+                aria-expanded={details}
+                onClick={() => setDetails((v) => !v)}
+              >
+                Inputs
+                <Icon name={details ? "chevron_up" : "chevron_down"} size="sm" />
+              </button>
               <Badge tone={group.allocated ? "success" : undefined}>
                 {group.allocated ? "Allocated" : `${Math.round(group.allocatedPct)}% allocated`}
               </Badge>
-              {/* P8 — allocation happens in ONE place, opened on this size,
-                  now as an overlay so Bid summary stays underneath. */}
-              <button type="button" className="btn btn--ghost sm" onClick={() => onAllocate(group)}>
+              <button type="button" className="btn btn--secondary sm" onClick={() => onAllocate(group)}>
                 Allocate
               </button>
             </span>
@@ -632,22 +675,60 @@ function GroupRows({
         <tr className="bs-details">
           <td colSpan={cols}>
             <dl className="bs-dl">
-              <div><dt>Plan units</dt><dd>{units(group.planUnits)} / yr</dd></div>
               <div><dt>COO (incumbent)</dt><dd>{inp.countryIso ?? "—"}</dd></div>
               <div><dt>HTS</dt><dd className={inp.htsCode ? undefined : "bs-missing"}>{inp.htsCode ?? "Missing"}</dd></div>
               <div><dt>Dimensions</dt><dd className={dims ? undefined : "bs-missing"}>{dims ?? "Missing"}</dd></div>
               <div><dt>Weight</dt><dd className={inp.weightG ? undefined : "bs-missing"}>{inp.weightG ? `${units(inp.weightG)} g` : "Missing"}</dd></div>
-              <div><dt>Tariff{inp.countryIso ? ` · ${inp.countryIso}` : ""}</dt><dd>{inp.htsCode ? percent(inp.tariffRate) : "—"}</dd></div>
-              <div><dt>Logistics / unit</dt><dd>Ocean {unitCost(inp.logistics.ocean)} · Air {unitCost(inp.logistics.air)}</dd></div>
               <div><dt>Freight split</dt><dd><SplitEditor group={group} onSaved={onChanged} /></dd></div>
             </dl>
           </td>
         </tr>
       ) : null}
 
-      {collapsed
-        ? null
-        : rows.map((r) => (
+      {collapsed ? null : (
+        <>
+          {/* TODAY — the variant's own costs, in the bids' columns, so every
+              bid below reads straight against what we pay now. */}
+          <tr className="bs-today">
+            <td className="bs-sticky bs-c-check" />
+            <td className="bs-sticky bs-c-product">
+              <span className="bs-today-l">Today</span>
+            </td>
+            <td className="bs-sticky bs-c-vendor">
+              <span className="bs-vendor">Current cost</span>
+              <span className="bs-vendor-meta">
+                {inp.countryIso ?? "—"} · Baseline PCOGS
+              </span>
+            </td>
+            <CostCells
+              fob={group.baselinePcogs || null}
+              tariff={group.baselinePcogs * inp.tariffRate}
+              tariffRate={inp.tariffRate}
+              logistics={inp.logistics}
+              landed={group.current}
+              ddp={null}
+              useDdp={null}
+              landedOpen={landedOpen}
+              ddpOpen={ddpOpen}
+              landedTip={
+                <CurrentTip
+                  c={group.current}
+                  pcogs={group.baselinePcogs}
+                  rate={inp.tariffRate}
+                  logistics={inp.logistics}
+                  iso={group.current.countryIso}
+                />
+              }
+            />
+            <td className="num bs-band-start">
+              {unitCost(group.current.blend)}
+              <span className="bs-basis">Current</span>
+            </td>
+            <td colSpan={4} />
+          </tr>
+          {/* Vendors with no bid fold into one line, so the bids are what
+              the eye lands on; "Show" lists them as rows again. */}
+          {rows.filter((r) => r.hasBid || showWaiting).map((r) => (
             <BidRowView
               key={r.rowKey}
               row={r}
@@ -656,10 +737,30 @@ function GroupRows({
               onCheck={() => onSelect(r.rowKey)}
               onOpen={() => onOpen(r)}
               isOpen={openKey === r.rowKey}
-              mode={mode}
-              breakdown={breakdown}
+              landedOpen={landedOpen}
+              ddpOpen={ddpOpen}
             />
           ))}
+          {rows.some((r) => !r.hasBid) ? (
+            <tr className="bs-waiting">
+              <td colSpan={cols}>
+                <div className="bs-waiting-in">
+                  <span>
+                    <strong>{showWaiting ? "Showing" : rows.filter((r) => !r.hasBid).length}</strong>{" "}
+                    {showWaiting ? "vendors with no bid above" : `with no bid yet: ${rows
+                      .filter((r) => !r.hasBid)
+                      .map((r) => `${r.vendor.name}${r.vendor.countryIso ? ` (${r.vendor.countryIso})` : ""}`)
+                      .join(", ")}`}
+                  </span>
+                  <button type="button" className="btn btn--ghost sm" onClick={() => setShowWaiting((v) => !v)}>
+                    {showWaiting ? "Hide" : "Show as rows"}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ) : null}
+        </>
+      )}
     </>
   );
 }
@@ -671,8 +772,8 @@ function BidRowView({
   onCheck,
   onOpen,
   isOpen,
-  mode,
-  breakdown,
+  landedOpen,
+  ddpOpen,
 }: {
   row: FlatRow;
   lowest: number | null;
@@ -680,23 +781,21 @@ function BidRowView({
   onCheck: () => void;
   onOpen: () => void;
   isOpen: boolean;
-  mode: CostMode;
-  breakdown: boolean;
+  landedOpen: boolean;
+  ddpOpen: boolean;
 }) {
   const p = row.price;
   const stageTone = STAGE_TONE[row.stage.status] ?? "info";
-  const best = p ? bestIn(p, mode) : null;
-  const isLowest = best !== null && lowest !== null && Math.abs(best.value - lowest) < 1e-9;
-  const cur = p ? p.current[mode] : 0;
-  const delta = p && cur ? (best!.value - cur) / cur : null;
-  const ddp = p?.ddp?.[mode] ?? null;
+  const useDdp = p?.basis === "DDP_BLEND";
+  const isLowest = p !== null && lowest !== null && Math.abs(p.bestCost - lowest) < 1e-9;
   const iso = row.vendor.countryIso;
   const otherCoo = iso !== null && row.group.current.countryIso !== null && iso !== row.group.current.countryIso;
   const typeLabel = row.vendor.type === "NEW" ? "New" : row.vendor.type === "INCUMBENT" ? "Incumbent" : "Existing";
+  const priceCols = 1 + (landedOpen ? 6 : 1) + (ddpOpen ? 3 : 1) + 3;
 
   return (
     <tr
-      className={`bs-row${row.hasBid ? "" : " is-nobid"}${isOpen ? " is-open" : ""}`}
+      className={`bs-row${row.hasBid ? "" : " is-nobid"}${isOpen ? " is-open" : ""}${isLowest ? " is-lowest" : ""}`}
       onClick={onOpen}
       tabIndex={0}
       role="button"
@@ -712,7 +811,7 @@ function BidRowView({
       <td className="bs-sticky bs-c-check" onClick={(e) => e.stopPropagation()}>
         <Checkbox checked={checked} onChange={onCheck} aria-label={`Select ${row.vendor.name}`} />
       </td>
-      {/* PRODUCT on every row (Akshay, 5 Oct). */}
+      {/* STYLE on every row (Akshay, 5 Oct). */}
       <td className="bs-sticky bs-c-product">
         <span className="id">{row.group.styleNumber}</span>
         <span className="bs-vendor-meta">{row.group.variationLabel}</span>
@@ -722,35 +821,25 @@ function BidRowView({
         <span className="bs-vendor-meta">{iso ?? "—"} · {typeLabel}</span>
       </td>
 
-      {p && best ? (
+      {p ? (
         <>
-          <td className="num">{unitCost(p.fob)}</td>
-          {breakdown ? (
-            <>
-              <td className="num bs-sum">
-                {unitCost(p.tariff)}
-                <span className="bs-vendor-meta">{percent(p.tariffRate)}</span>
-              </td>
-              <td className="num bs-sum">
-                {unitCost(p.logistics[mode])}
-                <span className="bs-vendor-meta">{mode === "blend" ? `air ${row.group.split.airPct}%` : MODE_LABEL[mode].toLowerCase()}</span>
-              </td>
-            </>
-          ) : null}
-          <td className={`num${breakdown ? " bs-sum bs-sum-end" : ""} ${best.ddp ? "bs-muted" : "bs-used"}`}>
-            <TipTarget tip={<LandedTip p={p} mode={mode} airPct={row.group.split.airPct} />}>
-              {unitCost(p.quincePaid[mode])}
-            </TipTarget>
-          </td>
-          <td className={`num ${best.ddp ? "bs-used" : "bs-muted"}`}>
-            {ddp === null ? "—" : (
-              <TipTarget tip={<DdpTip p={p} mode={mode} />}>{unitCost(ddp)}</TipTarget>
-            )}
-          </td>
-          <td className="num">
-            {unitCost(best.value)}
-            <span className="bs-basis">{best.ddp ? "DDP" : "Landed"}</span>
-            <BasisMark lowest={isLowest} overridden={mode === "blend" && p.overridden} />
+          <CostCells
+            fob={p.fob}
+            tariff={p.tariff}
+            tariffRate={p.tariffRate}
+            logistics={p.logistics}
+            landed={p.quincePaid}
+            ddp={p.ddp}
+            useDdp={useDdp}
+            landedOpen={landedOpen}
+            ddpOpen={ddpOpen}
+            landedTip={<LandedTip p={p} airPct={row.group.split.airPct} />}
+            ddpTip={<DdpTip p={p} />}
+          />
+          <td className="num bs-band-start">
+            <strong>{unitCost(p.bestCost)}</strong>
+            <span className="bs-basis">{useDdp ? "DDP" : "Landed"}</span>
+            <BasisMark lowest={isLowest} overridden={p.overridden} />
           </td>
           <td className="num">
             <TipTarget
@@ -761,20 +850,19 @@ function BidRowView({
                   rate={p.tariffRate}
                   logistics={p.logistics}
                   iso={p.current.countryIso}
-                  mode={mode}
                 />
               }
             >
-              {signedPct(delta)}
+              {signedPct(p.deltaPct)}
             </TipTarget>
-            {otherCoo ? <span className="bs-vendor-meta">vs current at {iso}</span> : null}
+            {otherCoo ? <span className="bs-vendor-meta">vs today at {iso}</span> : null}
           </td>
           <td className="num">
             <span className={p.annualSavings < 0 ? "aw-neg" : undefined}>{moneyCompact(p.annualSavings)}</span>
           </td>
         </>
       ) : (
-        <td colSpan={breakdown ? 8 : 6} className="bs-nobid-cell">
+        <td colSpan={priceCols} className="bs-nobid-cell">
           {row.notIssued
             ? "Not issued yet — the RFP is still a draft"
             : row.cannotBid
@@ -801,14 +889,14 @@ function BidRowView({
   );
 }
 
-/* ── hover cards ─────────────────────────────────────────────────────────── */
+/* ── hover cards (shown where a band is folded to its blend) ─────────────── */
 
-function ModeGrid({ values, mode }: { values: { ocean: number | null; air: number | null; blend: number | null }; mode: CostMode }) {
+function ModeGrid({ values }: { values: MaybeModes }) {
   return (
     <div className="bs-tip-modes">
-      {(["ocean", "air", "blend"] as CostMode[]).map((m) => (
-        <div key={m} className={m === mode ? "on" : undefined}>
-          <span>{MODE_LABEL[m]}</span>
+      {(["ocean", "air", "blend"] as const).map((m) => (
+        <div key={m} className={m === "blend" ? "on" : undefined}>
+          <span>{m === "blend" ? "Blend" : m === "air" ? "Air" : "Ocean"}</span>
           <strong>{values[m] === null ? "—" : unitCost(values[m])}</strong>
         </div>
       ))}
@@ -830,28 +918,28 @@ function Equation({ lines }: { lines: [string, string, number][] }) {
   );
 }
 
-function LandedTip({ p, mode, airPct }: { p: Price; mode: CostMode; airPct: number }) {
+function LandedTip({ p, airPct }: { p: Price; airPct: number }) {
   return (
     <>
       <div className="bs-tip-h">Landed, Quince-paid</div>
-      <ModeGrid values={p.quincePaid} mode={mode} />
+      <ModeGrid values={p.quincePaid} />
       <Equation
         lines={[
           ["", "FOB", p.fob ?? 0],
           ["+", `Tariff ${percent(p.tariffRate)}`, p.tariff],
-          ["+", `Logistics, ${mode === "blend" ? `${airPct}% air` : mode}`, p.logistics[mode]],
-          ["=", `Landed, ${MODE_LABEL[mode].toLowerCase()}`, p.quincePaid[mode]],
+          ["+", `Logistics, ${airPct}% air`, p.logistics.blend],
+          ["=", "Landed, blend", p.quincePaid.blend],
         ]}
       />
     </>
   );
 }
 
-function DdpTip({ p, mode }: { p: Price; mode: CostMode }) {
+function DdpTip({ p }: { p: Price }) {
   return (
     <>
       <div className="bs-tip-h">DDP, vendor-delivered</div>
-      <ModeGrid values={p.ddp ?? { ocean: null, air: null, blend: null }} mode={mode} />
+      <ModeGrid values={p.ddp ?? { ocean: null, air: null, blend: null }} />
       <div className="bs-tip-note">FOB plus the vendor&rsquo;s highest destination fee. Tariff and freight are in the vendor&rsquo;s price.</div>
     </>
   );
@@ -863,26 +951,24 @@ function CurrentTip({
   rate,
   logistics,
   iso,
-  mode,
 }: {
   c: Modes;
   pcogs: number;
   rate: number;
   logistics: Modes;
   iso: string | null;
-  mode: CostMode;
 }) {
   return (
     <>
       <div className="bs-tip-h">Current landed{iso ? ` at ${iso}` : ""}</div>
-      <ModeGrid values={c} mode={mode} />
+      <ModeGrid values={c} />
       {pcogs ? (
         <Equation
           lines={[
             ["", "Baseline PCOGS", pcogs],
             ["+", `Tariff ${percent(rate)}`, pcogs * rate],
-            ["+", `Logistics, ${mode}`, logistics[mode]],
-            ["=", `Current, ${MODE_LABEL[mode].toLowerCase()}`, c[mode]],
+            ["+", "Logistics, blend", logistics.blend],
+            ["=", "Current, blend", c.blend],
           ]}
         />
       ) : (
