@@ -360,7 +360,7 @@ function VendorDrawerInner({
             <dl className="fact-list">
               <dt>Bids submitted</dt>
               <dd>{vendor.quoteCount}</dd>
-              <dt>Products awarded</dt>
+              <dt>Styles awarded</dt>
               <dd>{vendor.awardCount}</dd>
               <dt>Savings delivered</dt>
               <dd>

@@ -165,7 +165,7 @@ export default function VariationSetupPage() {
         text:
           body.updated === 0
             ? `Already at ${GRAIN_LABEL[grain].toLowerCase()} level.`
-            : `${body.updated} product${body.updated === 1 ? "" : "s"} now bid at ${GRAIN_LABEL[grain].toLowerCase()} level.`,
+            : `${body.updated} style${body.updated === 1 ? "" : "s"} now bid at ${GRAIN_LABEL[grain].toLowerCase()} level.`,
       });
       setPicked(new Set());
       reload();
@@ -191,7 +191,7 @@ export default function VariationSetupPage() {
       <div className="bar bar--info vs-rule">
         <Icon name="info_circle" />
         <div>
-          Which axis each product is bid, compared and awarded on. A grain can
+          Which axis each style is bid, compared and awarded on. A grain can
           move <strong>down</strong> the ladder — style to colour or size, then to
           colour × size — but never back up or sideways, because a bid already
           placed against a colour has nowhere to go.
@@ -224,7 +224,7 @@ export default function VariationSetupPage() {
           setDepartment(next.department?.[0] ?? "");
           setSubDepartment(next.subDepartment?.[0] ?? "");
         }}
-        meta={`${rows.length} product${rows.length === 1 ? "" : "s"}${picked.size ? ` · ${picked.size} selected` : ""}`}
+        meta={`${rows.length} style${rows.length === 1 ? "" : "s"}${picked.size ? ` · ${picked.size} selected` : ""}`}
       />
 
           {note ? (
@@ -259,10 +259,10 @@ export default function VariationSetupPage() {
                       checked={allShownPicked}
                       mixed={picked.size > 0 && !allShownPicked}
                       onChange={toggleAllShown}
-                      aria-label="Select all shown products"
+                      aria-label="Select all shown styles"
                     />
                   </th>
-                  <th>Product</th>
+                  <th>Style</th>
                   <th>Category</th>
                   <th>Bid grain</th>
                   <th className="num">Bid groups</th>
@@ -282,7 +282,7 @@ export default function VariationSetupPage() {
                   <tr>
                     <td colSpan={6}>
                       <div className="empty compact">
-                        <div className="ttl">Could not load products</div>
+                        <div className="ttl">Could not load styles</div>
                         <div className="desc">{String(error)}</div>
                       </div>
                     </td>
@@ -291,9 +291,9 @@ export default function VariationSetupPage() {
                   <tr>
                     <td colSpan={6}>
                       <div className="empty compact">
-                        <div className="ttl">No product matches</div>
+                        <div className="ttl">No style matches</div>
                         <div className="desc">
-                          Widen the filters to see more products.
+                          Widen the filters to see more styles.
                         </div>
                       </div>
                     </td>
@@ -376,7 +376,7 @@ export default function VariationSetupPage() {
       {picked.size > 0 ? (
         <div className="sel-bar fixed">
           <span className="cnt">
-            {picked.size} product{picked.size === 1 ? "" : "s"} selected
+            {picked.size} style{picked.size === 1 ? "" : "s"} selected
             {/* Selection survives filtering, so say when some of it is
                 off-screen — otherwise the offered grains look wrong for
                 what the user can actually see. */}
@@ -392,7 +392,7 @@ export default function VariationSetupPage() {
               Clear selection
             </button>
             {bulkAllowed.length === 0 ? (
-              <span className="vs-leaf">No grain is legal for every selected product</span>
+              <span className="vs-leaf">No grain is legal for every selected style</span>
             ) : (
               <SelBarMenu
                 label="Set grain"

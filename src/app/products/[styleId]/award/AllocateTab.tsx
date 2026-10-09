@@ -249,7 +249,7 @@ function RegionPanel({
     <aside className="pd-region">
       <div className="pd-region-h">
         <strong>Region split</strong>
-        <span className="pd-region-sub">this product only</span>
+        <span className="pd-region-sub">this style only</span>
       </div>
 
       <div className="pd-region-rows">

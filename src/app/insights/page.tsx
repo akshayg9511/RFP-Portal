@@ -307,7 +307,7 @@ function InsightsInner() {
               {
                 label: "Savings",
                 value: money(cov.savings),
-                sub: `${percent(cov.savingsPercent)} on decided products`,
+                sub: `${percent(cov.savingsPercent)} on decided styles`,
               },
               {
                 label: filtered ? "Flags in this slice" : "Guardrails outside range",
@@ -324,7 +324,7 @@ function InsightsInner() {
               <span className="k">
                 Wave progress
                 <Tooltip
-                  tip="Share of biddable baseline value now decided — products with at least one submitted bid. Measured baseline against baseline, so it only rises as you decide more. Savings is shown separately above."
+                  tip="Share of biddable baseline value now decided — styles with at least one submitted bid. Measured baseline against baseline, so it only rises as you decide more. Savings is shown separately above."
                   placement="bottom"
                 >
                   <Icon name="info_circle" size="sm" />
@@ -334,7 +334,7 @@ function InsightsInner() {
               <dl className="wi-breakdown">
                 <dt>Decided</dt>
                 <dd>
-                  {cov.stylesDecided} of {cov.stylesInPlay} products ·{" "}
+                  {cov.stylesDecided} of {cov.stylesInPlay} styles ·{" "}
                   {compactUnits(cov.unitsDecided)} of {compactUnits(cov.unitsInPlay)} units
                 </dd>
                 <dt className="sub">
@@ -342,7 +342,7 @@ function InsightsInner() {
                   Still to decide
                 </dt>
                 <dd className="sub">
-                  {cov.stylesInPlay - cov.stylesDecided} products ·{" "}
+                  {cov.stylesInPlay - cov.stylesDecided} styles ·{" "}
                   {money(cov.baselineInPlay - cov.baselineDecided)}
                 </dd>
                 <dt className="sub">
@@ -350,7 +350,7 @@ function InsightsInner() {
                   Not yet out to bid
                 </dt>
                 <dd className="sub">
-                  {cov.notInPlayStyles} products · {money(cov.notInPlayValue)}
+                  {cov.notInPlayStyles} styles · {money(cov.notInPlayValue)}
                 </dd>
               </dl>
             </div>
@@ -371,7 +371,7 @@ function InsightsInner() {
                 ) : null}
                 {cov.notInPlayStyles > 0 ? (
                   <>
-                    Products not yet out to bid are excluded — they are not a
+                    Styles not yet out to bid are excluded — they are not a
                     decision anyone is withholding.
                   </>
                 ) : null}
@@ -507,7 +507,7 @@ function InsightsInner() {
             <div className="card">
               <div className="card-h">
                 <div className="ttl">
-                  Products taking a cost increase
+                  Styles taking a cost increase
                   {data.stylesTakingIncrease.length > 0
                     ? ` (${data.stylesTakingIncrease.length})`
                     : ""}
@@ -567,7 +567,7 @@ function InsightsInner() {
                     </span>
                     <div className="ttl">No increases</div>
                     <div className="desc">
-                      Every allocated product is at or below its baseline.
+                      Every allocated style is at or below its baseline.
                     </div>
                   </div>
                 )}
@@ -585,7 +585,7 @@ function InsightsInner() {
                   : ""}
               </div>
               <div className="sub">
-                Per vendor in total across every product, against their cap ·
+                Per vendor in total across every style, against their cap ·
                 click a vendor for what they won
               </div>
             </div>
@@ -727,7 +727,7 @@ function InsightsInner() {
                             <div className="desc">
                               {data.guardrails.vendors.length
                                 ? "Try a different search."
-                                : "Allocate a product and its vendors appear here."}
+                                : "Allocate a style and its vendors appear here."}
                             </div>
                           </div>
                         </td>
@@ -848,7 +848,7 @@ function VendorAwardsInner({
 
           <div className="pg-baseline">
             <div className="pg-baseline-item">
-              <span className="k">Products won</span>
+              <span className="k">Styles won</span>
               <span className="v">{data?.totals.products ?? 0}</span>
             </div>
             <div className="pg-baseline-item">
@@ -877,7 +877,7 @@ function VendorAwardsInner({
                 </span>
                 <div className="ttl">Nothing awarded yet</div>
                 <div className="desc">
-                  They have bid but no product has been allocated to them.
+                  They have bid but no style has been allocated to them.
                 </div>
               </div>
             ) : null}

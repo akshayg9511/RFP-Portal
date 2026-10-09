@@ -203,7 +203,7 @@ function RfpsList() {
             <strong>
               {createdIds.size} draft RFP{createdIds.size === 1 ? "" : "s"} created.
             </strong>{" "}
-            The products use different quotation templates, so each became its own
+            The styles use different quotation templates, so each became its own
             RFP. Open each one to add vendors and issue it.
             {notice ? <div className="rl-created-note">{notice}</div> : null}
           </div>
@@ -290,7 +290,7 @@ function RfpsList() {
             <tr>
               <SortTh sortKey="name" sort={sort} onSort={setSort}>RFP</SortTh>
               <SortTh sortKey="status" sort={sort} onSort={setSort}>Status</SortTh>
-              <SortTh sortKey="products" sort={sort} onSort={setSort} num>Products</SortTh>
+              <SortTh sortKey="products" sort={sort} onSort={setSort} num>Styles</SortTh>
               <SortTh sortKey="vendors" sort={sort} onSort={setSort} num>Vendors</SortTh>
               <SortTh sortKey="bids" sort={sort} onSort={setSort} num>Bids</SortTh>
               <SortTh sortKey="lowest" sort={sort} onSort={setSort} num>Lowest vs baseline</SortTh>
@@ -410,7 +410,7 @@ function RfpsList() {
             </span>
             <div className="ttl">No RFPs yet</div>
             <div className="desc">
-              Select products from a style set, and they become one RFP per
+              Select styles from a style set, and they become one RFP per
               quotation template.
             </div>
             <div className="acts">

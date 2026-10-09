@@ -28,7 +28,7 @@ export default function StyleSetsPage() {
           <div className="grow">
             <h1 className="ttl">Style sets</h1>
             <p className="page-sub">
-              Curated groups of products a wave bids on. Pick a set to see its
+              Curated groups of styles a wave bids on. Pick a set to see its
               styles.
             </p>
           </div>
@@ -55,7 +55,7 @@ export default function StyleSetsPage() {
               </span>
               <div className="ttl">No style sets yet</div>
               <div className="desc">
-                Style sets group the products a wave will bid on. Run the seed
+                Style sets group the styles a wave will bid on. Run the seed
                 to load them.
               </div>
             </div>

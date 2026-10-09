@@ -222,7 +222,7 @@ export default function NewRfpPage() {
               </span>
               <div className="ttl">Nothing selected</div>
               <div className="desc">
-                Choose the products to bid on, then come back here. The
+                Choose the styles to bid on, then come back here. The
                 selection splits into one RFP per quotation template.
               </div>
               <div className="acts">
@@ -294,7 +294,7 @@ export default function NewRfpPage() {
             <div className="card-b">
               <div className="split-headline">
                 <span className="v">{preview.totalStyles}</span>
-                <span className="k">products</span>
+                <span className="k">styles</span>
                 <Icon name="arrow_right" />
                 <span className="v">{preview.rfpCount}</span>
                 <span className="k">
@@ -303,8 +303,8 @@ export default function NewRfpPage() {
               </div>
               <p style={{ color: "var(--color-neutral-foreground-muted-enabled)", marginBlockStart: "var(--space-sm)" }}>
                 {preview.rfpCount > 1
-                  ? "These products use different quotation templates, so they become separate RFPs. Each vendor sees only the products in their RFP."
-                  : "All of these products share one quotation template."}
+                  ? "These styles use different quotation templates, so they become separate RFPs. Each vendor sees only the styles in their RFP."
+                  : "All of these styles share one quotation template."}
               </p>
             </div>
           </div>
@@ -314,7 +314,7 @@ export default function NewRfpPage() {
               <Icon name="alert_triangle" />
               <div>
                 <strong>
-                  {preview.unresolved.length} product
+                  {preview.unresolved.length} style
                   {preview.unresolved.length === 1 ? "" : "s"} have no template.
                 </strong>{" "}
                 They will be left out:{" "}

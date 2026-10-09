@@ -178,7 +178,7 @@ export default function ProductCatalogPage() {
       <div className="page-hd">
         <div className="row">
           <div className="grow">
-            <h1 className="ttl">Product catalog</h1>
+            <h1 className="ttl">Style catalog</h1>
           </div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function ProductCatalogPage() {
       {/* Flat, equal cards across the width (Aravind, C3). */}
       <SummaryStrip
         items={[
-          { label: "Products", value: units(data?.total ?? 0) },
+          { label: "Styles", value: units(data?.total ?? 0) },
           { label: "Revenue shown", value: money(rows.reduce((t, r) => t + r.revenue, 0)) },
         ]}
       />
@@ -301,7 +301,7 @@ export default function ProductCatalogPage() {
                     the point, and with 10,000 products selecting all of them
                     would never be meant. */}
                 <Checkbox
-                  aria-label="Select all shown products"
+                  aria-label="Select all shown styles"
                   checked={allVisibleSelected}
                   mixed={selection.count > 0 && !allVisibleSelected}
                   onChange={() => {
@@ -315,7 +315,7 @@ export default function ProductCatalogPage() {
                   }}
                 />
               </th>
-              <SortTh sortKey="styleNumber" sort={sort} onSort={setSort}>Product</SortTh>
+              <SortTh sortKey="styleNumber" sort={sort} onSort={setSort}>Style</SortTh>
               <th>Category</th>
               <th>Bid grain</th>
               <SortTh sortKey="units" sort={sort} onSort={setSort} num>Plan units</SortTh>
@@ -342,7 +342,7 @@ export default function ProductCatalogPage() {
                     <span className="glyph">
                       <Icon name="search" size="lg" />
                     </span>
-                    <div className="ttl">No products match</div>
+                    <div className="ttl">No styles match</div>
                     <div className="desc">
                       {filtered
                         ? "Try a wider filter, or clear them."

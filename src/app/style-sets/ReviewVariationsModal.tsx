@@ -229,7 +229,7 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
                         </span>
                         <span className="trail">
                           {atStyleLevel
-                            ? "Whole product"
+                            ? "Whole style"
                             : isRemoved
                               ? "Not included"
                               : `${kept} of ${groups.length}`}
@@ -240,7 +240,7 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
                     {isOpen ? (
                       <div className="acc-b">
                         {atStyleLevel ? (
-                          <p className="rv-whole">Bid at product level — nothing to choose.</p>
+                          <p className="rv-whole">Bid at style level — nothing to choose.</p>
                         ) : (
                           <div className="rv-vars">
                             {groups.map((g) => (
@@ -270,7 +270,7 @@ function ReviewVariationsForm({ onClose }: { onClose: () => void }) {
             on the right (Aravind, C9). */}
         <div className="modal-f spread">
           <span className="note">
-            {included.length} product{included.length === 1 ? "" : "s"}
+            {included.length} style{included.length === 1 ? "" : "s"}
             {skuTotal ? ` · ${skuTotal} SKUs` : ""}
           </span>
           <button className="btn btn--secondary" onClick={onClose}>

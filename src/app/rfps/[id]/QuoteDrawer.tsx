@@ -144,7 +144,7 @@ function DrawerContent({
           </span>
           <div className="ttl">No bid yet</div>
           <div className="desc">
-            {vendorName} has not submitted for this product. You can still
+            {vendorName} has not submitted for this style. You can still
             message them from Comments.
           </div>
         </div>
@@ -165,7 +165,7 @@ function DrawerContent({
           </div>
 
           <div className="section">
-            <div className="hd">Product</div>
+            <div className="hd">Style</div>
             <dl className="fact-list">
               <Row k="Style" v={data.style.styleNumber} />
               <Row k="Material" v={data.style.material ?? "—"} />

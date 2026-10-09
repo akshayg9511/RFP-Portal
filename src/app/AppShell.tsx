@@ -20,7 +20,7 @@ const MAIN: Dest[] = [
   // The catalogue comes FIRST because it is the funnel's mouth: 10,000
   // products, narrowed by revenue and attribute, grouped into style sets, then
   // sent out as RFPs. Nav order is workflow order.
-  { href: "/products", label: "Product catalog", icon: "sku" },
+  { href: "/products", label: "Style catalog", icon: "sku" },
   { href: "/style-sets", label: "Style sets", icon: "bedding" },
   { href: "/rfps", label: "RFPs", icon: "invoice" },
   { href: "/vendors", label: "Vendors", icon: "users" },

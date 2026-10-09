@@ -68,7 +68,7 @@ export function ProductsSummary({
           </button>
         ) : null}
       </div>
-      <ul className="rd-plist" tabIndex={0} aria-label="Products">
+      <ul className="rd-plist" tabIndex={0} aria-label="Styles">
         {rows.map((s) => {
           const quoting = invitations.filter((i) => i.styleIds.includes(s.id)).length;
           const bids = invitations.filter((i) =>
@@ -97,7 +97,7 @@ export function ProductsSummary({
                       </span>
                     ))
                   ) : (
-                    <span className="rd-chip">Whole product</span>
+                    <span className="rd-chip">Whole style</span>
                   )}
                 </span>
               </span>
@@ -124,7 +124,7 @@ export function ProductsSummary({
           );
         })}
         {rows.length === 0 ? (
-          <li className="rd-pempty">No products match “{query}”.</li>
+          <li className="rd-pempty">No styles match “{query}”.</li>
         ) : null}
       </ul>
     </section>

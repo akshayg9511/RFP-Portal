@@ -70,11 +70,11 @@ export function AddProductsDrawer({
         body: JSON.stringify({ styleIds: [...picked] }),
       });
       const b = await r.json();
-      if (!r.ok) throw new Error(b?.message ?? "Could not add products");
+      if (!r.ok) throw new Error(b?.message ?? "Could not add styles");
       onAdded(b);
       close();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add products");
+      setError(e instanceof Error ? e.message : "Could not add styles");
     } finally {
       setBusy(false);
     }
@@ -84,8 +84,8 @@ export function AddProductsDrawer({
     <SideDrawer
       open={open}
       onClose={close}
-      title="Add products"
-      sub="Products that use this RFP's quotation template"
+      title="Add styles"
+      sub="Styles that use this RFP's quotation template"
       footer={
         <>
           <button type="button" className="btn btn--secondary" onClick={close}>
@@ -100,8 +100,8 @@ export function AddProductsDrawer({
             {busy
               ? "Adding…"
               : picked.size
-                ? `Add ${picked.size} product${picked.size === 1 ? "" : "s"}`
-                : "Add products"}
+                ? `Add ${picked.size} style${picked.size === 1 ? "" : "s"}`
+                : "Add styles"}
           </button>
         </>
       }
@@ -158,7 +158,7 @@ export function AddProductsDrawer({
           );
         })}
         {!catalog.loading && rows.length === 0 ? (
-          <li className="rd-pempty">No products match.</li>
+          <li className="rd-pempty">No styles match.</li>
         ) : null}
       </ul>
     </SideDrawer>

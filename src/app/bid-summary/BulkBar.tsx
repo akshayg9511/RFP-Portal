@@ -97,7 +97,7 @@ export function BulkBar({
         <span className="cnt">
           {rows.length} bid{rows.length === 1 ? "" : "s"}
           {pairs.length !== rows.length
-            ? ` · ${pairs.length} vendor × product${pairs.length === 1 ? "" : "s"}`
+            ? ` · ${pairs.length} vendor × style${pairs.length === 1 ? "" : "s"}`
             : ""}
         </span>
         {/* Reworked selection bar (Aravind, C29): Clear selection, then ONE

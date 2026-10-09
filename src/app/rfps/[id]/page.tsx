@@ -93,13 +93,13 @@ function nominationMessage(body: {
   if (held.length) {
     const rfps = [...new Set(held.map((h) => h.rfpName))];
     parts.push(
-      `${held.length} product assignment${held.length === 1 ? "" : "s"} held back — already being quoted in ${rfps.map((r) => `"${r}"`).join(", ")}.`,
+      `${held.length} style assignment${held.length === 1 ? "" : "s"} held back — already being quoted in ${rfps.map((r) => `"${r}"`).join(", ")}.`,
     );
   }
 
   for (const b of body.fullyBlocked ?? []) {
     parts.push(
-      `${b.vendorName} could not be added: every product is already in "${b.rfpName}".`,
+      `${b.vendorName} could not be added: every style is already in "${b.rfpName}".`,
     );
   }
 
@@ -411,7 +411,7 @@ export default function RfpDetailPage() {
         method: "DELETE",
       });
       const b = await r.json();
-      if (!r.ok) throw new Error(b?.message ?? "Could not remove that product");
+      if (!r.ok) throw new Error(b?.message ?? "Could not remove that style");
       // Unsaved nomination edits may still hold it; drop it from them too.
       setAdded((prev) => {
         const next = new Map<string, Set<string>>();
@@ -421,7 +421,7 @@ export default function RfpDetailPage() {
         return next;
       });
       reload();
-      say("ok", "Product removed from this RFP.");
+      say("ok", "Style removed from this RFP.");
     } catch (e) {
       say("error", e instanceof Error ? e.message : String(e));
     }
@@ -537,7 +537,7 @@ export default function RfpDetailPage() {
                 <Badge tone={issued ? "success" : "warning"}>
                   {issued ? "Issued" : data.status === "DRAFT" ? "Draft" : data.status}
                 </Badge>{" "}
-                {data.templateName} · {data.styles.length} product
+                {data.templateName} · {data.styles.length} style
                 {data.styles.length === 1 ? "" : "s"}
                 {data.dueDate
                   ? ` · due ${new Date(data.dueDate).toLocaleDateString("en-GB", {
@@ -640,7 +640,7 @@ export default function RfpDetailPage() {
                 <span className="k">Bids in</span>
                 <span className="v">{bidCount}</span>
                 <span className="s">
-                  {withBids} of {data.styles.length} products
+                  {withBids} of {data.styles.length} styles
                 </span>
               </span>
 
@@ -657,7 +657,7 @@ export default function RfpDetailPage() {
                     {percent(lowestVsBaseline)}
                   </span>
                 )}
-                <span className="s">on products with bids</span>
+                <span className="s">on styles with bids</span>
               </span>
 
               <span className="rd-tile">
@@ -789,7 +789,7 @@ export default function RfpDetailPage() {
                   </span>
                   <div className="ttl">No vendors yet</div>
                   <div className="desc">
-                    Add the vendors who should quote these products.
+                    Add the vendors who should quote these styles.
                     {issued ? " They are issued to as soon as you add them." : ""}
                   </div>
                   <div className="acts">
@@ -865,7 +865,7 @@ export default function RfpDetailPage() {
         onAdded={({ added, skipped }) => {
           reload();
           const parts = [
-            `${added.length} product${added.length === 1 ? "" : "s"} added.`,
+            `${added.length} style${added.length === 1 ? "" : "s"} added.`,
             ...skipped.map((s) => `${s.styleNumber} not added: ${s.reason}.`),
           ];
           say(skipped.length ? "error" : "ok", parts.join(" "));

@@ -262,7 +262,7 @@ export function VendorsTab({
                   <span className="rd-meta">
                     <span className="id">{info!.vendorCode}</span>
                     {info!.cooRegion ? ` · ${info!.cooRegion}` : ""} ·{" "}
-                    {subset.size} product{subset.size === 1 ? "" : "s"}
+                    {subset.size} style{subset.size === 1 ? "" : "s"}
                   </span>
                   {/* §5.3 holds a product back when it is already quoted
                       elsewhere. Naming it is what makes "1 of 2" legible —
@@ -273,7 +273,7 @@ export function VendorsTab({
                         .map(
                           (sid) =>
                             styles.find((st) => st.id === sid)?.styleNumber ??
-                            "a product",
+                            "a style",
                         )
                         .join(", ")}{" "}
                       already quoted in another RFP
@@ -295,7 +295,7 @@ export function VendorsTab({
                      rendered on separate lines. On a draft the denominator is
                      the choice being made, so it stays — but as a sentence. */
                   <span className="rd-count">
-                    {subset.size} of {styles.length} product
+                    {subset.size} of {styles.length} style
                     {styles.length === 1 ? "" : "s"}
                   </span>
                 )}
@@ -400,7 +400,7 @@ export function VendorsTab({
                                 aria-label={`${style.name} for ${info!.name}`}
                               />
                             ) : null}
-                            <span className="rd-vrow-label">Whole product</span>
+                            <span className="rd-vrow-label">Whole style</span>
                             <span className="rd-vrow-value">
                               {inSubset && quote?.status === "SUBMITTED" ? (
                                 <button

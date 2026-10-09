@@ -314,8 +314,8 @@ function AwardPageInner() {
           <span className="ctx-what">
             Showing{" "}
             {params.get("cooRegion")
-              ? `${params.get("cooRegion")} products`
-              : `products matching "${params.get("q")}"`}
+              ? `${params.get("cooRegion")} styles`
+              : `styles matching "${params.get("q")}"`}
             {params.get("reason") ? ` · ${params.get("reason")}` : ""}
           </span>
           <button
@@ -358,7 +358,7 @@ function AwardPageInner() {
           the rest in the More filters panel (6 groups). */}
       <FilterBar
           sticky
-        search={{ value: query, onChange: setQuery, placeholder: "Search products" }}
+        search={{ value: query, onChange: setQuery, placeholder: "Search styles" }}
         facet={{
           label: "status",
           placeholder: "Select status",
@@ -387,7 +387,7 @@ function AwardPageInner() {
           put("vendor", next.vendor?.[0]);
           router.replace(q.toString() ? `/award?${q}` : "/award", { scroll: false });
         }}
-        meta={`${rows.length} product${rows.length === 1 ? "" : "s"}`}
+        meta={`${rows.length} style${rows.length === 1 ? "" : "s"}`}
       />
 
       <div className="data-grid-surface sticky-head">
@@ -402,7 +402,7 @@ function AwardPageInner() {
             </colgroup>
             <thead>
               <tr>
-                <th>Product</th>
+                <th>Style</th>
                 <th className="num">Bids</th>
                 <th className="num">Best cost</th>
                 <th className="num">Savings potential</th>
@@ -428,11 +428,11 @@ function AwardPageInner() {
                       <span className="glyph">
                         <Icon name="search" size="lg" />
                       </span>
-                      <div className="ttl">No products match</div>
+                      <div className="ttl">No styles match</div>
                       <div className="desc">
                         {data?.length
                           ? "Try a different filter or search."
-                          : "Once vendors submit bids, their products appear here."}
+                          : "Once vendors submit bids, their styles appear here."}
                       </div>
                       {anyFilter ? (
                         <div className="acts">

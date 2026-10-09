@@ -85,7 +85,7 @@ export function RfpGroup({
 
           <dl className="rfp-group-stats">
             <div>
-              <dt>Products</dt>
+              <dt>Styles</dt>
               <dd>{units(group.styleCount)}</dd>
             </div>
             <div>
@@ -145,7 +145,7 @@ export function RfpGroup({
         </div>
 
         <div>
-          <div className="data-grid-surface rfp-scroll" tabIndex={0} aria-label="Products">
+          <div className="data-grid-surface rfp-scroll" tabIndex={0} aria-label="Styles">
             <table className="data-grid">
               <thead>
                 <tr>

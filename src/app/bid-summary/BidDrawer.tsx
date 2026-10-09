@@ -97,7 +97,7 @@ function DrawerBody({
       {siblings.length > 1 ? (
         <div className="section">
           <div className="hd">Variant</div>
-          <div className="bd-vars" role="tablist" aria-label="Variants of this product">
+          <div className="bd-vars" role="tablist" aria-label="Variants of this style">
             {siblings.map((s) => {
               const on = s.rowKey === row.rowKey;
               return (

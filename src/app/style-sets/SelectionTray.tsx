@@ -67,7 +67,7 @@ export function SelectionTray({
   return (
     <div className="sel-bar fixed">
       <span className="cnt">
-        {count} {count === 1 ? "product" : "products"}
+        {count} {count === 1 ? "style" : "styles"}
         {/* SKUs only when variations were actually picked — on a style-grained
             selection the figure would just restate the product count. */}
         {skuCount > 0 ? ` · ${skuCount} SKU${skuCount === 1 ? "" : "s"}` : ""}

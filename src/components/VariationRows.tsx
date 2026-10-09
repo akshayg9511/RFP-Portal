@@ -99,7 +99,7 @@ export function VariationRows({
     return (
       <tr className="pc-var-row">
         <td colSpan={columns}>
-          <span className="pc-var-none">No variations on this product.</span>
+          <span className="pc-var-none">No variations on this style.</span>
         </td>
       </tr>
     );

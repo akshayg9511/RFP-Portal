@@ -110,14 +110,14 @@ export function ProductsTab({
         <div className="control search sm aw-search">
           <Icon name="search" size="sm" />
           <input
-            placeholder="Search products"
-            aria-label="Search products in this RFP"
+            placeholder="Search styles"
+            aria-label="Search styles in this RFP"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <span className="aw-filter-count">
-          {rows.length} of {styles.length} products
+          {rows.length} of {styles.length} styles
         </span>
       </div>
 
@@ -126,7 +126,7 @@ export function ProductsTab({
           <span className="glyph">
             <Icon name="search" size="lg" />
           </span>
-          <div className="ttl">No product matches</div>
+          <div className="ttl">No style matches</div>
           <div className="desc">Try a different search.</div>
         </div>
       ) : null}
@@ -206,7 +206,7 @@ export function ProductsTab({
                   ) : null}
 
                   {bids.length === 0 && pending.length === 0 ? (
-                    <p className="rd-empty">No vendor has this product yet.</p>
+                    <p className="rd-empty">No vendor has this style yet.</p>
                   ) : null}
 
                   {bids.map(({ inv, fob }) => (
@@ -268,7 +268,7 @@ export function ProductsTab({
               0,
             ),
           )}{" "}
-          across {styles.length} products.
+          across {styles.length} styles.
         </p>
       ) : null}
     </>
