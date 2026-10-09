@@ -6941,3 +6941,138 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
   z-index: calc(var(--z-sticky) - 1);
   background: var(--color-neutral-background-table-head-enabled);
 }
+
+/* ══ 14 · LANDED BREAKDOWN (Bid summary) ══════════════════════════════════
+   One freight mode at a time, and the landed sum (FOB + tariff + logistics
+   = landed) opened for every product at once. Ocean / air / blend for any
+   cost cell sit in one hover card instead of six columns. */
+.bs-grid { min-inline-size: 1080px; }
+.bs-grid.is-breakdown { min-inline-size: 1260px; }
+.bs-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+  margin-block: var(--space-sm);
+}
+.bs-toolbar-note {
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+}
+.bs-toolbar-end { margin-inline-start: auto; }
+
+/* The sum reads as a sum: operators in the header, a seam around it. */
+.bs-op {
+  display: inline-block;
+  min-inline-size: 1.1em;
+  margin-inline-end: 2px;
+  color: var(--color-neutral-foreground-muted-enabled);
+  font-weight: var(--type-body-weight);
+}
+.bs-grid.is-breakdown th.bs-sum,
+.bs-grid.is-breakdown td.bs-sum { background: var(--color-neutral-background-muted-enabled); }
+.bs-grid.is-breakdown .bs-group > td { background: var(--color-neutral-background-muted-enabled); }
+.bs-grid.is-breakdown td.bs-sum-end,
+.bs-grid.is-breakdown th.bs-sum-end { box-shadow: inset -1px 0 0 var(--color-neutral-stroke-default-enabled); }
+.bs-th-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-control);
+}
+.bs-th-btn:hover { color: var(--color-brand-foreground-accent-enabled); }
+
+/* Which basis won, said in words beside Best. */
+.bs-basis {
+  display: block;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-neutral-foreground-muted-enabled);
+  font-weight: var(--type-body-weight);
+}
+.bs-fact-meta { color: var(--color-neutral-foreground-muted-enabled); }
+
+/* The variant's inputs, behind Details. */
+.bs-details > td {
+  background: var(--color-neutral-background-surface-enabled);
+  padding-block: var(--space-sm) var(--space-md);
+}
+.bs-dl {
+  position: sticky;
+  inset-inline-start: 0;
+  max-inline-size: calc(100cqi - 2 * var(--space-md));
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-xl);
+  margin: 0;
+  white-space: normal;
+}
+.bs-dl > div { display: grid; gap: 2px; }
+.bs-dl dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-neutral-foreground-muted-enabled);
+}
+.bs-dl dd { margin: 0; font-variant-numeric: tabular-nums; }
+.bs-missing { color: var(--color-status-warning-foreground-default-enabled); }
+
+/* Hover target + the one fixed card. */
+.bs-tip-t {
+  border-block-end: 1px dashed var(--color-neutral-stroke-default-enabled);
+  cursor: help;
+  border-radius: 2px;
+}
+.bs-tip-t:focus-visible { outline: 2px solid var(--color-brand-background-selection-enabled); outline-offset: 2px; }
+.bs-tip {
+  position: fixed;
+  z-index: var(--z-popover);
+  transform: translateX(-100%);
+  inline-size: 280px;
+  max-inline-size: calc(100vw - 32px);
+  padding: var(--space-md);
+  display: grid;
+  gap: var(--space-sm);
+  background: var(--color-neutral-background-surface-raised-enabled);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
+  border-radius: var(--radius-control);
+  box-shadow: var(--elevation-overlay);
+  font-size: var(--type-caption-size);
+  pointer-events: none;
+  white-space: normal;
+}
+.bs-tip.is-above { transform: translate(-100%, -100%); }
+.bs-tip-h { font-weight: var(--type-emphasis-weight); font-size: var(--type-body-sm-size); }
+.bs-tip-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2xs);
+}
+.bs-tip-modes > div {
+  display: grid;
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
+  border-radius: var(--radius-control);
+}
+.bs-tip-modes > div.on { border-color: var(--color-neutral-foreground-default-enabled); }
+.bs-tip-modes span { color: var(--color-neutral-foreground-muted-enabled); }
+.bs-tip-modes strong { font-variant-numeric: tabular-nums; }
+.bs-tip-eq { display: grid; gap: 2px; }
+.bs-tip-eq > div {
+  display: grid;
+  grid-template-columns: 1.2em 1fr auto;
+  gap: var(--space-xs);
+  font-variant-numeric: tabular-nums;
+}
+.bs-tip-eq .op { color: var(--color-neutral-foreground-muted-enabled); }
+.bs-tip-eq .v { text-align: end; }
+.bs-tip-eq > div.tot {
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
+  padding-block-start: var(--space-2xs);
+  font-weight: var(--type-emphasis-weight);
+}
+.bs-tip-note { color: var(--color-neutral-foreground-muted-enabled); }

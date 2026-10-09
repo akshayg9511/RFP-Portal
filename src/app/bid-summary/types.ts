@@ -2,6 +2,10 @@
 
 export type Basis = "QUINCE_BLEND" | "DDP_BLEND";
 
+/** One cost in each freight mode. Blend uses the variant's air/ocean split. */
+export type Modes = { ocean: number; air: number; blend: number };
+export type CostMode = keyof Modes;
+
 export type BidRow = {
   invitationId: string;
   quoteId: string | null;
@@ -27,6 +31,12 @@ export type BidRow = {
   };
   price: {
     fob: number | null;
+    /** Tariff at the vendor's COO, as a fraction, and in $ on this FOB. */
+    tariffRate: number;
+    tariff: number;
+    logistics: Modes;
+    /** Current landed priced at this vendor's COO. */
+    current: Modes & { countryIso: string | null };
     quincePaid: { ocean: number; air: number; blend: number };
     ddp: { ocean: number | null; air: number | null; blend: number } | null;
     basis: Basis;
@@ -55,6 +65,19 @@ export type BidGroup = {
   variationLabel: string;
   planUnits: number;
   currentLanded: number;
+  baselinePcogs: number;
+  /** Current landed at the incumbent's COO — the variant row's headline. */
+  current: Modes & { countryIso: string | null };
+  inputs: {
+    htsCode: string | null;
+    lengthIn: number | null;
+    widthIn: number | null;
+    heightIn: number | null;
+    weightG: number | null;
+    countryIso: string | null;
+    tariffRate: number;
+    logistics: Modes;
+  };
   split: { airPct: number; set: boolean };
   allocatedPct: number;
   allocated: boolean;

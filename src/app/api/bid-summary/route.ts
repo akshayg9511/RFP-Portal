@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { handle, num, numOr } from "@/lib/api";
-import { resolveBestCost } from "@/lib/bestCost";
+import { resolveBestCost, resolveLogistics, resolveTariff, type RateBook } from "@/lib/bestCost";
+import { blended, type Blend } from "@/domain/cost";
 import { loadRateBook } from "@/lib/rateBook";
 import {
   awardGroups,
@@ -50,7 +51,10 @@ export function GET() {
         variations: VARIATION_SELECT,
         freightSplits: FREIGHT_SPLIT_SELECT,
         images: { where: { isHero: true }, take: 1, select: { url: true } },
-        currentSuppliers: { where: { variationId: null }, select: { vendorId: true } },
+        currentSuppliers: {
+          where: { variationId: null },
+          select: { vendorId: true, vendor: { select: { countryIso: true } } },
+        },
         invitationStyles: {
           where: { invitation: { rfp: { status: { in: ["DRAFT", "ISSUED"] } } } },
           select: {
@@ -128,6 +132,14 @@ export function GET() {
               ? resolveBestCost(quote, style, inv.vendor, rates, group.size, group.blend)
               : null;
             const award = awardsHere.find((a) => a.vendorId === inv.vendor.id);
+            /**
+             * The landed sum, made visible (14 — landed breakdown). Current
+             * landed is priced at THIS vendor's COO (Akshay, 9 Oct): the same
+             * equation on Baseline PCOGS, so "vs current" compares like with
+             * like for that country.
+             */
+            const parts = costParts(rates, style, inv.vendor.countryIso, group.size, group.blend);
+            const current = currentAt(parts, group.baselineFob, group.baselineLanded, group.blend);
             const lead = quote?.productionLeadTime ?? null;
 
             return {
@@ -157,6 +169,10 @@ export function GET() {
               price: cost
                 ? {
                     fob: num(quote!.fob),
+                    tariffRate: parts.tariffRate,
+                    tariff: numOr(quote!.fob) * parts.tariffRate,
+                    logistics: parts.logistics,
+                    current: { ...current, countryIso: inv.vendor.countryIso },
                     quincePaid: {
                       ocean: cost.landedOcean,
                       air: cost.landedAir,
@@ -176,15 +192,15 @@ export function GET() {
                     overridden: cost.overridden,
                     bestCost: cost.bestCost,
                     /** Against the variant's CURRENT landed cost (P2). */
-                    deltaPct: group.baselineLanded
-                      ? (cost.bestCost - group.baselineLanded) / group.baselineLanded
+                    deltaPct: current.blend
+                      ? (cost.bestCost - current.blend) / current.blend
                       : null,
                     /**
                      * Annual, IF this vendor took the whole variant. Never
                      * summed across one variant's vendors — that would count
                      * the same volume once per bidder (P9).
                      */
-                    annualSavings: group.planUnits * (group.baselineLanded - cost.bestCost),
+                    annualSavings: group.planUnits * (current.blend - cost.bestCost),
                   }
                 : null,
               terms: quote
@@ -209,6 +225,10 @@ export function GET() {
 
         const priced = rows.filter((r) => r.price);
         const lowest = priced.length ? Math.min(...priced.map((r) => r.price!.bestCost)) : null;
+        // The headline "current" on the variant row: at the incumbent's COO.
+        const incumbentIso =
+          style.currentSuppliers.find((c) => c.vendor.countryIso)?.vendor.countryIso ?? null;
+        const incParts = costParts(rates, style, incumbentIso, group.size, group.blend);
         const allocatedPct = awardsHere.reduce((t, a) => t + numOr(a.awardPct), 0);
 
         return {
@@ -227,6 +247,21 @@ export function GET() {
           planUnits: group.planUnits,
           /** The variant's current landed cost, from the current baseline (P2). */
           currentLanded: group.baselineLanded,
+          baselinePcogs: group.baselineFob,
+          current: {
+            ...currentAt(incParts, group.baselineFob, group.baselineLanded, group.blend),
+            countryIso: incumbentIso,
+          },
+          inputs: {
+            htsCode: style.htsCode,
+            lengthIn: num(style.lengthIn),
+            widthIn: num(style.widthIn),
+            heightIn: num(style.heightIn),
+            weightG: num(style.weightG),
+            countryIso: incumbentIso,
+            tariffRate: incParts.tariffRate,
+            logistics: incParts.logistics,
+          },
           split: { airPct: Math.round(group.blend.air * 100), set: group.splitSet },
           allocatedPct,
           allocated: Math.abs(allocatedPct - 100) < 0.005,
@@ -267,4 +302,38 @@ function deliveredDdp(
   const f = num(fob);
   const present = fees.map((x) => num(x)).filter((x): x is number => x !== null);
   return f === null || !present.length ? null : f + Math.max(...present);
+}
+
+type Modes = { ocean: number; air: number; blend: number };
+
+/** Tariff rate and per-unit logistics for one product x variant x COO. */
+function costParts(
+  rates: RateBook,
+  style: { styleNumber: string; htsCode: string | null },
+  countryIso: string | null,
+  size: string | null,
+  blend: Blend,
+): { tariffRate: number; logistics: Modes } {
+  const l = resolveLogistics(rates, style.styleNumber, countryIso, size);
+  return {
+    tariffRate: resolveTariff(rates, style.htsCode, countryIso),
+    logistics: { ocean: l.ocean, air: l.air, blend: blended(l.air, l.ocean, blend) },
+  };
+}
+
+/**
+ * Current landed = Baseline PCOGS x (1 + tariff) + logistics, per mode. Falls
+ * back to the imported landed baseline when there is no PCOGS to build from.
+ */
+function currentAt(
+  parts: { tariffRate: number; logistics: Modes },
+  pcogs: number,
+  fallback: number,
+  blend: Blend,
+): Modes {
+  if (!pcogs) return { ocean: fallback, air: fallback, blend: fallback };
+  const base = pcogs * (1 + parts.tariffRate);
+  const ocean = base + parts.logistics.ocean;
+  const air = base + parts.logistics.air;
+  return { ocean, air, blend: blended(air, ocean, blend) };
 }
