@@ -301,7 +301,7 @@ export default function NewRfpPage() {
                   {preview.rfpCount === 1 ? "RFP" : "RFPs"}
                 </span>
               </div>
-              <p style={{ color: "var(--color-fg-muted)", marginBlockStart: "var(--space-sm)" }}>
+              <p style={{ color: "var(--color-neutral-foreground-muted-enabled)", marginBlockStart: "var(--space-sm)" }}>
                 {preview.rfpCount > 1
                   ? "These products use different quotation templates, so they become separate RFPs. Each vendor sees only the products in their RFP."
                   : "All of these products share one quotation template."}

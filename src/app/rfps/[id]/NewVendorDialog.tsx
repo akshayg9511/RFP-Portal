@@ -93,7 +93,7 @@ export function NewVendorDialog({
         </div>
 
         <div className="modal-b">
-          <p style={{ color: "var(--color-fg-muted)", marginBlockStart: 0 }}>
+          <p style={{ color: "var(--color-neutral-foreground-muted-enabled)", marginBlockStart: 0 }}>
             They get a temporary code until they are onboarded through the
             vendor portal.
           </p>

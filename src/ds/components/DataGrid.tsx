@@ -165,7 +165,7 @@ export function Td({ field, num, when, idCell, className, children, ...rest }: T
 }
 
 export interface TrProps extends React.HTMLAttributes<HTMLTableRowElement> {
-  /** A selected row — `--color-bg-selected-accent`, held under the pointer
+  /** A selected row — `--color-brand-background-selected-accent-enabled`, held under the pointer
    *  (`.on:hover` keeps the selected fill, so a hovered selected row does not
    *  read as deselecting). The grid is the one selection surface that takes the
    *  brand tint; the role falls back to the neutral fill on a brand with no

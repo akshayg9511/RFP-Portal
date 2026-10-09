@@ -10,7 +10,7 @@ export function ProcuraMark({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" role="img" aria-label="Procura">
       {/* The stem. */}
-      <rect x="7" y="7" width="7" height="18" rx="1.5" fill="var(--ref-cobalt-400)" />
+      <rect x="7" y="7" width="7" height="18" rx="1.5" fill="var(--ref-color-cobalt-400)" />
       {/* The bowl. A logo ink, not a UI colour — no token carries it. */}
       <circle cx="21" cy="12.5" r="5.5" fill="#F7A072" />
     </svg>

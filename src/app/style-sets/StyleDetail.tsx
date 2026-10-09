@@ -209,7 +209,7 @@ export function StyleDetail({
               </table>
               </div>
             ) : (
-              <p style={{ color: "var(--color-fg-muted)" }}>
+              <p style={{ color: "var(--color-neutral-foreground-muted-enabled)" }}>
                 No current supplier recorded for this style.
               </p>
             )}
@@ -273,7 +273,7 @@ export function StyleDetail({
                 accident. */}
             <p
               style={{
-                color: "var(--color-fg-muted)",
+                color: "var(--color-neutral-foreground-muted-enabled)",
                 fontSize: "var(--type-caption-size)",
                 marginBlockStart: "var(--space-sm)",
               }}

@@ -65,12 +65,12 @@
    on a feedback tint — and this system has a lot of tinted regions: banners,
    drop zones, selected rows, table headers.
    So the REGION carries the correction, not each of its parts: any container with
-   a fill re-points --color-fg-muted at --color-fg-on-fill, one rung darker, and
+   a fill re-points --color-neutral-foreground-muted-enabled at --color-neutral-foreground-on-neutral-fill-enabled, one rung darker, and
    every muted descendant inside it follows without a local override. Add a
    selector here when a new filled surface arrives; do not patch the child.
    Both support tones are re-pointed, not just muted: muted and subtle resolve to
    the same rung now, so correcting one and leaving the other means every
-   --color-fg-subtle consumer on a fill (.drop .hint, .time-zone, .cap) keeps the
+   --color-neutral-foreground-subtle-enabled consumer on a fill (.drop .hint, .time-zone, .cap) keeps the
    failing pairing.
 
    `.card.interactive.is-active` IS IN THIS LIST, and it is not a product state. The
@@ -92,8 +92,8 @@
 :is(.bar, .drop, .select-opt.on, .time-opt.on, .nav-item.on, .data-grid thead,
     .card.interactive:active, .card.interactive.is-active,
     .card.interactive[aria-disabled="true"]) {
-  --color-fg-muted: var(--color-fg-on-fill);
-  --color-fg-subtle: var(--color-fg-on-fill);
+  --color-neutral-foreground-muted-enabled: var(--color-neutral-foreground-on-neutral-fill-enabled);
+  --color-neutral-foreground-subtle-enabled: var(--color-neutral-foreground-on-neutral-fill-enabled);
 }
 
 /* ── BUTTON ── */
@@ -206,25 +206,25 @@
    danger icon button still carries its fill, because there the fill IS the
    variant. Danger-secondary keeps its own danger hover so the tone survives. */
 .btn.icon:where(.btn--secondary, .btn--secondary.neutral, .btn--danger-secondary) { background: transparent; border-color: transparent; }
-.btn.icon:where(.btn--secondary, .btn--secondary.neutral):hover { background: var(--color-bg-hover); }
-.btn.icon:where(.btn--secondary, .btn--secondary.neutral):active { background: var(--color-bg-active); }
-.btn--primary { background: var(--color-action-primary-rest); color: var(--color-action-primary-fg); }
-.btn--primary:hover { background: var(--color-action-primary-hover); }
-.btn--primary:active { background: var(--color-action-primary-active); }
-.btn--secondary { background: var(--color-action-secondary-rest); color: var(--color-action-secondary-fg); border-color: var(--color-action-secondary-border); }
-.btn--secondary:hover { background: var(--color-action-secondary-hover); }
-.btn--secondary:active { background: var(--color-action-secondary-active); }
+.btn.icon:where(.btn--secondary, .btn--secondary.neutral):hover { background: var(--color-neutral-background-interaction-hovered); }
+.btn.icon:where(.btn--secondary, .btn--secondary.neutral):active { background: var(--color-neutral-background-interaction-pressed); }
+.btn--primary { background: var(--color-brand-background-primary-enabled); color: var(--color-neutral-foreground-on-brand-primary-enabled); }
+.btn--primary:hover { background: var(--color-brand-background-primary-hovered); }
+.btn--primary:active { background: var(--color-brand-background-primary-pressed); }
+.btn--secondary { background: var(--color-brand-background-secondary-enabled); color: var(--color-brand-foreground-secondary-enabled); border-color: var(--color-brand-stroke-secondary-enabled); }
+.btn--secondary:hover { background: var(--color-brand-background-secondary-hovered); }
+.btn--secondary:active { background: var(--color-brand-background-secondary-pressed); }
 /* .neutral — secondary with the hue taken out, for the way out of a
    destructive decision. Same box, same weight in the hierarchy. */
-.btn--secondary.neutral { color: var(--color-action-secondary-neutral-fg); border-color: var(--color-action-secondary-neutral-border); }
-/* Ghost is the quietest BOX, not the quietest label. At --color-fg-muted it read
+.btn--secondary.neutral { color: var(--color-neutral-foreground-secondary-neutral-enabled); border-color: var(--color-neutral-stroke-secondary-neutral-enabled); }
+/* Ghost is the quietest BOX, not the quietest label. At --color-neutral-foreground-muted-enabled it read
    as disabled — muted is the tone the system gives text nobody has to act on, and
    a row of ghost buttons in a toolbar looked switched off. What makes a ghost quiet
    is having no fill and no edge until the pointer arrives; its label is a label,
    at the same colour and the same weight as every other button's. */
-.btn--ghost { background: transparent; color: var(--color-fg-default); }
-.btn--ghost:hover { background: var(--color-bg-hover); }
-.btn--ghost:active { background: var(--color-bg-active); }
+.btn--ghost { background: transparent; color: var(--color-neutral-foreground-default-enabled); }
+.btn--ghost:hover { background: var(--color-neutral-background-interaction-hovered); }
+.btn--ghost:active { background: var(--color-neutral-background-interaction-pressed); }
 /* Optical alignment. A filled or outlined button is aligned by its EDGE, so its
    padding is invisible to the eye. A ghost button has no edge — the only thing
    the eye can line up is the label, and the padding pushes it inward, so a ghost
@@ -249,12 +249,12 @@
    primary → secondary → ghost, all three real buttons. See the LINK block
    below for navigation, and Button usage for Cancel's weight — secondary beside a
    lone primary, ghost only as the third action in a row. */
-.btn--danger { background: var(--color-action-danger-rest); color: var(--color-action-danger-fg); }
-.btn--danger:hover { background: var(--color-action-danger-hover); }
-.btn--danger:active { background: var(--color-action-danger-active); }
-.btn--danger-secondary { background: var(--color-action-danger-secondary-rest); color: var(--color-action-danger-secondary-fg); border-color: var(--color-action-danger-secondary-border); }
-.btn--danger-secondary:hover { background: var(--color-action-danger-secondary-hover); }
-.btn--danger-secondary:active { background: var(--color-action-danger-secondary-active); }
+.btn--danger { background: var(--color-status-danger-background-primary-enabled); color: var(--color-neutral-foreground-on-danger-primary-enabled); }
+.btn--danger:hover { background: var(--color-status-danger-background-primary-hovered); }
+.btn--danger:active { background: var(--color-status-danger-background-primary-pressed); }
+.btn--danger-secondary { background: var(--color-status-danger-background-secondary-enabled); color: var(--color-status-danger-foreground-secondary-enabled); border-color: var(--color-status-danger-stroke-secondary-enabled); }
+.btn--danger-secondary:hover { background: var(--color-status-danger-background-secondary-hovered); }
+.btn--danger-secondary:active { background: var(--color-status-danger-background-secondary-pressed); }
 .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Destructive controls focus in their own hue, and any control that already
    carries a red edge drops it while focused, so the ring is the only red line.
@@ -279,8 +279,41 @@
    [aria-disabled="true"] joins the selector because that is now the documented
    mechanism — see the note on .btn.loading below. */
 .btn[disabled]:not(.loading), .btn.disabled:not(.loading), .btn[aria-disabled="true"]:not(.loading) {
-  background: var(--color-bg-disabled); color: var(--color-fg-disabled);
-  border-color: var(--color-border-muted); cursor: not-allowed;
+  background: var(--color-neutral-background-disabled-rest); color: var(--color-neutral-foreground-disabled-rest);
+  border-color: var(--color-neutral-stroke-muted-enabled); cursor: not-allowed;
+}
+/* THE OUTLINE VARIANTS KEEP THEIR OUTLINE. The rule above paints one disabled
+   FILL across every variant, which made a disabled secondary pixel-identical to
+   a disabled primary — two controls that differ at rest only by a fill, rendered
+   into the same grey box. Secondary, its neutral twin and danger-secondary all
+   rest on `transparent` and carry their identity in the EDGE, so filling them in
+   costs the variant the one thing that identified it; the user reading the row
+   can no longer tell which action was the safe one.
+   Foreground and border still come from the rule above: the edge drops to the
+   muted grey rather than keeping accent or danger, because an outline that keeps
+   its brand hue still looks actionable. The colour shift from accent/danger to
+   grey is what carries "disabled" once the fill is gone.
+   GHOST IS DELIBERATELY NOT HERE. The contract requires it to stay visibly
+   distinct when disabled — it is already the quietest box, so a ghost that only
+   dims reads the same as a ghost at rest. The fill is the only thing separating
+   those two states, which is the opposite of the problem this rule fixes. */
+.btn:is(.btn--secondary, .btn--danger-secondary):is([disabled], .disabled, [aria-disabled="true"]):not(.loading) {
+  background: transparent;
+}
+/* GHOST DROPS BOTH THE FILL AND THE EDGE. The contract used to require the
+   opposite — a ghost that only dims was held to read the same as a ghost at
+   rest, so it took the disabled fill to stay distinct. Reversed on the system
+   owner's call at v486: the fill gave a ghost a BOX it never has at rest, so a
+   disabled ghost was the only ghost in the system with a boundary, and it read
+   as a different component rather than as the same one unavailable. Ghost is
+   defined by having no surface; a state that hands it one is not the same
+   control. What separates disabled from rest is now the same thing that
+   separates it everywhere else — the label greys out.
+   The edge goes too, not just the fill: the rule above sets a muted border for
+   every variant, and leaving it would trade a grey box for a grey outline while
+   the complaint was the box. */
+.btn--ghost:is([disabled], .disabled, [aria-disabled="true"]):not(.loading) {
+  background: transparent; border-color: transparent;
 }
 /* Working: the label stays so the button keeps its width and the user keeps
    their place; the spinner replaces the leading glyph, and the variant keeps its
@@ -298,10 +331,10 @@
    above are earlier in the file, so this re-asserts each variant's RESTING fill
    rather than trying to out-specify them one by one. Keyboard activation is
    blocked by the handler, not here. */
-.btn--primary.loading:is(:hover, :active)           { background: var(--color-action-primary-rest); }
-.btn--secondary.loading:is(:hover, :active)         { background: var(--color-action-secondary-rest); }
-.btn--danger.loading:is(:hover, :active)            { background: var(--color-action-danger-rest); }
-.btn--danger-secondary.loading:is(:hover, :active)  { background: var(--color-action-danger-secondary-rest); }
+.btn--primary.loading:is(:hover, :active)           { background: var(--color-brand-background-primary-enabled); }
+.btn--secondary.loading:is(:hover, :active)         { background: var(--color-brand-background-secondary-enabled); }
+.btn--danger.loading:is(:hover, :active)            { background: var(--color-status-danger-background-primary-enabled); }
+.btn--danger-secondary.loading:is(:hover, :active)  { background: var(--color-status-danger-background-secondary-enabled); }
 .btn--ghost.loading:is(:hover, :active)             { background: transparent; }
 /* Full width — a single action owning its container (drawer footers, narrow
    forms, mobile). Never in a row beside another button. */
@@ -316,14 +349,14 @@
 /* The split chevron is an icon-only half, so it keeps its own tight padding
    rather than the optical trim above. */
 .btn-split .btn + .btn:has(> .ms:first-child:not(.trail)) { padding-inline: var(--space-sm); }
-.btn-split .btn + .btn { border-left: var(--border-width-default) solid var(--color-border-on-accent); padding: 0 var(--space-sm); }
+.btn-split .btn + .btn { border-left: var(--border-width-default) solid var(--color-neutral-stroke-on-brand-enabled); padding: 0 var(--space-sm); }
 
 /* ── LINK ── */
 /* Navigation, not action. A link takes the user somewhere; a button does
    something. That is the whole distinction, and it is why link is its own
    component rather than the bottom rung of the button ladder: it does not
    compete with primary/secondary/ghost, it sits on a different axis.
-   The underline is present at rest and is the ONLY affordance: --color-fg-link
+   The underline is present at rest and is the ONLY affordance: --color-neutral-foreground-link-enabled
    is neutral, so nothing but the line distinguishes a link from the text around
    it — which is also why the line never disappears on hover. Hover shifts the
    colour one neutral step off the body colour instead of thickening the rule: a heavier line nudges the
@@ -334,8 +367,8 @@
    brings the UA's own fill, border, padding and font with it, which painted a
    grey box behind the words on any inverse surface, so the class clears that
    chrome and inherits type from its context. */
-.lnk { background: none; border: 0; padding: 0; font: inherit; color: var(--color-fg-link); text-decoration: underline; text-decoration-thickness: var(--border-width-default); text-underline-offset: 3px; border-radius: var(--radius-inner); cursor: pointer; transition: color var(--motion-hover-duration) var(--motion-hover-easing); }
-.lnk:hover { color: var(--color-fg-link-hover); text-decoration-color: currentColor; }
+.lnk { background: none; border: 0; padding: 0; font: inherit; color: var(--color-neutral-foreground-link-enabled); text-decoration: underline; text-decoration-thickness: var(--border-width-default); text-underline-offset: 3px; border-radius: var(--radius-inner); cursor: pointer; transition: color var(--motion-hover-duration) var(--motion-hover-easing); }
+.lnk:hover { color: var(--color-neutral-foreground-link-hovered); text-decoration-color: currentColor; }
 .lnk:active { text-underline-offset: 2px; }
 .lnk:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Standalone: a link on its own line, below the thing it relates to — never
@@ -354,7 +387,7 @@
    of underlined body-colour links would out-shout the data. Breadcrumb does NOT
    use this: a crumb keeps its underline for hover, so it has its own .crumb
    part. */
-.lnk.quiet { color: var(--color-fg-muted); }
+.lnk.quiet { color: var(--color-neutral-foreground-muted-enabled); }
 /* Quiet inverts on purpose, and it is the only variant that can: hover moves a
    link one neutral step toward the other end of the pair. The base link rests at
    the body colour — the darkest neutral in light mode — so its only perceptible
@@ -363,10 +396,10 @@
    body colour instead. Both variants land on the pair's opposite value, which is
    why a quiet link at rest shares a colour with a hovered base link — quiet is
    only used in dense chrome where no base link sits beside it. */
-.lnk.quiet:hover { color: var(--color-fg-default); }
+.lnk.quiet:hover { color: var(--color-neutral-foreground-default-enabled); }
 /* ── ACTION: THE ONE LINK WHERE COLOUR CARRIES THE AFFORDANCE ──────────────
    And it can only be true because of the SCOPE. The base link is neutral with a
-   line, for the reason recorded at --color-fg-link: a page of accent-coloured
+   line, for the reason recorded at --color-neutral-foreground-link-enabled: a page of accent-coloured
    link text pulls the eye through prose that should read evenly, and the line is
    the only signal that survives greyscale. None of that applies in an ACTION
    SLOT — a field's label row, a data grid's action column — where the position
@@ -384,8 +417,8 @@
    on a state change. The explicit colour on :hover is not redundant: .lnk:hover
    is the same specificity and would otherwise pull an action to fg-link-hover,
    which is muted. */
-.lnk.action { color: var(--color-fg-accent); text-decoration: none; }
-.lnk.action:hover { color: var(--color-fg-accent); text-decoration: underline; }
+.lnk.action { color: var(--color-brand-foreground-accent-enabled); text-decoration: none; }
+.lnk.action:hover { color: var(--color-brand-foreground-accent-enabled); text-decoration: underline; }
 .lnk.action:focus-visible { text-decoration: underline; }
 
 /* ── CARD ── */
@@ -403,7 +436,7 @@
    transparent no-op shadow rather than none, so it stays list-composable. */
 .card {
   --card-elevation: var(--elevation-raised);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border: var(--border-width-default) solid transparent;
   border-radius: var(--radius-container); padding: var(--space-lg);
   box-shadow: var(--card-elevation);
@@ -427,13 +460,13 @@
 }
 /* Nested or embedded: nothing underneath to cast onto, so the border is the
    only edge it has and the ring rides alone. */
-.card.flat { --card-elevation: 0 0 transparent; border-color: var(--color-border-muted); }
+.card.flat { --card-elevation: 0 0 transparent; border-color: var(--color-neutral-stroke-muted-enabled); }
 /* .raised is the old opt-in and is now the default — kept so existing markup
    keeps working and reads the same. */
 .card.raised { --card-elevation: var(--elevation-raised); border-color: transparent; }
 .card.overlay { --card-elevation: var(--elevation-overlay); border-color: transparent; }
 @media print {
-  .card, .card.raised, .card.overlay { border-color: var(--color-border-muted); box-shadow: none; }
+  .card, .card.raised, .card.overlay { border-color: var(--color-neutral-stroke-muted-enabled); box-shadow: none; }
 }
 .card.interactive { position: relative; cursor: pointer; transition: box-shadow var(--motion-hover-duration) var(--motion-hover-easing), background var(--motion-hover-duration) var(--motion-hover-easing); }
 /* THE CARD IS THE TARGET, AND THE ONE CONTROL INSIDE IT IS HOW IT BECOMES ONE.
@@ -468,27 +501,78 @@
    everything else does. Press is one step darker in the same direction.
    The elevation is untouched either way, so the height never changes and the
    row beneath never reflows. */
-.card.interactive:hover  { background: var(--color-bg-hover); }
-.card.interactive:active { background: var(--color-bg-active); }
-/* Selection restores a visible edge even on an elevated card: an inset shadow
-   alone vanishes in greyscale, in print, and in forced-colors. */
-.card.interactive.on { box-shadow: var(--elevation-inset-selected), var(--card-elevation); border-color: var(--color-border-selected); }
+.card.interactive:hover  { background: var(--color-neutral-background-interaction-hovered); }
+.card.interactive:active { background: var(--color-neutral-background-interaction-pressed); }
+/* ONE RING, IN ONE COLOUR. This rule used to draw two: --elevation-inset-selected
+   is a 2px inset in --color-neutral-stroke-selected-surface-enabled (the darkest
+   neutral), and the border beside it took the accent — so a chosen card wore a
+   1px blue edge with a 2px near-black ring immediately inside it. Both were
+   deliberate in isolation and neither was reviewed against the other: the border
+   was added so the edge survives greyscale, print and forced-colors, where an
+   inset shadow does not, and the inset was the shared "selected SURFACE" ring
+   that .thumb.on also takes. Together they read as a doubled outline, and the
+   card was the only component in the system wearing both languages at once.
+
+   IT IS THE ACCENT THAT STAYS. A card is chosen the way a field is chosen, and
+   selection is the one state where the brand is the whole message; the neutral
+   ring's argument — that a picked card should not compete with the control
+   inside it — is an argument about HOVER competing with selection, and hover
+   already answers on a different channel here (a fill, never an edge).
+
+   THE 2px IS BUILT THE WAY A FOCUSED FIELD BUILDS ITS 2px, which is the idiom
+   this system already documents: the element keeps its own 1px BORDER and adds
+   a second accent pixel as a shadow, so the band reads 2px and no width ever
+   changes. Here the shadow is INSET rather than outside, because a card's ring
+   must not push into the gap between cards in a grid — and inset is also what
+   keeps selection from shifting a single pixel of layout. Border plus inset are
+   adjacent and concentric, so they compose into one continuous 2px edge.
+
+   The border is still what survives print and forced-colors, so the reason it
+   was introduced is intact — it is now simply the same colour as the ring it
+   sits against instead of a second, competing one.
+
+   .thumb.on is UNCHANGED and still takes the neutral surface ring. */
+.card.interactive.on { box-shadow: inset 0 0 0 var(--border-width-default) var(--color-brand-stroke-selection-enabled), var(--card-elevation); border-color: var(--color-brand-stroke-selection-enabled); }
 /* Focus rides on the card whether the card itself is the control (a link or
    button element) or it merely contains one — :has keeps the ring on the whole
    object, which is what the user is actually choosing. */
 .card.interactive:focus-visible,
 .card.interactive:has(:focus-visible) { outline: none; box-shadow: var(--focus-ring), var(--card-elevation); }
-/* An unavailable card drops its elevation entirely and takes the muted border
-   back, so it reads as flat and inert whatever it was before. */
-.card.interactive[aria-disabled="true"] { cursor: not-allowed; background: var(--color-bg-disabled); color: var(--color-fg-disabled); box-shadow: none; border-color: var(--color-border-muted); }
+/* AN UNAVAILABLE CARD KEEPS ITS ELEVATION, and this rule used to do the opposite.
+   It dropped the shadow and took a muted border back, on the argument that a
+   disabled object should read as flat and inert whatever it was before. That is a
+   defensible reading and it is not the one this system takes: elevation encodes
+   STACKING ORDER — where a surface sits relative to the page — and being
+   unavailable does not move it. A card that was an object on the page is still an
+   object on the page; it just cannot be used. Disabling is a change of state, and
+   in this system interaction and state never touch elevation (see the hover and
+   press rules above, which move the FILL and leave the height alone).
+
+   TONE CARRIES IT INSTEAD, which is the same answer every other disabled control
+   in the library gives: the disabled fill and the disabled ink. Nothing else has
+   ever needed to change its geometry to say unavailable.
+
+   DROPPING THE BORDER OVERRIDE IS PART OF THE SAME FIX rather than a separate
+   choice. The muted border was the replacement edge for the shadow this rule was
+   removing; restoring the shadow and keeping the border would put both on one
+   card, which this component's own `avoid` forbids — they answer the same
+   question and the object reads heavier than either alone. With both overrides
+   gone each elevation keeps the edge it already declares: .flat its muted
+   hairline and no shadow, .raised and .overlay their shadow and a transparent
+   border. One rule, three correct answers, none of them restated here.
+
+   THE HOVER AND PRESS PAIR STAYS, now naming --card-elevation rather than none.
+   It is redundant against the cascade and deliberately so: it is the line that
+   says interaction cannot introduce a lift on a card that is not interactive. */
+.card.interactive[aria-disabled="true"] { cursor: not-allowed; background: var(--color-neutral-background-disabled-rest); color: var(--color-neutral-foreground-disabled-rest); }
 .card.interactive[aria-disabled="true"]:hover,
-.card.interactive[aria-disabled="true"]:active { box-shadow: none; }
+.card.interactive[aria-disabled="true"]:active { box-shadow: var(--card-elevation); }
 /* Sections. A card that carries a header or a footer stops padding itself and
    hands padding to the parts, so the divider can run edge to edge — a hairline
    that stops short of the border reads as a mistake. */
 .card.split { padding: 0; }
-.card.split > .card-h { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg); border-bottom: var(--border-width-default) solid var(--color-border-muted); }
-.card.split > .card-h .ttl { font-size: var(--type-body-md-size); font-weight: var(--type-emphasis-weight); color: var(--color-fg-default); }
+.card.split > .card-h { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg); border-bottom: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); }
+.card.split > .card-h .ttl { font-size: var(--type-body-md-size); font-weight: var(--type-emphasis-weight); color: var(--color-neutral-foreground-default-enabled); }
 .card.split > .card-h .act { margin-left: auto; display: flex; align-items: center; gap: var(--space-xs); }
 .card.split > .card-b { padding: var(--space-lg); }
 /* ── SURFACE FOOTER ──
@@ -515,7 +599,7 @@
   display: flex; align-items: center; justify-content: flex-end;
   gap: var(--space-sm);
   padding: var(--surface-f-pad-y, var(--space-md)) var(--surface-f-pad-x, var(--space-lg));
-  border-top: var(--border-width-default) solid var(--color-border-muted);
+  border-top: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
 }
 /* Small surfaces: read in one glance, so padding is separation enough. */
 /* A hairline is only worth drawing where the surface has outgrown padding-alone
@@ -525,7 +609,7 @@
    (a composed query with a commit row, which is what More filters is). A drawer
    keeps it unconditionally — its body always scrolls. */
 .popover-f, .cal-f, .modal-f { border-top-color: transparent; }
-.modal-f.divided { border-top-color: var(--color-border-muted); }
+.modal-f.divided { border-top-color: var(--color-neutral-stroke-muted-enabled); }
 /* Actions that are not a commit read from the leading edge. */
 .modal-f.lead, .drawer-f.lead, .popover-f.lead, .card.split > .card-f, .cal-f { justify-content: flex-start; }
 /* EVERY TASK ACTION SITS AT THE TRAILING EDGE, ON EVERY SURFACE. The base rule
@@ -559,7 +643,7 @@
    rather than shrink the actions, which must never compress — a commit that has
    lost half its label is a commit nobody can read. */
 .drawer-f > .note, .popover-f > .note {
-  font-size: var(--type-body-sm-size); color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .drawer-f > .note .lnk, .popover-f > .note .lnk { font-size: inherit; }
@@ -568,9 +652,9 @@
 /* The key moves up with the body it sits beside. It is a LABEL for the figure
    under it, not a caption about it, and a label in this system is the reading
    size — the rung below made the one word explaining a 30px number the smallest
-   thing on the card. Tone still separates them: --color-fg-muted against the
+   thing on the card. Tone still separates them: --color-neutral-foreground-muted-enabled against the
    value's default ink. */
-.card .k { font-size: var(--type-body-md-size); color: var(--color-fg-muted); margin-bottom: var(--space-sm); }
+.card .k { font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); margin-bottom: var(--space-sm); }
 /* Proportional figures, not tabular. Tabular earns its place in a COLUMN of
    numbers the reader compares; a single metric on a card is compared with
    nothing, and locking the 1 to a zero's width gives it the wide base serif
@@ -582,6 +666,36 @@
    The escape hatch has to be declared at the specificity of the rule it is
    escaping, or the documentation describes something that does not happen. */
 .card .v.txt-num { font-variant-numeric: tabular-nums; }
+/* THE THIRD LINE, and it existed before it had a name. A metric card is label,
+   figure, and — often — one short line qualifying the figure: what it covers,
+   when it was measured, or what state it is in. Two stories already built that
+   line by hand, one with an inline margin on a badge wrapper and one with an
+   inline font-size and colour, which is the same "documentation by repetition"
+   the container's own font-size comment describes. Naming it is what stops the
+   third copy.
+
+   .sub IS ALREADY THE SYSTEM'S WORD for a supporting line under a primary one —
+   .select-opt .sub, .drawer-h .sub, and the .ttl / .sub / .meta trio a grid cell
+   marks its parts with. Reusing it means an author who has met one has met all
+   of them, and the rule stays element-agnostic so the line can be a <div>, a <p>
+   or a wrapper holding a .badge for a state.
+
+   SIZE CARRIES THE HIERARCHY, TONE DOES NOT. It takes the small rung against the
+   key's reading rung, and the SAME muted ink the key already uses: dropping to
+   subtle would have put the lightest text in the system under the heaviest, and
+   the pairing is measured against a raised surface rather than the page. The key
+   above and this line below therefore differ by size alone, which is the one
+   axis the value between them does not also move on.
+
+   IT TAKES THE CARD'S OWN RHYTHM, --space-sm, the same step the key already puts
+   between itself and the value. An earlier draft used --space-xs to group the
+   qualifier tightly with the figure it describes, which reads well enough on its
+   own but introduced a second vertical step into a component that had exactly
+   one — and the Figma Card is a uniform 8px vertical auto-layout, which cannot
+   express a per-child gap without restructuring all eighteen Plain variants.
+   A rung invented for one edge is not worth a structure the other implementation
+   has to fake, so both sides now step by --space-sm and agree natively. */
+.card .sub { font-size: var(--type-body-sm-size); line-height: var(--type-body-sm-line); color: var(--color-neutral-foreground-muted-enabled); margin-top: var(--space-sm); }
 
 /* ── BADGE ── */
 /* HORIZONTAL padding is brand-tunable via --badge-pad-x (spacious sets 12 against 8).
@@ -672,9 +786,34 @@
    The dismiss target follows the size it is in, so a small badge's is 20 on a
    pointer and 24 on touch. That is a bounded target inside its own pill, for the
    reason .badge button.x has always been on TOUCH_EXEMPT. */
+/* NO LEADING GLYPH ON A BADGE, and this component has now argued it both ways.
+   v488 added `.badge > .ms` at --size-icon-sm on the reasoning that the original
+   prohibition rested on arithmetic describing the wrong rung: "16px fills three
+   quarters of a 20px pill" is true of .badge.sm, and the rule had been applied
+   to the whole component. The default pill is 24, where 16 is 67% — the same
+   proportion a 16px glyph takes in a 24px container elsewhere.
+
+   THE PROPORTION WAS RIGHT AND THE RESULT WAS STILL WRONG. Measured on the
+   render: 16 in 24 leaves 4px of air above and below, and 16 in 20 leaves 2.
+   Every other 16-in-24 pairing in this system sits in a SQUARE container with
+   straight edges; a badge is a PILL, so the mark is closest to the boundary
+   exactly where the boundary curves away, and the glyph reads as oversized
+   however the percentage scores. A ratio is not a substitute for looking.
+
+   THERE IS NO SMALLER RUNG TO FALL BACK TO. 12px is a CLOSED list and QDS_LINT
+   errors on anything not on it. Membership is decided by measured ink at that
+   size, and the band the list covers ends at close (15.9% of its box); a status
+   glyph is far outside it — alert_circle is 24.1%, and the badge's own tone marks
+   are that kind of drawing. So the options were 16 or nothing, and 16 is what was
+   measured and rejected.
+
+   A BADGE IS A WORD, and the word is the whole component. Status that needs a
+   mark has .status-dot beside it, and a tone that needs explaining is a Banner
+   or a Toast — both of which pair hue with an icon AND a word, which is where
+   the never-colour-alone rule is actually satisfied. */
 .badge.sm { block-size: var(--size-badge-sm); }
 .badge.sm button.x::after { width: var(--size-badge-sm); height: var(--size-badge-sm); }
-/* ONE grey. There used to be two — .badge--neutral on --color-bg-muted with a
+/* ONE grey. There used to be two — .badge--neutral on --color-neutral-background-muted-enabled with a
    near-black label, and .badge--info on the feedback tint with a #606060 one —
    and side by side in a status column nobody could say which was which, because
    the difference was a fill one step apart and a text colour, not a meaning.
@@ -685,10 +824,10 @@
    where bg-muted was 1.04:1 and vanished) and the label is what gets read, at
    about 12.9:1 instead of 5:1. The tone's own fg still belongs to the Banner
    glyph and the status dot, which sit on it as a MARK rather than as text. */
-.badge--info { background: var(--color-feedback-info-bg); color: var(--color-fg-default); border-color: var(--color-feedback-info-edge); }
-.badge--success { background: var(--color-feedback-success-bg); color: var(--color-feedback-success-fg); border-color: var(--color-feedback-success-edge); }
-.badge--warning { background: var(--color-feedback-warning-bg); color: var(--color-feedback-warning-fg); border-color: var(--color-feedback-warning-edge); }
-.badge--danger { background: var(--color-feedback-danger-bg); color: var(--color-feedback-danger-fg); border-color: var(--color-feedback-danger-edge); }
+.badge--info { background: var(--color-status-info-background-subtle-enabled); color: var(--color-neutral-foreground-default-enabled); border-color: var(--color-status-info-stroke-edge-enabled); }
+.badge--success { background: var(--color-status-success-background-subtle-enabled); color: var(--color-status-success-foreground-default-enabled); border-color: var(--color-status-success-stroke-edge-enabled); }
+.badge--warning { background: var(--color-status-warning-background-subtle-enabled); color: var(--color-status-warning-foreground-default-enabled); border-color: var(--color-status-warning-stroke-edge-enabled); }
+.badge--danger { background: var(--color-status-danger-background-subtle-enabled); color: var(--color-status-danger-foreground-default-enabled); border-color: var(--color-status-danger-stroke-edge-enabled); }
 
 /* Accent — a brand moment. Not a status, not a category, and not a sixth tone
    to reach for when the others do not fit: the accent is the only badge in the
@@ -700,18 +839,40 @@
    fill as .btn--primary and .chip.on, because the achromatic accent and the
    emphasis surface are one neutral rung. Documented at the token, and the reason
    this tone wants a brand. */
-.badge--accent { background: var(--color-accent-tint-bg); color: var(--color-accent-tint-fg); }
+.badge--accent { background: var(--color-brand-background-tint-enabled); color: var(--color-brand-foreground-tint-enabled); }
 
 /* Categorical tones — KIND, not status. Six numbered slots at one lightness and
    chroma, hue the only variable, so a row of them reads as one family. No solid
    counterpart on purpose: solid means "find this one", and a category is not
    more important than the category beside it. */
-.badge--cat-1 { background: var(--color-cat-1-bg); color: var(--color-cat-1-fg); }
-.badge--cat-2 { background: var(--color-cat-2-bg); color: var(--color-cat-2-fg); }
-.badge--cat-3 { background: var(--color-cat-3-bg); color: var(--color-cat-3-fg); }
-.badge--cat-4 { background: var(--color-cat-4-bg); color: var(--color-cat-4-fg); }
-.badge--cat-5 { background: var(--color-cat-5-bg); color: var(--color-cat-5-fg); }
-.badge--cat-6 { background: var(--color-cat-6-bg); color: var(--color-cat-6-fg); }
+.badge--cat-1 { background: var(--color-categorical-1-background-enabled); color: var(--color-categorical-1-foreground-enabled); }
+.badge--cat-2 { background: var(--color-categorical-2-background-enabled); color: var(--color-categorical-2-foreground-enabled); }
+.badge--cat-3 { background: var(--color-categorical-3-background-enabled); color: var(--color-categorical-3-foreground-enabled); }
+.badge--cat-4 { background: var(--color-categorical-4-background-enabled); color: var(--color-categorical-4-foreground-enabled); }
+.badge--cat-5 { background: var(--color-categorical-5-background-enabled); color: var(--color-categorical-5-foreground-enabled); }
+.badge--cat-6 { background: var(--color-categorical-6-background-enabled); color: var(--color-categorical-6-foreground-enabled); }
+/* OPT-IN EDGE, for a badge on a surface its fill does not separate from. .badge already
+   reserves `1px solid transparent`, so this sets a colour and changes NO geometry — nothing
+   reflows and .solid still resets it.
+
+   STATUS BADGES DO NOT TAKE THIS and have no .edge rule: their edge is permanent, because a
+   status pill has to hold its shape wherever it lands. Accent and categorical are identity,
+   not state — on a white surface the fill alone reads, and a border on every chip in a column
+   of six is noise. The edge is for the grey case.
+
+   SIZED TO THE STATUS EDGE, NOT TO THE RAMP. The obvious value is the family's next rung, and
+   it is wrong: measured in OKLab it steps 1.5x the status edge in light and 3x in dark, so the
+   categorical chips read as outlined while the status pills beside them read as softly sealed.
+   These are mixed to match instead — 70% toward the next rung in light, 30% in dark, 80% for
+   accent where hue-100 -> hue-200 is a tighter gap. Resulting dE 0.059-0.065 light and
+   0.039-0.047 dark, against a status band of 0.058-0.063 and 0.042-0.048. */
+.badge--accent.edge { border-color: var(--color-brand-stroke-tint-edge-enabled); }
+.badge--cat-1.edge { border-color: var(--color-categorical-1-stroke-edge-enabled); }
+.badge--cat-2.edge { border-color: var(--color-categorical-2-stroke-edge-enabled); }
+.badge--cat-3.edge { border-color: var(--color-categorical-3-stroke-edge-enabled); }
+.badge--cat-4.edge { border-color: var(--color-categorical-4-stroke-edge-enabled); }
+.badge--cat-5.edge { border-color: var(--color-categorical-5-stroke-edge-enabled); }
+.badge--cat-6.edge { border-color: var(--color-categorical-6-stroke-edge-enabled); }
 
 /* Solid: the tone fills, the text sits on it. Same meaning as the tinted badge,
    one volume louder — for the status a user has to FIND in a dense table rather
@@ -727,12 +888,12 @@
    forced-colors reasons that apply to every badge. */
 .badge.solid { border-color: transparent; }
 /* No neutral solid: the near-black filled pill went with the tone. Its roles
-   (--color-feedback-neutral-solid / -on-solid) stay live — .sdot reads them for
+   (--color-status-neutral-background-solid-enabled / -on-solid) stay live — .sdot reads them for
    the base status dot, where a near-black 8px mark is exactly right. */
-.badge--info.solid    { background: var(--color-feedback-info-solid);    color: var(--color-feedback-info-on-solid); }
-.badge--success.solid { background: var(--color-feedback-success-solid); color: var(--color-feedback-success-on-solid); }
-.badge--warning.solid { background: var(--color-feedback-warning-solid); color: var(--color-feedback-warning-on-solid); }
-.badge--danger.solid  { background: var(--color-feedback-danger-solid);  color: var(--color-feedback-danger-on-solid); }
+.badge--info.solid    { background: var(--color-status-info-background-solid-enabled);    color: var(--color-status-info-foreground-on-solid-enabled); }
+.badge--success.solid { background: var(--color-status-success-background-solid-enabled); color: var(--color-status-success-foreground-on-solid-enabled); }
+.badge--warning.solid { background: var(--color-status-warning-background-solid-enabled); color: var(--color-status-warning-foreground-on-solid-enabled); }
+.badge--danger.solid  { background: var(--color-status-danger-background-solid-enabled);  color: var(--color-status-danger-foreground-on-solid-enabled); }
 /* The dismiss on a solid pill rides the inverted foreground, not the muted
    subtle role, which would vanish into the fill. */
 .badge.solid button.x { color: currentColor; }
@@ -743,17 +904,17 @@
    free; a native button takes the UA font and the UA control appearance, so the
    first conforming implementation rendered its filter row in Arial. Declared
    here rather than in the markup, the way .btn already does it. */
-.chip { display: inline-flex; align-items: center; white-space: nowrap; gap: var(--space-sm); height: var(--size-chip); padding: 0 var(--space-lg); font: inherit; font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular); appearance: none; border-radius: var(--radius-pill); background: var(--color-bg-surface); border: var(--border-width-default) solid var(--color-border-control); color: var(--color-fg-default); cursor: pointer; }
-.chip.on { background: var(--color-bg-emphasis); color: var(--color-fg-on-emphasis); border-color: var(--color-bg-emphasis); }
+.chip { display: inline-flex; align-items: center; white-space: nowrap; gap: var(--space-sm); height: var(--size-chip); padding: 0 var(--space-lg); font: inherit; font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular); appearance: none; border-radius: var(--radius-pill); background: var(--color-neutral-background-surface-enabled); border: var(--border-width-default) solid var(--color-neutral-stroke-control-enabled); color: var(--color-neutral-foreground-default-enabled); cursor: pointer; }
+.chip.on { background: var(--color-neutral-background-emphasis-enabled); color: var(--color-neutral-foreground-on-emphasis-enabled); border-color: var(--color-neutral-background-emphasis-enabled); }
 /* Interactive states, scoped to the BUTTON chip. A filter chip is a control and
    now says so in markup, which means it needs the three states every other
    control has — and the removable span chip needs none of them, because its only
    interaction is the dismiss inside it, which carries its own.
    Selected hovers one step further into its own fill rather than lightening: a
    lightening emphasis chip reads as deselecting itself. */
-button.chip:hover { background: var(--color-bg-hover); border-color: var(--color-border-strong); }
-button.chip:active { background: var(--color-bg-active); }
-button.chip.on:hover { background: var(--color-bg-emphasis-hover); border-color: var(--color-bg-emphasis-hover); }
+button.chip:hover { background: var(--color-neutral-background-interaction-hovered); border-color: var(--color-neutral-stroke-strong-enabled); }
+button.chip:active { background: var(--color-neutral-background-interaction-pressed); }
+button.chip.on:hover { background: var(--color-neutral-background-emphasis-hovered); border-color: var(--color-neutral-background-emphasis-hovered); }
 /* --radius-pill is already on the base rule, so the ring follows the shape. */
 .chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* THE TARGET GROWS ON ONE AXIS, and that is the whole reason a chip can hold the
@@ -806,8 +967,8 @@ button.chip.on:hover { background: var(--color-bg-emphasis-hover); border-color:
    (banner, toast, modal, drawer, popover, chip). It is always a real button:
    as a bare <svg aria-hidden> it looked clickable via cursor: pointer but was
    unfocusable, un-keyboardable, and silent to a screen reader. */
-button.x { all: unset; position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-fg-subtle); flex-shrink: 0; }
-button.x:hover { color: var(--color-fg-default); }
+button.x { all: unset; position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-neutral-foreground-subtle-enabled); flex-shrink: 0; }
+button.x:hover { color: var(--color-neutral-foreground-default-enabled); }
 button.x:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-control); }
 /* The target grows OUTSIDE the box, not with it. all: unset collapses the
    button to its 20px glyph, and enlarging the box to --size-touch-min would
@@ -904,10 +1065,10 @@ button.x::after {
      read as more room on the side that already had some. */
   height: var(--size-token); padding: 0 var(--space-sm) 0 var(--space-md);
   font-size: var(--type-body-sm-size); border-radius: var(--radius-inner);
-  background: var(--color-bg-entry); color: var(--color-fg-default);
+  background: var(--color-neutral-background-entry-enabled); color: var(--color-neutral-foreground-default-enabled);
   /* No outline, for the same reason a badge has none: a token is a mark sitting
      ON a surface, not a surface of its own, and the fill separates it — which is
-     why the fill is --color-bg-entry and not --color-bg-muted. Muted measured
+     why the fill is --color-neutral-background-entry-enabled and not --color-neutral-background-muted-enabled. Muted measured
      1.035:1 against the CANVAS in light, and the canvas is where these actually
      sit: an applied-filter row is under a toolbar, on the page, not on a card.
      A claim that the fill separates it has to be true on the surface it lands on.
@@ -921,14 +1082,14 @@ button.x::after {
    than pushing the dismiss out of reach or wrapping the token in half. */
 .token .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A qualifier ("Owner:") is muted so the value stays the thing being read — but
-   on --color-fg-muted it measured 3.96:1 in dark, because muted is tuned against
-   surface and canvas and the token sits on a FILL. --color-fg-on-fill is the role
+   on --color-neutral-foreground-muted-enabled it measured 3.96:1 in dark, because muted is tuned against
+   surface and canvas and the token sits on a FILL. --color-neutral-foreground-on-neutral-fill-enabled is the role
    for exactly that (a foreground pinned one rung for a filled region): still
    visibly quieter than the value beside it, and past 4.5:1 in both modes. */
-.token .key { color: var(--color-fg-on-fill); flex-shrink: 0; }
+.token .key { color: var(--color-neutral-foreground-on-neutral-fill-enabled); flex-shrink: 0; }
 /* No whole-element hover. A token's only interaction is its dismiss, and that
    carries its own hover — so the token itself has nothing to respond to. The
-   fill it would have used (--color-bg-active) is also --color-bg-disabled in
+   fill it would have used (--color-neutral-background-interaction-pressed) is also --color-neutral-background-disabled-rest in
    every light theme, which would have left a hovered token and a disabled one
    differing by text colour alone. */
 /* Static: a token the user cannot remove carries no dismiss, so it also loses
@@ -938,9 +1099,9 @@ button.x::after {
 /* Invalid — an entry that parsed but failed validation (a malformed address,
    a name with no match). It stays removable; the tone is the correction cue,
    with the message under the field carrying the words. */
-.token--danger { background: var(--color-feedback-danger-bg); color: var(--color-feedback-danger-fg); }
+.token--danger { background: var(--color-status-danger-background-subtle-enabled); color: var(--color-status-danger-foreground-default-enabled); }
 .token--danger .key { color: inherit; opacity: .7; }
-.token.disabled { background: var(--color-bg-disabled); color: var(--color-fg-disabled); }
+.token.disabled { background: var(--color-neutral-background-disabled-rest); color: var(--color-neutral-foreground-disabled-rest); }
 .token.disabled button.x { display: none; }
 
 /* Token field — the input tokens live in. It borrows Input's box metrics and
@@ -949,17 +1110,17 @@ button.x::after {
 .token-field {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm);
   min-height: var(--size-control-md); padding: var(--space-xs) var(--space-sm);
-  border: var(--border-width-default) solid var(--color-border-control);
-  border-radius: var(--radius-element); background: var(--color-bg-surface);
+  border: var(--border-width-default) solid var(--color-neutral-stroke-control-enabled);
+  border-radius: var(--radius-element); background: var(--color-neutral-background-surface-enabled);
   cursor: text; transition: border-color var(--motion-hover-duration) var(--motion-hover-easing);
 }
-.token-field:hover { border-color: var(--color-border-strong); }
-.token-field:focus-within { border-color: var(--color-focus-ring); box-shadow: var(--border-glow-emphasis); }
-.token-field.invalid { border-color: var(--color-feedback-danger-fg); }
+.token-field:hover { border-color: var(--color-neutral-stroke-strong-enabled); }
+.token-field:focus-within { border-color: var(--color-neutral-stroke-focus-ring-enabled); box-shadow: var(--border-glow-emphasis); }
+.token-field.invalid { border-color: var(--color-status-danger-foreground-default-enabled); }
 /* The caret follows the last token on the same line — a full-width input
    would push every new entry onto a row of its own. */
-.token-field input { flex: 1 1 80px; min-width: 80px; border: none; outline: none; background: transparent; font: inherit; font-size: var(--type-body-md-size); color: var(--color-fg-default); }
-.token-field input::placeholder { color: var(--color-fg-subtle); }
+.token-field input { flex: 1 1 80px; min-width: 80px; border: none; outline: none; background: transparent; font: inherit; font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-default-enabled); }
+.token-field input::placeholder { color: var(--color-neutral-foreground-subtle-enabled); }
 
 /* ── TOKEN FIELD · DROPDOWN MODE ──────────────────────────
    A SECOND INTERACTION MODE, NOT A SECOND COMPONENT. The default token field is
@@ -998,7 +1159,7 @@ button.x::after {
   padding-inline-end: calc(var(--space-sm) * 2 + var(--size-icon-sm));
 }
 /* The empty-state text, where the input's ::placeholder would have been. */
-.token-field.dropdown > .ph { color: var(--color-fg-subtle); font-size: var(--type-body-md-size); }
+.token-field.dropdown > .ph { color: var(--color-neutral-foreground-subtle-enabled); font-size: var(--type-body-md-size); }
 /* Size and stroke move together — QDS_LINT holds the rendered pair. */
 /* CENTRED ON THE FIRST ROW, NOT FLUSH WITH THE PADDING EDGE, and the offset is
    DERIVED so it needs no media query and no per-brand value: the field's own
@@ -1023,15 +1184,15 @@ button.x::after {
   position: absolute;
   inset-block-start: calc(var(--space-xs) + (var(--size-token) - var(--size-icon-sm)) / 2);
   inset-inline-end: var(--space-sm);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
   font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm);
   transition: transform var(--motion-hover-duration) var(--motion-hover-easing);
 }
 /* Open mirrors .select.open exactly: same border role, same emphasis glow, same
    180deg chevron. An open picker and an open select should not read differently. */
-.token-field.dropdown.open { border-color: var(--color-focus-ring); box-shadow: var(--border-glow-emphasis); }
+.token-field.dropdown.open { border-color: var(--color-neutral-stroke-focus-ring-enabled); box-shadow: var(--border-glow-emphasis); }
 .token-field.dropdown.open > .ms { transform: rotate(180deg); }
-.token-field.dropdown.invalid.open { border-color: var(--color-feedback-danger-fg); box-shadow: var(--border-glow-emphasis-danger); }
+.token-field.dropdown.invalid.open { border-color: var(--color-status-danger-foreground-default-enabled); box-shadow: var(--border-glow-emphasis-danger); }
 
 
 /* ── FORM ── */
@@ -1042,7 +1203,7 @@ button.x::after {
    Nothing to fix in the spacing; a different value here would make the two
    optically unequal in the other direction. */
 .field { display: flex; flex-direction: column; gap: var(--field-gap); min-width: 220px; }
-:is(.field > label, .field > .lbl-row > label) { font-size: var(--type-label-size); font-weight: var(--type-label-weight); color: var(--color-fg-default); }
+:is(.field > label, .field > .lbl-row > label) { font-size: var(--type-label-size); font-weight: var(--type-label-weight); color: var(--color-neutral-foreground-default-enabled); }
 /* ── THE LABEL ROW, AND IT IS STACKED-ONLY ────────────────────────────────
    A field's label sometimes has to carry an action: Edit in English, Undo
    changes, a sync control. Without a slot the whole field leaves the component
@@ -1069,10 +1230,21 @@ button.x::after {
 /* min-height as well as height: a control dropped into a flex COLUMN has its
    height on the main axis, where flex-shrink applies — without a floor it
    collapses to its content and a 36px field renders at 20. */
-.control { display: flex; align-items: center; gap: var(--space-sm); height: var(--size-control-md); min-height: var(--size-control-md); padding: 0 var(--space-md); border: var(--border-width-default) solid var(--color-border-control); border-radius: var(--radius-element); background: var(--color-bg-surface); transition: border-color var(--motion-hover-duration) var(--motion-hover-easing); }
+.control { display: flex; align-items: center; gap: var(--space-sm); height: var(--size-control-md); min-height: var(--size-control-md); padding: 0 var(--space-md); border: var(--border-width-default) solid var(--color-neutral-stroke-control-enabled); border-radius: var(--radius-element); background: var(--color-neutral-background-surface-enabled); transition: border-color var(--motion-hover-duration) var(--motion-hover-easing); }
 /* Small — FOR DENSE INLINE EDITING, and that is the whole of it: a cell being
-   edited in a data grid or a table, where the field has to sit in a row's height
-   without pushing the rows apart. It is NOT a general small Input, and a form
+   edited in a data grid or a table, where the field has to sit in a row without
+   pushing the whole grid apart. MEASURED, IT STILL ADDS 7px: a default row is
+   46px (14px text inside --table-cell-pad-y twice), and a 28px control in the
+   same 12px padding makes 53. This comment used to claim the row height was
+   unchanged, which was never true and was never checked.
+
+   THAT IS THE RIGHT TRADE RATHER THAN A DEFECT, and the grid already makes it
+   elsewhere: a status cell carrying a Badge is 48px for the same reason. The
+   rung's job is to keep an edited row CLOSE to its neighbours, not identical to
+   them — the default 36px control would add 15px and visibly break the rhythm.
+   Only the rows being edited grow, and they grow by a sixth of a row.
+
+   It is NOT a general small Input, and a form
    never reaches for it — a form's field is the default rung, whatever else is on
    the screen.
 
@@ -1094,14 +1266,33 @@ button.x::after {
 .control.sm { height: var(--size-control-sm); min-height: var(--size-control-sm); padding-inline: var(--space-sm); gap: var(--space-sm); }
 .control.sm input, .control.sm textarea { font-size: var(--type-body-sm-size); }
 .control.sm .affix { font-size: var(--type-body-sm-size); }
-.control:hover { border-color: var(--color-border-strong); }
-.control:focus-within { border-color: var(--color-focus-ring); box-shadow: var(--border-glow-emphasis); }
+.control:hover { border-color: var(--color-neutral-stroke-strong-enabled); }
+.control:focus-within { border-color: var(--color-neutral-stroke-focus-ring-enabled); box-shadow: var(--border-glow-emphasis); }
 /* A field's value matches a select's value exactly — same size, same weight.
    The two sit side by side in a form, and the input was rendering a step larger
    (--type-body-lg-size), so a text field read heavier than the select beside it. */
-.control input, .control textarea { border: none; outline: none; background: transparent; flex: 1; min-width: 0; font: inherit; font-size: var(--type-body-md-size); font-weight: var(--ref-font-weight-regular); color: var(--color-fg-default); }
-.control input::placeholder, .control textarea::placeholder { color: var(--color-fg-subtle); }
-.control .affix { color: var(--color-fg-subtle); font-size: var(--type-body-md-size); flex-shrink: 0; }
+.control input, .control textarea { border: none; outline: none; background: transparent; flex: 1; min-width: 0; font: inherit; font-size: var(--type-body-md-size); font-weight: var(--ref-font-weight-regular); color: var(--color-neutral-foreground-default-enabled); }
+.control input::placeholder, .control textarea::placeholder { color: var(--color-neutral-foreground-subtle-enabled); }
+.control .affix { color: var(--color-neutral-foreground-subtle-enabled); font-size: var(--type-body-md-size); flex-shrink: 0; }
+/* AN ICON AFFIX, LEADING OR TRAILING. A calendar on a date field, a clock on a
+   time field, a magnifier on a search — a mark that says what KIND of value the
+   field takes. It is the same role as the text affix beside it and takes the
+   same --color-neutral-foreground-subtle-enabled: an icon at full foreground
+   strength competed with the value, which is the one thing in the row the user
+   is actually reading.
+   SIDE IS DOM ORDER, not a modifier. .control is a flex row and the input
+   carries flex: 1, so an .ms before the input sits leading and one after it is
+   pushed to the trailing edge by the input itself — no auto margin, no .lead /
+   .trail pair to keep in sync with a direction change under RTL.
+   flex-shrink: 0 for the same reason the text affix has it: the value gives up
+   the room, never the mark that says what the value IS.
+   Size is set HERE rather than left to a .sm class on the glyph, the way
+   .select .ms already does it — an affix that changes size because an author
+   forgot a class is a field that looks broken for a reason nobody can see. The
+   stroke moves with it in the same declaration, which is the pairing iconScale
+   checks. NOT A TARGET: an icon that does something is a button, and it belongs
+   in .control > .acts with the treatment that slot already defines. */
+.control > .ms { color: var(--color-neutral-foreground-subtle-enabled); flex-shrink: 0; font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); }
 
 /* ── A TRAILING ACTION INSIDE THE FIELD ───────────────────
    For an action that belongs to THIS VALUE and has to be reachable while the
@@ -1117,7 +1308,7 @@ button.x::after {
    IT IS THE SAME .lnk.action IN BOTH PLACES, so the treatment is decided once:
    accent, no underline at rest, underlined on hover and focus. It is NOT an
    .affix — an affix is a unit or a currency, has no target and takes
-   --color-fg-subtle, and giving it a click would make a decoration and a
+   --color-neutral-foreground-subtle-enabled, and giving it a click would make a decoration and a
    control look identical.
 
    FLEX-SHRINK: 0, SO THE VALUE GIVES UP THE ROOM, not the action. Same rule the
@@ -1137,13 +1328,13 @@ button.x::after {
 .control > .acts > .lnk { display: inline-flex; align-items: center; }
 /* A dead field's action is dead with it. Readonly is the opposite case and is
    left alone on purpose: a readonly value is exactly where Undo still applies. */
-.control.disabled > .acts > .lnk { color: var(--color-fg-disabled); cursor: not-allowed; text-decoration: none; }
+.control.disabled > .acts > .lnk { color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed; text-decoration: none; }
 /* Invalid draws its edge from the danger FOREGROUND, not the border role: the
    border role is a decorative panel edge (1.75:1 on a light surface) while a
    border that says "this field is wrong" is a state signal and has to clear
    the 3:1 non-text floor — the foreground gives 6.21:1 light, 8.26:1 dark. */
-.control.invalid { border-color: var(--color-feedback-danger-fg); }
-.control.invalid:hover { border-color: var(--color-feedback-danger-fg); }
+.control.invalid { border-color: var(--color-status-danger-foreground-default-enabled); }
+.control.invalid:hover { border-color: var(--color-status-danger-foreground-default-enabled); }
 /* Focused and invalid: the SAME gesture as a valid field, in the error hue. The
    edge is already danger at rest, so focus adds the glow and changes nothing
    else — one indicator carrying both "focused" and "wrong", and the field does
@@ -1154,16 +1345,16 @@ button.x::after {
    accent edge; against the 1px one it made the error state visibly heavier than
    the ordinary one, so the same gesture had two weights depending on hue. */
 .control.invalid:focus-within {
-  border-color: var(--color-feedback-danger-fg);
+  border-color: var(--color-status-danger-foreground-default-enabled);
   box-shadow: var(--border-glow-emphasis-danger);
 }
 /* Read-only: still readable and selectable, but nothing to edit — sunken fill,
    no hover edge. Disabled: not participating at all. */
-.control.readonly { background: var(--color-bg-surface-sunken); border-color: var(--color-border-muted); }
-.control.readonly:hover { border-color: var(--color-border-muted); }
-.control.disabled { background: var(--color-bg-disabled); border-color: var(--color-border-muted); cursor: not-allowed; }
-.control.disabled:hover { border-color: var(--color-border-muted); }
-.control.disabled input, .control.disabled textarea, .control.disabled .affix, .control.disabled .ms { color: var(--color-fg-disabled); cursor: not-allowed; }
+.control.readonly { background: var(--color-neutral-background-surface-sunken-enabled); border-color: var(--color-neutral-stroke-muted-enabled); }
+.control.readonly:hover { border-color: var(--color-neutral-stroke-muted-enabled); }
+.control.disabled { background: var(--color-neutral-background-disabled-rest); border-color: var(--color-neutral-stroke-muted-enabled); cursor: not-allowed; }
+.control.disabled:hover { border-color: var(--color-neutral-stroke-muted-enabled); }
+.control.disabled input, .control.disabled textarea, .control.disabled .affix, .control.disabled .ms { color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed; }
 /* THE INSET BELONGS TO THE TEXTAREA, NOT THE CONTROL, and the reason is the two
    pieces of chrome a textarea draws for itself: the scrollbar and the resize
    handle. Both sit on the TEXTAREA's own edge, so padding the CONTROL pushed them
@@ -1187,30 +1378,30 @@ button.x::after {
   min-height: calc(var(--textarea-min-height) + var(--space-md) * 2);
 }
 /* Required marker on the label — never the only signal that a field is needed. */
-:is(.field > label, .field > .lbl-row > label) .req { color: var(--color-feedback-danger-fg); margin-left: var(--space-2xs); }
+:is(.field > label, .field > .lbl-row > label) .req { color: var(--color-status-danger-foreground-default-enabled); margin-left: var(--space-2xs); }
 /* Named .optional, not .opt: the selection-control class is .opt and it carries
    a min-height (the pointer floor, 44px under a coarse pointer), so a hint
    sharing that name inherited a touch target and stretched its own label. */
-:is(.field > label, .field > .lbl-row > label) .optional { color: var(--color-fg-subtle); font-weight: var(--ref-font-weight-regular); margin-left: var(--space-2xs); }
-.field .msg { font-size: var(--type-field-msg-size); line-height: var(--type-field-msg-line); color: var(--color-fg-subtle); }
+:is(.field > label, .field > .lbl-row > label) .optional { color: var(--color-neutral-foreground-subtle-enabled); font-weight: var(--ref-font-weight-regular); margin-left: var(--space-2xs); }
+.field .msg { font-size: var(--type-field-msg-size); line-height: var(--type-field-msg-line); color: var(--color-neutral-foreground-subtle-enabled); }
 /* Error text wraps — a sentence naming a rule usually runs to two lines in a
    narrow field — so the glyph centres on the FIRST line, not on the block.
    align-items: center was centring it on the whole paragraph, which put the
    glyph opposite the gap between lines and started the eye in the wrong place.
    See Foundations → Layout & alignment. */
-.field .msg.err { color: var(--color-feedback-danger-fg); display: flex; align-items: flex-start; gap: var(--space-xs); }
+.field .msg.err { color: var(--color-status-danger-foreground-default-enabled); display: flex; align-items: flex-start; gap: var(--space-xs); }
 .field .msg.err .ms { font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); margin-block-start: calc((var(--type-field-msg-size) * var(--type-field-msg-line) - var(--size-icon-sm)) / 2); }
 /* Helper row that pairs a message with a counter — the counter never replaces
    the helper text, so the rule stays visible while the user types. */
 .field .msg-row { display: flex; align-items: baseline; gap: var(--space-md); }
 .field .msg-row .msg { flex: 1; min-width: 0; }
-.field .count { font-size: var(--type-caption-size); color: var(--color-fg-subtle); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.field .count.over { color: var(--color-feedback-danger-fg); }
+.field .count { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.field .count.over { color: var(--color-status-danger-foreground-default-enabled); }
 
 /* selection controls */
 /* Row height is the pointer floor, not the touch floor — see
    --size-touch-min-pointer. Any coarse pointer restores 44px. */
-.opt { display: inline-flex; align-items: center; gap: var(--space-sm); font-size: var(--type-body-md-size); color: var(--color-fg-default); cursor: pointer; min-height: var(--size-touch-min-pointer); }
+.opt { display: inline-flex; align-items: center; gap: var(--space-sm); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-default-enabled); cursor: pointer; min-height: var(--size-touch-min-pointer); }
 @media (pointer: coarse) { .opt { min-height: var(--size-touch-min); } }
 /* THE SWATCH KEEPS ITS SIZE; THE TARGET GROWS OUTSIDE IT. An 18px checkbox is a
    drawing, and 18px is what makes a column of them read as one group rather than
@@ -1229,14 +1420,14 @@ button.x::after {
   }
 }
 .opt.between { justify-content: space-between; width: 100%; }
-.checkbox { width: 18px; height: 18px; border-radius: var(--ref-radius-50); border: var(--border-width-emphasis) solid var(--color-border-control); display: inline-flex; align-items: center; justify-content: center; color: var(--color-fg-on-accent); flex-shrink: 0; }
-.checkbox.on { background: var(--color-selection-rest); border-color: var(--color-selection-rest); }
+.checkbox { width: 18px; height: 18px; border-radius: var(--ref-corner-radius-50); border: var(--border-width-emphasis) solid var(--color-neutral-stroke-control-enabled); display: inline-flex; align-items: center; justify-content: center; color: var(--color-neutral-foreground-on-brand-enabled); flex-shrink: 0; }
+.checkbox.on { background: var(--color-brand-background-selection-enabled); border-color: var(--color-brand-background-selection-enabled); }
 /* Partial selection is its OWN state, not a lighter kind of checked: "some of
    these rows" and "all of these rows" lead to different next clicks, and a filled
    box with a tick says the second. Filled with a dash, and aria-checked="mixed"
    carries it — reusing .on left the header visually and semantically identical
    to fully checked. */
-.checkbox.mixed { background: var(--color-selection-rest); border-color: var(--color-selection-rest); }
+.checkbox.mixed { background: var(--color-brand-background-selection-enabled); border-color: var(--color-brand-background-selection-enabled); }
 
 /* .checkbox on a real control. In a .opt row the <label> is the control and the
    box is decoration; a grid's checkbox column has no room for that row's touch
@@ -1273,7 +1464,7 @@ button.x::after {
    only the properties a UA button actually imposes are reset — family, alignment,
    border, margin, appearance — and size, weight and colour are left to the class.
    Nothing here sets `color` on the buttons for the same reason. */
-a.nav-item { color: inherit; text-decoration: none; }
+a.nav-item { text-decoration: none; }
 button.nav-item, button.menu-item, button.tab, button.cal-day {
   appearance: none; -webkit-appearance: none;
   margin: 0; border: none; background: none;
@@ -1291,15 +1482,15 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 /* The tick reads against a filled swatch at 16px, where the standard 1px line
    looked frail. 1.25 of stroke lands the drawn line at ~1.8px. */
 .checkbox .ms { font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); stroke-linecap: round; }
-.radio { width: 18px; height: 18px; border-radius: var(--radius-pill); border: var(--border-width-emphasis) solid var(--color-border-control); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.radio { width: 18px; height: 18px; border-radius: var(--radius-pill); border: var(--border-width-emphasis) solid var(--color-neutral-stroke-control-enabled); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 /* Selected reads as a solid disc with a punched-out centre rather than a ring
    plus a floating dot — the filled mass is legible at 18px and matches the
    filled checkbox beside it. */
-.radio.on { border-color: var(--color-selection-rest); background: var(--color-selection-rest); }
-.radio.on::after { content: ''; width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--color-bg-surface); }
-.toggle { position: relative; width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--color-border-control); flex-shrink: 0; transition: background var(--motion-hover-duration) var(--motion-hover-easing); }
-.toggle.on { background: var(--color-selection-rest); }
-.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: var(--radius-pill); background: var(--color-bg-surface); box-shadow: var(--elevation-raised); transition: left var(--motion-hover-duration) var(--motion-hover-easing); }
+.radio.on { border-color: var(--color-brand-background-selection-enabled); background: var(--color-brand-background-selection-enabled); }
+.radio.on::after { content: ''; width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--color-neutral-background-surface-enabled); }
+.toggle { position: relative; width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--color-neutral-stroke-control-enabled); flex-shrink: 0; transition: background var(--motion-hover-duration) var(--motion-hover-easing); }
+.toggle.on { background: var(--color-brand-background-selection-enabled); }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: var(--radius-pill); background: var(--color-neutral-background-surface-enabled); box-shadow: var(--elevation-raised); transition: left var(--motion-hover-duration) var(--motion-hover-easing); }
 .toggle.on::after { left: 18px; }
 /* DISABLED, and it had to be written: the contract documents "muted box and
    label, not-allowed" for these three, and until now nothing implemented it —
@@ -1307,7 +1498,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    cursor: pointer, and left its label at full strength. A dead control that
    looks live is worse than one that looks dead, because the user spends a click
    finding out.
-   The fill drops to --color-bg-disabled and the mark to --color-fg-disabled
+   The fill drops to --color-neutral-background-disabled-rest and the mark to --color-neutral-foreground-disabled-rest
    rather than the box simply losing its tick: a disabled CHECKED box still has
    to say it is checked, so the state survives and only the affordance leaves.
    :has() on the row, so the LABEL dims with its control — a bright label over a
@@ -1316,15 +1507,15 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    state without a real disabled attribute. */
 :is(.checkbox, .radio, .toggle)[disabled],
 :is(.checkbox, .radio, .toggle).disabled {
-  background: var(--color-bg-disabled); border-color: var(--color-border-muted);
-  color: var(--color-fg-disabled); cursor: not-allowed;
+  background: var(--color-neutral-background-disabled-rest); border-color: var(--color-neutral-stroke-muted-enabled);
+  color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed;
 }
-.toggle[disabled], .toggle.disabled { background: var(--color-bg-disabled); }
+.toggle[disabled], .toggle.disabled { background: var(--color-neutral-background-disabled-rest); }
 .opt:has([disabled]), .opt:has(.disabled), .opt[aria-disabled="true"] {
-  color: var(--color-fg-disabled); cursor: not-allowed;
+  color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed;
 }
 
-/* HOVER — the state --color-selection-hover was minted for and nothing ever
+/* HOVER — the state --color-brand-background-selection-hovered was minted for and nothing ever
    implemented. Every button variant answers the pointer; a checkbox, radio and
    toggle did not, and the token sat unreferenced as the evidence. .toggle even
    carried --motion-hover-duration in its transition: a component declaring how it
@@ -1334,7 +1525,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      unchecked → the border strengthens, exactly as .control:hover and .select:hover
                  already do. An ACCENT here would preview a state the control is not
                  in, which is a promise the hover cannot keep.
-     checked   → the accent deepens to --color-selection-hover, which is the token's
+     checked   → the accent deepens to --color-brand-background-selection-hovered, which is the token's
                  whole purpose: --ref-accent-600 against rest's 500.
 
    THE ROW HOVERS TOO. In an .opt the <label> is the control and the box is
@@ -1347,19 +1538,19 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    a LIST keeps the specificity flat while doing it. */
 :is(.checkbox, .radio):not(.on, .mixed, [disabled], .disabled):hover,
 .opt:not([aria-disabled="true"]):hover > :is(.checkbox, .radio):not(.on, .mixed, [disabled], .disabled) {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-neutral-stroke-strong-enabled);
 }
 .toggle:not(.on, [disabled], .disabled):hover,
 .opt:not([aria-disabled="true"]):hover > .toggle:not(.on, [disabled], .disabled) {
-  background: var(--color-border-strong);
+  background: var(--color-neutral-stroke-strong-enabled);
 }
 :is(.checkbox, .radio):is(.on, .mixed):not([disabled], .disabled):hover,
 .opt:not([aria-disabled="true"]):hover > :is(.checkbox, .radio):is(.on, .mixed):not([disabled], .disabled) {
-  background: var(--color-selection-hover); border-color: var(--color-selection-hover);
+  background: var(--color-brand-background-selection-hovered); border-color: var(--color-brand-background-selection-hovered);
 }
 .toggle.on:not([disabled], .disabled):hover,
 .opt:not([aria-disabled="true"]):hover > .toggle.on:not([disabled], .disabled) {
-  background: var(--color-selection-hover);
+  background: var(--color-brand-background-selection-hovered);
 }
 /* AND AN aria-disabled ROW SUPPRESSES ITS CONTROL'S HOVER. The row-level guard on
    the rules above only covers a hover arriving THROUGH the row; a pointer landing
@@ -1368,12 +1559,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    the pointer if you hit the 18px swatch precisely. Pinned to the RESTING values
    rather than the disabled ones: the control is not disabled, its row is, and the
    row already says so in the label and the cursor. */
-.opt[aria-disabled="true"] :is(.checkbox, .radio):hover { border-color: var(--color-border-control); }
+.opt[aria-disabled="true"] :is(.checkbox, .radio):hover { border-color: var(--color-neutral-stroke-control-enabled); }
 .opt[aria-disabled="true"] :is(.checkbox, .radio):is(.on, .mixed):hover {
-  background: var(--color-selection-rest); border-color: var(--color-selection-rest);
+  background: var(--color-brand-background-selection-enabled); border-color: var(--color-brand-background-selection-enabled);
 }
-.opt[aria-disabled="true"] .toggle:hover { background: var(--color-border-control); }
-.opt[aria-disabled="true"] .toggle.on:hover { background: var(--color-selection-rest); }
+.opt[aria-disabled="true"] .toggle:hover { background: var(--color-neutral-stroke-control-enabled); }
+.opt[aria-disabled="true"] .toggle.on:hover { background: var(--color-brand-background-selection-enabled); }
 
 /* ── BANNER ── (class stays .bar) */
 /* No border. The tinted fill already separates the banner from the surface it
@@ -1400,12 +1591,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    written against --type-body-md-line, and with no declaration here the title's
    line box rendered at ~16.8px instead of 21 — so the math was correct and the
    box it aimed at was not, leaving the glyph 2px low. */
-.bar .ttl { font-weight: var(--ref-font-weight-medium); color: var(--color-fg-default); line-height: var(--type-body-md-line); }
+.bar .ttl { font-weight: var(--ref-font-weight-medium); color: var(--color-neutral-foreground-default-enabled); line-height: var(--type-body-md-line); }
 .bar.single .ttl { font-weight: var(--ref-font-weight-regular); }
 /* The description stays at body size — medium weight on the title and muted
    colour here already separate the two lines, and a size step as well makes the
    explanation look like fine print when it is the part worth reading. */
-.bar .desc { margin: var(--space-xs) 0 0; color: var(--color-fg-muted); }
+.bar .desc { margin: var(--space-xs) 0 0; color: var(--color-neutral-foreground-muted-enabled); }
 /* The action sits on the right of the banner, level with the FIRST line of the
    message rather than centred on the whole block — the same rule the status
    glyph follows, so glyph, title, and action all start on one line.
@@ -1423,9 +1614,9 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    the button default so the label matches the words it sits with, and its trailing
    padding is trimmed so the label lands on the banner's padding edge where the
    link's last character did. Its hover wash is mixed from currentColor so it works
-   on a tinted fill in both modes — --color-bg-hover is tuned against a surface and
+   on a tinted fill in both modes — --color-neutral-background-interaction-hovered is tuned against a surface and
    disappears on one of these. Colour needs no adjustment: ghost carries
-   --color-fg-default like every other button. */
+   --color-neutral-foreground-default-enabled like every other button. */
 /* Everything in the banner is fluid except the two fixed-size glyphs. The
    action row used to be flex-shrink:0, so in a narrow banner it held its full
    width and the dismiss beyond it was pushed past the padding and out of the
@@ -1464,8 +1655,8 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    by one step: the text block still ends where it did relative to the label, and
    the fill gets a step of tint to sit inside on hover. */
 .bar:not(.bar--global):not(:has(> button.x)):has(.acts .btn--ghost) { padding-inline-end: var(--space-xl); }
-.bar .acts .btn--ghost:hover { background: color-mix(in oklab, currentColor 6%, transparent); color: var(--color-fg-default); }
-.bar .acts .btn--ghost:active { background: color-mix(in oklab, currentColor 11%, transparent); color: var(--color-fg-default); }
+.bar .acts .btn--ghost:hover { background: color-mix(in oklab, currentColor 6%, transparent); color: var(--color-neutral-foreground-default-enabled); }
+.bar .acts .btn--ghost:active { background: color-mix(in oklab, currentColor 11%, transparent); color: var(--color-neutral-foreground-default-enabled); }
 /* ══ THE BANNER ROW WRAPS WHEN ITS OWN WIDTH RUNS OUT ═══════════════════════
    INTRINSIC, NOT A BREAKPOINT, and the reason is placement: a banner is not a
    page-width component. It ships inside a drawer and inside a modal, so the width
@@ -1553,13 +1744,13 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 /* 12px, and centred on the first line too. The dismiss is the least important
    thing in the banner and was drawn at the same 20px as the status glyph, which
    gave the closing control the same weight as the reason the banner exists. */
-/* The dismiss rides --color-fg-on-fill, not the --color-fg-subtle every dismiss
+/* The dismiss rides --color-neutral-foreground-on-neutral-fill-enabled, not the --color-neutral-foreground-subtle-enabled every dismiss
    on a plain surface takes. Subtle is measured against white and canvas; on a
    feedback tint it fell to 3.87:1 on info — past the 3:1 non-text floor but
    under 4.5:1, and this glyph is small enough to want the text bar. On-fill is
    the role for exactly this (a foreground pinned one rung darker for a filled
    region): 4.99–5.82:1 across the four light tints, 7.18:1+ in dark. */
-.bar button.x { align-self: flex-start; flex-shrink: 0; color: var(--color-fg-on-fill); }
+.bar button.x { align-self: flex-start; flex-shrink: 0; color: var(--color-neutral-foreground-on-neutral-fill-enabled); }
 /* 0.667, the 12px compensation — (20 / size − 1). The 0.25 here was the 16px value
    and drew a 0.76px line, so the dismiss the comment above deliberately made SMALLER
    than the status glyph also came out LIGHTER than every other 12px mark. Size was
@@ -1632,18 +1823,18 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    direction from the banner's own. */
 .bar--global .acts .btn--ghost { margin-inline-start: calc(var(--space-md) * -1); }
 .bar--global > .inner > button.x { margin-inline-start: auto; }
-.bar--info { background: var(--color-feedback-info-bg); }
-.bar--info > .ms, .bar--info > .inner > .ms { color: var(--color-feedback-info-fg); }
-.bar--info .ttl { color: var(--color-fg-default); }
-.bar--success { background: var(--color-feedback-success-bg); }
-.bar--success > .ms, .bar--success > .inner > .ms { color: var(--color-feedback-success-fg); }
-.bar--success .ttl { color: var(--color-fg-default); }
-.bar--warning { background: var(--color-feedback-warning-bg); }
-.bar--warning > .ms, .bar--warning > .inner > .ms { color: var(--color-feedback-warning-fg); }
-.bar--warning .ttl { color: var(--color-fg-default); }
-.bar--danger { background: var(--color-feedback-danger-bg); }
-.bar--danger > .ms, .bar--danger > .inner > .ms { color: var(--color-feedback-danger-fg); }
-.bar--danger .ttl { color: var(--color-fg-default); }
+.bar--info { background: var(--color-status-info-background-subtle-enabled); }
+.bar--info > .ms, .bar--info > .inner > .ms { color: var(--color-status-info-foreground-default-enabled); }
+.bar--info .ttl { color: var(--color-neutral-foreground-default-enabled); }
+.bar--success { background: var(--color-status-success-background-subtle-enabled); }
+.bar--success > .ms, .bar--success > .inner > .ms { color: var(--color-status-success-foreground-default-enabled); }
+.bar--success .ttl { color: var(--color-neutral-foreground-default-enabled); }
+.bar--warning { background: var(--color-status-warning-background-subtle-enabled); }
+.bar--warning > .ms, .bar--warning > .inner > .ms { color: var(--color-status-warning-foreground-default-enabled); }
+.bar--warning .ttl { color: var(--color-neutral-foreground-default-enabled); }
+.bar--danger { background: var(--color-status-danger-background-subtle-enabled); }
+.bar--danger > .ms, .bar--danger > .inner > .ms { color: var(--color-status-danger-foreground-default-enabled); }
+.bar--danger .ttl { color: var(--color-neutral-foreground-default-enabled); }
 
 /* ── DATA GRID ── */
 /* A table on a page is an object too, so it takes the same elevated treatment
@@ -1651,7 +1842,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    carries it — the table itself cannot, because border-collapse and a radius
    do not coexist. */
 .data-grid-surface {
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border: var(--border-width-default) solid transparent;
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-raised);
@@ -1675,7 +1866,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    the grid for exactly as long as it is focused. Same stacking .card.interactive.on
    uses for its selected ring. */
 .data-grid-surface:focus-visible { outline: none; box-shadow: var(--focus-ring), var(--elevation-raised); }
-@media print { .data-grid-surface { border-color: var(--color-border-muted); box-shadow: none; } }
+@media print { .data-grid-surface { border-color: var(--color-neutral-stroke-muted-enabled); box-shadow: none; } }
 /* ══ BELOW THE TURN A ROW BECOMES A RECORD, BY DEFAULT ═══════════════════
    STACKED IS THE MOBILE-SAFE DEFAULT AND HORIZONTAL SCROLL IS AN INTENTIONAL
    EXCEPTION. That is the whole point of the inversion: this was opt-in, which
@@ -1770,7 +1961,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      representation is migrated explicitly and documented. */
   .data-grid:not(.columnar) tbody tr {
     padding: var(--table-cell-pad-y) var(--table-cell-pad-x);
-    border-bottom: var(--border-width-default) solid var(--color-border-muted);
+    border-bottom: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
   }
   .data-grid:not(.columnar) tbody tr:last-child { border-bottom: 0; }
 
@@ -1869,7 +2060,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
        the corner that depends on it. The guard caught this when the radius sat
        alone, which is the check working. */
     display: grid;
-    background: var(--color-bg-surface-raised);
+    background: var(--color-neutral-background-surface-raised-enabled);
     border: var(--border-width-default) solid transparent;
     border-radius: var(--radius-container);
     box-shadow: var(--elevation-raised);
@@ -1880,7 +2071,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   /* The hover fill is a ROW affordance and would flatten the card it is painted
      on. A record card is not a row you point at — the whole card is the target —
      so the fill stands down and the card keeps its own surface. */
-  .data-grid.stacked tbody tr:hover { background: var(--color-bg-surface-raised); }
+  .data-grid.stacked tbody tr:hover { background: var(--color-neutral-background-surface-raised-enabled); }
 
   /* ── LIST: a reduced representation, and reduced for everyone ──
      Rows are not cards here, and the hairline from the default above is exactly
@@ -1910,7 +2101,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      first-child default above. */
   .data-grid:not(.columnar) td.ttl  { font-size: var(--type-body-md-size); font-weight: var(--type-label-weight); }
   .data-grid:not(.columnar) td.sub  { font-size: var(--type-body-sm-size); font-weight: var(--type-body-weight); }
-  .data-grid:not(.columnar) td.meta { font-size: var(--type-body-sm-size); font-weight: var(--type-body-weight); color: var(--color-fg-subtle); }
+  .data-grid:not(.columnar) td.meta { font-size: var(--type-body-sm-size); font-weight: var(--type-body-weight); color: var(--color-neutral-foreground-subtle-enabled); }
   /* A status keeps its Badge treatment and gains no type rung of its own — the
      badge IS the status, and restyling the cell around it would give the same
      state two voices. It carries no data-label prefix either: "Status: Paid"
@@ -1918,7 +2109,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   .data-grid:not(.columnar) td.status::before { content: none; }
   /* Detail sits at the meta rung wherever it is shown, which is the stacked
      record — in the list it is gone entirely. */
-  .data-grid:not(.columnar) td.detail { font-size: var(--type-body-sm-size); font-weight: var(--type-body-weight); color: var(--color-fg-subtle); }
+  .data-grid:not(.columnar) td.detail { font-size: var(--type-body-sm-size); font-weight: var(--type-body-weight); color: var(--color-neutral-foreground-subtle-enabled); }
   /* The action area is a slot, not a field: it takes no label and sits at the
      end of the record. Nothing is invented for its contents — a consumer that
      provides no action gets no slot, which is why there is no chevron here. */
@@ -1928,7 +2119,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      context. Opt-in per cell and free when absent. */
   .data-grid:not(.columnar) td[data-label]::before {
     content: attr(data-label) ": ";
-    color: var(--color-fg-subtle);
+    color: var(--color-neutral-foreground-subtle-enabled);
   }
   /* A stacked row is one target, so the selection cell and any row actions need a
      composition decision rather than a size one — the same question finding 126
@@ -1958,7 +2149,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    particular column really must read quieter, that is a tone and alignment
    decision, not a size one. */
 .data-grid.dense { --table-cell-size: var(--type-body-sm-size); }
-.data-grid { width: 100%; border-collapse: collapse; background: var(--color-bg-surface-raised); font-size: var(--table-cell-size); }
+.data-grid { width: 100%; border-collapse: collapse; background: var(--color-neutral-background-surface-raised-enabled); font-size: var(--table-cell-size); }
 /* DECLARING WIDTHS IS THE OPT-IN. A grid with a <colgroup> lays out fixed; a
    grid without one keeps the default auto layout, where columns size to their
    content.
@@ -1986,11 +2177,11 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 /* The header sits one step darker than canvas, not level with it. The grid is a
    raised object, so a canvas-coloured header only separated from the page by
    accident of context — on a canvas-backed screen it disappeared into it. */
-.data-grid thead { background: var(--color-bg-table-head); }
-.data-grid th { text-align: left; padding: var(--table-cell-pad-y) var(--table-cell-pad-x); font-size: var(--table-cell-size); font-weight: var(--ref-font-weight-regular); color: var(--color-fg-on-fill); border-bottom: var(--border-width-default) solid var(--color-border-default); }
-.data-grid td { padding: var(--table-cell-pad-y) var(--table-cell-pad-x); border-bottom: var(--border-width-default) solid var(--color-border-muted); color: var(--color-fg-default); }
-.data-grid tbody tr:hover td { background: var(--color-bg-hover); }
-/* A selected row takes --color-bg-selected — one rung past hover, the darkest of
+.data-grid thead { background: var(--color-neutral-background-table-head-enabled); }
+.data-grid th { text-align: left; padding: var(--table-cell-pad-y) var(--table-cell-pad-x); font-size: var(--table-cell-size); font-weight: var(--ref-font-weight-regular); color: var(--color-neutral-foreground-on-neutral-fill-enabled); border-bottom: var(--border-width-default) solid var(--color-neutral-stroke-default-enabled); }
+.data-grid td { padding: var(--table-cell-pad-y) var(--table-cell-pad-x); border-bottom: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); color: var(--color-neutral-foreground-default-enabled); }
+.data-grid tbody tr:hover td { background: var(--color-neutral-background-interaction-hovered); }
+/* A selected row takes --color-neutral-background-interaction-toggled — one rung past hover, the darkest of
    the state fills because it is the one that persists. It holds under the pointer
    too: a selected row that turns back into a hover fill reads as having lost the
    selection the user is about to act on. Never the only signal — the checkbox in
@@ -1998,15 +2189,15 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    The grid is the ONE selection surface that takes the brand tint rather than
    the neutral fill, and the reason is what selection means here: a set the user
    is assembling and will act on, carried across scrolling and filtering, not a
-   momentary position like a highlighted option in a list. --color-bg-selected-accent
-   defaults to --color-bg-selected, so on a brand with no hue this is the same
+   momentary position like a highlighted option in a list. --color-brand-background-selected-accent-enabled
+   defaults to --color-neutral-background-interaction-toggled, so on a brand with no hue this is the same
    grey rung it always was; only default and spacious redirect it to the accent
    tint. Select options, calendar ranges and tab counts keep the neutral role. */
-.data-grid tbody tr.on td, .data-grid tbody tr.on:hover td { background: var(--color-bg-selected-accent); }
+.data-grid tbody tr.on td, .data-grid tbody tr.on:hover td { background: var(--color-brand-background-selected-accent-enabled); }
 /* A selected row re-points the INFO tint for everything inside it, because the
    two roles resolve to the same value by construction:
-     --color-bg-selected       -> --ref-neutral-250   (light) / -900 (dark)
-     --color-feedback-info-bg  -> --ref-info-bg -> --ref-neutral-250 / -900
+     --color-neutral-background-interaction-toggled       -> --ref-color-neutral-solid-250   (light) / -900 (dark)
+     --color-status-info-background-subtle-enabled  -> --ref-info-bg -> --ref-color-neutral-solid-250 / -900
    Both arrived there deliberately and for unrelated reasons — selected is the
    darkest rung of the hover/active/selected ladder because it is the one that
    persists, and info sits two steps down because an achromatic tone has only
@@ -2014,7 +2205,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    make a .badge--info vanish into the row it sits on.
    FIXED IN THE ROW, AND NOTHING IS DONE TO THE BADGE AT ALL. Two earlier
    versions of this both restyled the pill — one re-pointed
-   --color-feedback-info-bg to the surface role, the other gave the badge an edge
+   --color-status-info-background-subtle-enabled to the surface role, the other gave the badge an edge
    — and both were answering the right problem at the wrong end. A status is a
    fact about the RECORD. Selecting a row says something about the user's intent,
    and nothing the user does to a row should look like the row's data changed.
@@ -2156,14 +2347,14 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    needs no tabindex the way a scrollable grid does: it is a tablist, arrow keys
    move focus between tabs, and the browser scrolls the focused one into view.
    Six is still the ceiling — this is the floor under the mistake, not a licence. */
-.tabs { display: flex; border-bottom: var(--border-width-default) solid var(--color-border-muted); gap: var(--space-2xs); overflow-x: auto; scrollbar-width: thin; }
+.tabs { display: flex; border-bottom: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); gap: var(--space-2xs); overflow-x: auto; scrollbar-width: thin; }
 /* The active indicator is a pseudo-element inset to the tab's own padding, so the
    rule sits under the label itself rather than the full hit area. Tabs carry no
    background of their own — they sit cleanly on canvas, surface, or raised. */
 /* flex-shrink: 0 and nowrap, or the row never scrolls: flex items shrink below
    their label width first, so an over-long row wrapped its labels onto two lines
    AND still overflowed. The tab keeps its width; the row takes the overflow. */
-.tab { position: relative; flex-shrink: 0; white-space: nowrap; background: transparent; padding: var(--space-md) var(--space-lg); font-size: var(--type-body-md-size); color: var(--color-fg-subtle); cursor: pointer; display: flex; align-items: center; gap: var(--space-sm); }
+.tab { position: relative; flex-shrink: 0; white-space: nowrap; background: transparent; padding: var(--space-md) var(--space-lg); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-subtle-enabled); cursor: pointer; display: flex; align-items: center; gap: var(--space-sm); }
 /* bottom: 0, not -1px. The indicator used to be drawn one pixel outside the
    row so it covered the hairline; now that the row clips its own overflow, that
    pixel is clipped and the underline vanished. It sits on the inside edge
@@ -2177,15 +2368,39 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    of the view. The indicator follows the label, so its inset drops with it. */
 .tabs > .tab:first-child { padding-inline-start: 0; }
 .tabs > .tab:first-child::after { inset-inline-start: 0; }
-.tab:hover { color: var(--color-fg-default); }
+.tab:hover { color: var(--color-neutral-foreground-default-enabled); }
 /* An INSET ring, unlike everywhere else in the system. The row is a scroll
    container now, so it clips whatever a tab paints outside its own box — the
    standard --focus-ring spills 6px and would be cut off at the first and last
    tab. Same geometry read inward: the accent edge at emphasis width, drawn
    inside the tab. */
-.tab:focus-visible { outline: none; box-shadow: inset 0 0 0 var(--border-width-emphasis) var(--color-focus-ring); border-radius: var(--radius-control); }
-.tab.on { color: var(--color-selection-rest); font-weight: var(--ref-font-weight-medium); }
-.tab.on::after { background: var(--color-selection-rest); }
+.tab:focus-visible { outline: none; box-shadow: inset 0 0 0 var(--border-width-emphasis) var(--color-neutral-stroke-focus-ring-enabled); border-radius: var(--radius-control); }
+.tab.on { color: var(--color-brand-background-selection-enabled); font-weight: var(--ref-font-weight-medium); }
+.tab.on::after { background: var(--color-brand-background-selection-enabled); }
+/* BELOW THE TURN THE INDICATOR SPANS THE WHOLE TAB, and this is the one place
+   the rule above is wrong. On a pointer the inset is right: the underline sits
+   under the LABEL, the tab's 16px padding is separation between tabs rather than
+   part of the target, and a rule running the full hit area would read as a block
+   rather than as an underline.
+
+   A phone inverts both halves of that. The tab IS the target — it is what a thumb
+   lands on, and a mark that stops short of the thing being tapped describes
+   something smaller than what responds. And the row scrolls here, so the
+   indicator is also a SCROLL POSITION cue: a full-width mark reads as "this
+   segment of the row", which is what a partially-scrolled set of tabs needs, and
+   an inset one reads as a word that happens to be underlined.
+
+   Scoped to the TURN, not to the pointer. A coarse tablet above 768 renders the
+   desktop composition — QDS_VIEWPORTS calls that case "desktop composition,
+   coarse pointer" — and it keeps the inset rule with everything else about that
+   composition. Only the narrow form changes.
+
+   inset-inline: 0 rather than a negative pull, because the tab's own box is
+   exactly the span wanted; the first tab already drops its leading padding and
+   its ::after already follows, so that one needs nothing here. */
+@media (max-width: 768px) {
+  .tab::after { inset-inline: 0; }
+}
 /* A count is an exception, not a fixture: it appears on the tabs that are
    waiting on the user and carries the accent, so the one number on the row is
    the thing the eye lands on. A count on every tab is decoration — see the
@@ -2195,7 +2410,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    comes out a ~24×20 capsule, not a circle — the inset is what gives the number
    room, and a count squeezed to a 20px circle reads as a dot with a digit
    crammed into it. */
-.tab .ct { display: inline-flex; align-items: center; justify-content: center; height: var(--size-count); min-width: var(--size-count); padding: 0 var(--space-sm); border-radius: var(--radius-pill); background: var(--color-accent-tint-bg); font-size: var(--type-caption-size); font-weight: var(--ref-font-weight-medium); line-height: 1; color: var(--color-accent-tint-fg); }
+.tab .ct { display: inline-flex; align-items: center; justify-content: center; height: var(--size-count); min-width: var(--size-count); padding: 0 var(--space-sm); border-radius: var(--radius-pill); background: var(--color-brand-background-tint-enabled); font-size: var(--type-caption-size); font-weight: var(--ref-font-weight-medium); line-height: 1; color: var(--color-brand-foreground-tint-enabled); }
 /* THE COUNT DOES NOT CHANGE WITH SELECTION. It used to inverse on .tab.on, and
    before that it was neutral until selected — two versions of the same idea,
    that the count should help say which tab you are on. It should not: the label
@@ -2206,9 +2421,9 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    So every tab count is the same accent tint, selected or not. What the count
    reports is a quantity, and a quantity does not change because you looked at
    it. */
-.seg { display: inline-flex; background: var(--color-bg-seg-track); padding: var(--space-2xs); border-radius: var(--radius-control); gap: var(--space-2xs); }
-.seg button { border: none; background: transparent; font: inherit; font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular); color: var(--color-fg-on-fill); padding: var(--space-xs) var(--space-md); border-radius: calc(var(--radius-control) - 1px); cursor: pointer; }
-.seg button.on { background: var(--color-bg-surface-raised); color: var(--color-selection-rest); font-weight: var(--type-label-weight); box-shadow: var(--elevation-raised); }
+.seg { display: inline-flex; background: var(--color-neutral-background-seg-track-enabled); padding: var(--space-2xs); border-radius: var(--radius-control); gap: var(--space-2xs); }
+.seg button { border: none; background: transparent; font: inherit; font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular); color: var(--color-neutral-foreground-on-neutral-fill-enabled); padding: var(--space-xs) var(--space-md); border-radius: calc(var(--radius-control) - 1px); cursor: pointer; }
+.seg button.on { background: var(--color-neutral-background-surface-raised-enabled); color: var(--color-brand-background-selection-enabled); font-weight: var(--type-label-weight); box-shadow: var(--elevation-raised); }
 
 /* ══ THE TOUCH FLOOR IS 44 ON BOTH AXES AND ONLY ONE OF THEM WAS FLOORED ══
    The coarse ladder collapses --size-control-sm and -md to --size-touch-min, and
@@ -2268,17 +2483,17 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    on one side only.
    The border stays as a TRANSPARENT one, the same idiom .data-grid-surface uses:
    it is what forced-colors paints for users on a system palette, where shadows
-   are dropped entirely. Both need a --color-bg-canvas region behind them; a
+   are dropped entirely. Both need a --color-neutral-background-canvas-enabled region behind them; a
    raised shadow on a surface-coloured backdrop has nothing to lift off. */
 .nav-drawer {
   width: var(--shell-panel-w, 256px);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border: var(--border-width-default) solid transparent;
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-raised);
   padding: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);
 }
-@media print { .nav-drawer { border-color: var(--color-border-muted); box-shadow: none; } }
+@media print { .nav-drawer { border-color: var(--color-neutral-stroke-muted-enabled); box-shadow: none; } }
 /* ── .nav-drawer.sections — A SECTION RAIL, AND WHAT IT DOES ON A PHONE ──────
    OPT-IN, AND DELIBERATELY NOT INFERRED. A standalone .nav-drawer beside a
    record's cards is a SECTION rail: its rows are places inside the object on
@@ -2341,17 +2556,17 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   border-radius: var(--radius-element);
 }
 .nav-drawer.sections > details > summary::-webkit-details-marker { display: none; }
-.nav-drawer.sections > details > summary:hover { background: var(--color-bg-hover); }
+.nav-drawer.sections > details > summary:hover { background: var(--color-neutral-background-interaction-hovered); }
 .nav-drawer.sections > details > summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* The bar spans both columns under the label, which is what makes the collapsed
    row read as a step in a sequence rather than a heading with a chevron. */
 .nav-drawer.sections > details > summary > .progress { grid-column: 1 / -1; }
 .nav-drawer.sections > details > summary > .lbl {
-  font-weight: var(--type-label-weight); color: var(--color-fg-default);
+  font-weight: var(--type-label-weight); color: var(--color-neutral-foreground-default-enabled);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .nav-drawer.sections > details > summary > .ms {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   transition: transform var(--motion-hover-duration) var(--motion-hover-easing);
 }
 .nav-drawer.sections > details[open] > summary > .ms { transform: rotate(180deg); }
@@ -2368,12 +2583,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 }
 :is(.nav, .shell > .hd) .brandmark { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-sm) var(--space-md); font-weight: var(--ref-font-weight-medium); }
 /* Scoped, never global: .empty .glyph is a different thing (a sunken circle). */
-:is(.nav, .shell > .hd) .glyph { width: var(--nav-brand-size); height: var(--nav-brand-size); border-radius: var(--ref-radius-100); background: var(--color-action-primary-rest); color: var(--color-action-primary-fg); display: inline-flex; align-items: center; justify-content: center; font-size: var(--type-caption-size); font-weight: var(--ref-font-weight-medium); }
+:is(.nav, .shell > .hd) .glyph { width: var(--nav-brand-size); height: var(--nav-brand-size); border-radius: var(--ref-corner-radius-100); background: var(--color-brand-background-primary-enabled); color: var(--color-neutral-foreground-on-brand-primary-enabled); display: inline-flex; align-items: center; justify-content: center; font-size: var(--type-caption-size); font-weight: var(--ref-font-weight-medium); }
 /* Same seam as .select-group and .menu-label — a drawer group heading divides
    nav items the way those divide a list, so all four captioned seams read alike:
-   --color-border-default, the captioned-seam role. The rule, the two-role split
+   --color-neutral-stroke-default-enabled, the captioned-seam role. The rule, the two-role split
    and the measurements live above .divider-label in components-extra.css; do not
-   localise a copy here. Bare structural edges stay on --color-border-muted, this
+   localise a copy here. Bare structural edges stay on --color-neutral-stroke-muted-enabled, this
    nav's own included. As of v183 "read alike" is literally true — .menu-label and
    .divider-label were both on muted before. */
 :is(.nav-drawer, .nav) /* Group heading: box-sizing is declared so the collapsed seam can hold the
@@ -2383,12 +2598,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   display: flex; align-items: center; gap: var(--space-md);
   box-sizing: border-box;
   font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular);
-  color: var(--color-fg-subtle); padding: var(--space-md) var(--space-sm) var(--space-sm);
+  color: var(--color-neutral-foreground-subtle-enabled); padding: var(--space-md) var(--space-sm) var(--space-sm);
   user-select: none;
 }
 :is(.nav-drawer, .nav) .grp::before, :is(.nav-drawer, .nav) .grp::after {
   content: ""; flex: 1; height: var(--border-width-default);
-  background: var(--color-border-default);
+  background: var(--color-neutral-stroke-default-enabled);
 }
 /* flex-shrink: 0 BECAUSE height IS A FLEX BASIS IN THE PANEL, NOT A HEIGHT. .pn is
    a flex column with overflow: auto, so a row's declared --size-control-md is a
@@ -2410,7 +2625,20 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    rows stop competing with it. (.nav-bar .nav-item declares the same thing for
    the horizontal case, where the axis is inline; that rule is now subsumed by
    this one and kept for locality.) */
-.nav-item { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-md); height: var(--size-control-md); padding: 0 var(--space-md); border-radius: var(--radius-control); font-size: var(--type-body-md-size); color: var(--color-fg-muted); cursor: pointer; }
+.nav-item { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-md); height: var(--size-control-md); padding: 0 var(--space-md); border-radius: var(--radius-control); font-size: var(--type-body-md-size); cursor: pointer; }
+/* REST COLOUR IS DECLARED ONCE, FOR BOTH ELEMENT TYPES. It used to sit on .nav-item
+   alone at (0,1,0), and a.nav-item then said `color: inherit` at (0,1,1) to keep the
+   anchor off the UA's link blue — which outranked the class and threw the authored
+   colour away. Every nav item in this system is an <a>, so the muted rest colour had
+   never once applied: a Page-context drawer rendered its rest rows at the inherited
+   page foreground (#21201f measured) instead of --color-neutral-foreground-muted-enabled,
+   and Figma's Nav Drawer rest state disagreed with the CSS for exactly that reason.
+   The two selectors share ONE declaration rather than restating the token, so they
+   cannot drift. The anchor arm keeps (0,1,1), which is what holds a consuming
+   product's own `a { color }` off a nav item — the job `inherit` was really doing.
+   The shell's own chrome is unaffected: .shell > .pn .nav-item and .shell > .hd
+   .nav-item are (0,3,0) and still win, as does .nav-item.on at (0,2,0). */
+.nav-item, a.nav-item { color: var(--color-neutral-foreground-muted-enabled); }
 /* THE SYSTEM RING, not the browser's. Every focus in this library resolves to
    --focus-ring (or --focus-ring-danger / --border-glow-emphasis for fields), so
    a keyboard user sees ONE treatment across the product rather than one per
@@ -2421,7 +2649,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    outline without replacing it is the classic way a component becomes
    unusable by keyboard while looking finished. */
 .nav-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.nav-item:hover { background: var(--color-bg-hover); color: var(--color-fg-default); }
+.nav-item:hover { background: var(--color-neutral-background-interaction-hovered); color: var(--color-neutral-foreground-default-enabled); }
 /* A destination name that does not fit TRUNCATES. There was no rule at all, so
    the label inherited white-space: normal and min-width: auto — it wrapped inside
    a row whose height is fixed, sat crammed edge-to-edge at two lines, and at
@@ -2444,7 +2672,8 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    greyscale and a colourblind reading.
    Two navs opt out and keep their own treatment, both below: .nav-bar, where a
    fill behind one item in a horizontal row reads as a button among labels, and
-   any .dark nav, which has its own selected pair tuned against the dark surface. */
+   the shell's own .pn and .hd, which are dark chrome and have their own selected
+   pair tuned against that surface. */
 .nav-item.on { background: var(--color-bg-nav-item-selected); color: var(--color-fg-nav-item-selected); font-weight: var(--type-label-weight); }
 /* The glyph follows the label onto the accent rather than staying neutral — half
    the row in accent and half in body colour read as a rendering fault. */
@@ -2464,7 +2693,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      intended shape — a capsule, not a circle. */
   height: var(--size-count, 20px); min-width: var(--size-count, 20px);
   padding: 0 var(--space-sm); border-radius: var(--radius-pill);
-  background: var(--color-selection-rest); color: var(--color-fg-on-accent);
+  background: var(--color-brand-background-selection-enabled); color: var(--color-neutral-foreground-on-brand-enabled);
   font-size: var(--type-caption-size); font-weight: var(--ref-font-weight-medium); line-height: 1;
 }
 /* On a dark nav the accent pill would be the brightest thing in the chrome, so it
@@ -2472,11 +2701,11 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    surfaces, and the reason is why: this is a property of the dark SURFACE, not of
    being attached to an edge or of which nav it is. Each was found separately —
    a standalone dark drawer, then a dark header — both leaving the blue pill at
-   ~1.86:1 against --color-bg-nav, the numeral still legible on the fill and the
+   ~1.86:1 against --color-neutral-background-nav-enabled, the numeral still legible on the fill and the
    pill itself gone. The three dark surfaces stay in one selector so a fourth
    cannot be added without seeing it.
    Inverted mode is handled below, unscoped, since there every nav is dark. */
-.pn.dark .nav-item .ct, .nav-drawer.dark .nav-item .ct, .shell > .hd.dark .nav-item .ct { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
+.shell > .pn .nav-item .ct, .shell > .hd .nav-item .ct { background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled); }
 /* Vertical nav parts, scoped to .nav so they work in a shell panel as well as
    in the standalone .nav-drawer. The drawer is the same nav plus a surface and
    a border; inside a shell the panel IS the surface, so the drawer's own
@@ -2498,54 +2727,37 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    the primary action sitting a few pixels away in the same header. The drawer
    keeps its fill because a vertical list has a row to fill; a bar does not.
    Colour is not the only signal — .nav-item.on also carries the label weight. */
-.nav-bar .nav-item.on { background: none; color: var(--color-selection-rest); }
-.nav-bar .nav-item.on:hover { background: var(--color-bg-hover); }
+.nav-bar .nav-item.on { background: none; color: var(--color-brand-background-selection-enabled); }
+.nav-bar .nav-item.on:hover { background: var(--color-neutral-background-interaction-hovered); }
 /* Identity belongs to the shell, not to the destination list: the panel and the
    header carry the brandmark, and a standalone .nav-drawer never does. In the
    header it sits on the header's own padding rather than the panel's. */
 .shell > .hd .brandmark { padding: 0; }
 
-/* Dark panel — the recommended treatment for a shell side nav. Chrome that
-   frames the product reads as a different plane from the content it frames, and
-   a dark panel does that without a heavier border. It does not invert with
-   mode: see --color-bg-nav. */
-/* .shell > .pn.dark, not .pn.dark: the base panel rule is .shell > .pn, which
-   has equal specificity and is authored later in this file, so the shorter
-   selector lost the background it was asking for. */
-.shell > .pn.dark, .nav-drawer.dark { background: var(--color-bg-nav); border-color: var(--color-border-on-nav); color: var(--color-fg-on-nav); }
-/* A dark standalone nav separates by its BORDER, not by elevation — the one
-   documented exception to the standalone-nav rule above. The shadow ink is
-   --ref-shadow-key, a near-black; on --color-bg-nav it lands dark-on-dark and
-   separates nothing, so leaving it in place gave the dark drawer two devices for
-   one boundary while light had one. The border is the device that works on a
-   dark surface, so dark keeps it and drops the shadow. Light keeps the shadow
-   and holds its border transparent for forced-colors.
-   .shell > .pn.dark is NOT in this rule: an attached panel's border is its
-   non-shadowed page-facing edge, and its directional
-   --elevation-chrome-inline stays in both modes. */
-.nav-drawer.dark, .nav-rail.dark { box-shadow: none; }
-
-/* The dark chrome rules above set border-COLOR only, which was a no-op while the
-   shell's page-facing edge had no border. It now carries a 1px TRANSPARENT one
-   (for forced-colors and print), so those rules were inking a hairline beside
-   the chrome shadow — two seams on one boundary. The page-facing edge goes back
-   to transparent here; a standalone .nav-drawer keeps its border on all four
-   sides, because it is an object with edges rather than chrome fixed to one.
-   The print block below names .dark explicitly: these selectors are (0,3,0) and
-   would otherwise outrank it and lose the printed edge again. */
-.shell > .pn.dark { border-inline-end-color: transparent; }
-.pn.dark .brandmark { color: var(--color-fg-on-nav-strong); }
-.shell > .pn.dark .glyph { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
-.pn.dark .grp, .nav-drawer.dark .grp { color: var(--color-fg-on-nav); }
-.pn.dark .grp::before, .pn.dark .grp::after,
-.nav-drawer.dark .grp::before, .nav-drawer.dark .grp::after { background: var(--color-border-on-nav); }
-.pn.dark .nav-item, .nav-drawer.dark .nav-item { color: var(--color-fg-on-nav); }
-.pn.dark .nav-item:hover, .nav-drawer.dark .nav-item:hover { background: var(--color-bg-nav-hover); color: var(--color-fg-on-nav-strong); }
+/* THE SHELL SIDE NAV IS DARK, FULL STOP — it is no longer a .dark opt-in. The
+   global side nav and the shell header are chrome that frames the product, and
+   chrome reads as a different plane from the content it frames; making that a
+   per-product choice meant the same Nav Item had to serve a dark panel and a
+   light one, and the two drifted. Placement now carries the semantics in Figma
+   and the base rules carry them here.
+   The surface treatment itself lives on the BASE .shell > .pn rule further down
+   this file, not here: that rule has equal specificity and is authored later, so
+   a treatment declared at this point loses. This block is only the descendants.
+   .nav-drawer and .nav-rail are NOT in any of these rules — they are Page
+   surfaces and stay Theme-aware; their .dark capability is gone. */
+.shell > .pn .brandmark { color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+/* The brandmark plate stays NEUTRAL, never a brand-accent step: see the note on
+   --color-neutral-background-nav-badge-enabled. Chrome does not carry the brand hue. */
+.shell > .pn .glyph { background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled); }
+.shell > .pn .grp { color: var(--color-neutral-foreground-on-nav-enabled); }
+.shell > .pn .grp::before, .shell > .pn .grp::after { background: var(--color-neutral-stroke-on-nav-enabled); }
+.shell > .pn .nav-item { color: var(--color-neutral-foreground-on-nav-enabled); }
+.shell > .pn .nav-item:hover { background: var(--color-neutral-background-nav-hovered); color: var(--color-neutral-foreground-on-nav-strong-enabled); }
 /* Selected is the TEXT stepping to white plus the label weight; the fill is
    supporting only (1.52:1) and would not carry the state on its own. */
-.pn.dark .nav-item.on, .nav-drawer.dark .nav-item.on { background: var(--color-bg-nav-selected); color: var(--color-fg-on-nav-strong); }
+.shell > .pn .nav-item.on { background: var(--color-neutral-background-nav-toggled); color: var(--color-neutral-foreground-on-nav-strong-enabled); }
 /* GHOST BUTTONS ON A DARK NAV SURFACE. A ghost carries no fill, so its ink is
-   whatever the surface hands it — and .btn--ghost sets --color-fg-default, which
+   whatever the surface hands it — and .btn--ghost sets --color-neutral-foreground-default-enabled, which
    is a LIGHT-surface token. On all four dark nav surfaces that measured 1.0:1,
    near-black on near-black: the header's Notifications, Language and Help
    buttons were drawing nothing at all. Only .sel-bar had ever been given this
@@ -2554,17 +2766,17 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 
    Same shape as .nav-item above, deliberately: a ghost in this chrome is doing a
    nav item's job, so it takes the nav's own ink and the nav's own hover fill.
-   --color-bg-hover would be no use here either — it is mixed for a light surface
+   --color-neutral-background-interaction-hovered would be no use here either — it is mixed for a light surface
    and disappears on this one, which is why .sel-bar mixes its hover from
    currentColor. Here there is a real token for it. */
-:is(.shell > .hd.dark, .shell > .pn.dark, .nav-drawer.dark, .nav-rail.dark) .btn--ghost {
-  color: var(--color-fg-on-nav);
+:is(.shell > .hd, .shell > .pn) .btn--ghost {
+  color: var(--color-neutral-foreground-on-nav-enabled);
 }
-:is(.shell > .hd.dark, .shell > .pn.dark, .nav-drawer.dark, .nav-rail.dark) .btn--ghost:hover {
-  background: var(--color-bg-nav-hover); color: var(--color-fg-on-nav-strong);
+:is(.shell > .hd, .shell > .pn) .btn--ghost:hover {
+  background: var(--color-neutral-background-nav-hovered); color: var(--color-neutral-foreground-on-nav-strong-enabled);
 }
-:is(.shell > .hd.dark, .shell > .pn.dark, .nav-drawer.dark, .nav-rail.dark) .btn--ghost:active {
-  background: var(--color-bg-nav-selected); color: var(--color-fg-on-nav-strong);
+:is(.shell > .hd, .shell > .pn) .btn--ghost:active {
+  background: var(--color-neutral-background-nav-toggled); color: var(--color-neutral-foreground-on-nav-strong-enabled);
 }
 
 /* ── CONTINUOUS DARK CHROME ──────────────────────────────
@@ -2576,10 +2788,11 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
       already a large step in tone, so the shadow is a second device answering a
       question tone has answered. It is also half-wasted: the panel's rightward
       shadow spends its top 61px cast onto the dark bar, near-black on near-black.
-      This is the same argument .nav-drawer.dark already makes for dropping its
-      own shadow; the note there excluded .shell > .pn.dark on the grounds that
-      its directional shadow "stays in both modes", which was written when the bar
-      beside it was light and the shadow still had a light surface to fall on.
+      The standalone dark drawer used to make this same argument for dropping its
+      own shadow; that capability is gone, and the note there had excluded the
+      shell panel on the grounds that its directional shadow "stays in both
+      modes" — written when the bar beside it could still be light and the shadow
+      still had a light surface to fall on. Both are dark now, always.
 
    2. THE INNER CORNER GETS A RADIUS. With the shadows gone the content is a plane
       sitting INSIDE the chrome, so the shell's own ground becomes the chrome
@@ -2587,14 +2800,15 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
       The corner is what makes the two read as nested rather than merely adjacent,
       and it is the same logical radius a card gets, one step down from the page.
 
-   Scoped to the case where BOTH are dark. A dark panel under a light bar still
-   needs its shadow: there the boundary is chrome-to-chrome, not chrome-to-content,
-   and tone is not doing the work. */
-.shell:has(> .hd.dark):has(> .pn.dark) > .hd.dark,
-.shell:has(> .hd.dark):has(> .pn.dark) > .pn.dark { box-shadow: none; }
-.shell:has(> .hd.dark):has(> .pn.dark) { background: var(--color-bg-nav); }
-.shell:has(> .hd.dark):has(> .pn.dark) > .ct {
-  background: var(--color-bg-canvas);
+   Still scoped to a shell that has BOTH, because a shell with only one of them
+   has a single chrome edge rather than an L, and the inner corner would have
+   nothing to turn. It no longer tests .dark — both surfaces are dark by
+   construction now — so the test is simply that both exist. */
+.shell:has(> .hd):has(> .pn) > .hd,
+.shell:has(> .hd):has(> .pn) > .pn { box-shadow: none; }
+.shell:has(> .hd):has(> .pn) { background: var(--color-neutral-background-nav-enabled); }
+.shell:has(> .hd):has(> .pn) > .ct {
+  background: var(--color-neutral-background-canvas-enabled);
   border-start-start-radius: var(--radius-container);
 }
 /* DARK MODE NEEDS THE HAIRLINE BACK, and this is the whole reason the ladder is
@@ -2605,13 +2819,14 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    there left the boundary with NO device — which is how the nesting corner
    disappears entirely.
 
-   The border is the device that works on a dark surface — the same conclusion
-   .nav-drawer.dark reached — but it goes on the CONTENT plane rather than on the
-   chrome, on the two edges that face chrome, so it follows the rounded corner
-   instead of running straight past it. */
-[data-mode="dark"] .shell:has(> .hd.dark):has(> .pn.dark) > .ct {
-  border-block-start: var(--border-width-default) solid var(--color-border-on-nav);
-  border-inline-start: var(--border-width-default) solid var(--color-border-on-nav);
+   The border is the device that works on a dark surface — the conclusion the
+   standalone dark drawer used to reach before that capability was removed — but
+   it goes on the CONTENT plane rather than on the chrome, on the two edges that
+   face chrome, so it follows the rounded corner instead of running straight
+   past it. */
+[data-mode="dark"] .shell:has(> .hd):has(> .pn) > .ct {
+  border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-on-nav-enabled);
+  border-inline-start: var(--border-width-default) solid var(--color-neutral-stroke-on-nav-enabled);
 }
 /* Dark MODE — the whole UI inverted, as distinct from a dark nav on a light UI
    above. The accent tint is dropped here: in dark the tint is mixed from the
@@ -2619,36 +2834,36 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    so an inverted nav ended up with a blue-tinted selected row and a pale blue
    badge — the two loudest things on the screen sitting in its quietest chrome.
    Inverted, selection is carried by white on the neutral nav fill and the badge
-   takes the same stable pair the dark panel's does. Same reasoning as .pn.dark,
-   applied to the mode instead of the class.
+   takes the same stable pair the shell panel's does. Same reasoning as the
+   chrome surfaces, applied to the mode instead of the surface.
    Scoped in components.css rather than as a token override, deliberately: the
    brands set --color-bg-nav-item-selected at [data-brand] and this file loads
    after them, so a [data-mode="dark"] block in foundation.css would lose.
    Scoped to the drawer and the panel, not to .nav-item at large: .nav-bar
    deliberately carries no fill behind a selected item, and its rule is authored
    above this one, so an unscoped selector would have overridden it. */
-[data-mode="dark"] :is(.nav-drawer, .pn) .nav-item.on { background: var(--color-bg-nav-selected); color: var(--color-fg-on-nav-strong); }
-[data-mode="dark"] .nav-rail .ritem.on .pill { background: var(--color-bg-nav-selected); color: var(--color-fg-on-nav-strong); }
-[data-mode="dark"] .nav-rail .ritem.on .rlabel { color: var(--color-fg-on-nav-strong); }
-[data-mode="dark"] .nav-item .ct { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
+[data-mode="dark"] :is(.nav-drawer, .pn) .nav-item.on { background: var(--color-neutral-background-nav-toggled); color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+[data-mode="dark"] .nav-rail .ritem.on .pill { background: var(--color-neutral-background-nav-toggled); color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+[data-mode="dark"] .nav-rail .ritem.on .rlabel { color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+[data-mode="dark"] .nav-item .ct { background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled); }
 /* The brandmark glyph — the logo square — takes the same neutral pair. It is the
    only mark in the nav whose base rule consumes an ACCENT token
-   (--color-action-primary-rest), and in dark that resolves to the accent's PALE
+   (--color-brand-background-primary-enabled), and in dark that resolves to the accent's PALE
    end, so inverting the mode left a pale-blue logo as the one hue-bearing thing
    in an otherwise neutral dark nav. Every other part of the nav inverts correctly
    without a rule here, because every other part is already on a neutral,
-   mode-aware token: .nav-avatar on --color-bg-selected, .brandmark on inherited
-   colour, the item and group colours on --color-fg-muted and friends. That is why
+   mode-aware token: .nav-avatar on --color-neutral-background-interaction-toggled, .brandmark on inherited
+   colour, the item and group colours on --color-neutral-foreground-muted-enabled and friends. That is why
    this set is short and not a mirror of the class-scoped one — a mode-scoped
    override is only needed where a token carries the hue. */
-[data-mode="dark"] :is(.nav, .shell > .hd) .glyph { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
+[data-mode="dark"] :is(.nav, .shell > .hd) .glyph { background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled); }
 /* The bar keeps no fill and takes white TEXT. Scoping the rule above to the
    drawer and panel skipped the bar's background, which was right, and its colour,
-   which was not: it left --color-selection-rest in place, and in dark that is the
+   which was not: it left --color-brand-background-selection-enabled in place, and in dark that is the
    accent's pale end — the light accent this rule exists to remove, on the one nav
-   that shows selection with colour alone. Same value .hd.dark already gives a bar
-   sitting in a dark header; this is the mode doing what the class did. */
-[data-mode="dark"] .nav-bar .nav-item.on { color: var(--color-fg-nav-accent); }
+   that shows selection with colour alone. Same value the shell header already
+   gives a bar sitting inside it; this is the mode doing what the surface does. */
+[data-mode="dark"] .nav-bar .nav-item.on { color: var(--color-neutral-foreground-nav-accent-enabled); }
 
 /* Collapse — the panel drops to a glyph rail. Labels are wrapped in .lbl for
    exactly this reason: a bare text node cannot be hidden with CSS, so a nav
@@ -2696,7 +2911,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   inset-block-start: calc(50% - var(--size-icon-md) / 2 - 2px);
   inset-inline-start: calc(var(--space-md) + var(--size-icon-md) - 3px);
   width: 6px; height: 6px; border-radius: var(--radius-pill);
-  background: var(--color-fg-on-nav-strong); color: transparent; font-size: 0;
+  background: var(--color-neutral-foreground-on-nav-strong-enabled); color: transparent; font-size: 0;
   overflow: hidden;
 }
 /* Collapsed, the arrow IS the top row: the brandmark stands down rather than
@@ -2727,7 +2942,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   font-size: var(--type-body-sm-size); block-size: 1lh;
 }
 /* Account chip — initials in a circle, the trailing edge of a header. */
-.nav-avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--color-bg-selected); color: var(--color-fg-default); display: inline-flex; align-items: center; justify-content: center; font-size: var(--type-caption-size); font-weight: var(--type-emphasis-weight); }
+.nav-avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-pill); background: var(--color-neutral-background-interaction-toggled); color: var(--color-neutral-foreground-default-enabled); display: inline-flex; align-items: center; justify-content: center; font-size: var(--type-caption-size); font-weight: var(--type-emphasis-weight); }
 
 /* Panel top row: the brandmark and the collapse control share a line, so the
    control sits at the panel's trailing top corner — the corner the panel edge
@@ -2765,44 +2980,46 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    choose it, and unlike a nav label it cannot be shortened by editing — so both
    lines truncate and the flex child takes min-width:0, without which a flex item
    refuses to shrink below its content and pushes the thumbnail off the panel. */
-.pn-profile { display: flex; align-items: center; gap: var(--space-md); padding-block: var(--space-md); margin-block-end: var(--space-sm); border-block-end: var(--border-width-default) solid var(--color-border-muted); }
-.pn-profile .thumb { --thumb-size: var(--ref-dimension-500); }
+.pn-profile { display: flex; align-items: center; gap: var(--space-md); padding-block: var(--space-md); margin-block-end: var(--space-sm); border-block-end: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); }
+.pn-profile .thumb { --thumb-size: var(--ref-size-500); }
 .pn-profile .who { display: flex; flex-direction: column; min-width: 0; }
-.pn-profile .nm { font-size: var(--type-body-md-size); font-weight: var(--type-label-weight); color: var(--color-fg-default); }
-.pn-profile .em { font-size: var(--type-body-sm-size); color: var(--color-fg-muted); }
+.pn-profile .nm { font-size: var(--type-body-md-size); font-weight: var(--type-label-weight); color: var(--color-neutral-foreground-default-enabled); }
+.pn-profile .em { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); }
 .pn-profile .nm, .pn-profile .em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pn.dark .pn-profile { border-block-end-color: var(--color-border-on-nav); }
-.pn.dark .pn-profile .nm { color: var(--color-fg-on-nav-strong); }
-.pn.dark .pn-profile .em { color: var(--color-fg-on-nav); }
+.shell > .pn .pn-profile { border-block-end-color: var(--color-neutral-stroke-on-nav-enabled); }
+.shell > .pn .pn-profile .nm { color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+.shell > .pn .pn-profile .em { color: var(--color-neutral-foreground-on-nav-enabled); }
 /* :is(.nav, .shell > .hd) .brandmark takes the specificity of its most specific
    arm (0,2,0), so a plain .pn-top .brandmark cannot reset its padding. Matching
    that shape is what makes the reset land. The gap matches .nav-item's, so the
    mark-to-name distance and the glyph-to-label distance below it are one
    rhythm down the panel. */
 :is(.nav, .shell > .hd) .pn-top .brandmark { flex: 1; min-width: 0; padding: 0; gap: var(--space-md); }
-.nav-collapse { flex-shrink: 0; margin-block-start: 0; display: inline-flex; align-items: center; justify-content: center; width: var(--size-control-sm); height: var(--size-control-sm); border: none; background: none; border-radius: var(--radius-control); color: var(--color-fg-on-nav); font: inherit; cursor: pointer; }
-.nav-collapse:hover { background: var(--color-bg-nav-hover); color: var(--color-fg-on-nav-strong); }
+.nav-collapse { flex-shrink: 0; margin-block-start: 0; display: inline-flex; align-items: center; justify-content: center; width: var(--size-control-sm); height: var(--size-control-sm); border: none; background: none; border-radius: var(--radius-control); color: var(--color-neutral-foreground-on-nav-enabled); font: inherit; cursor: pointer; }
+.nav-collapse:hover { background: var(--color-neutral-background-nav-hovered); color: var(--color-neutral-foreground-on-nav-strong-enabled); }
 .nav-collapse:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Once the word is gone the glyph is the only statement of the action, so it
    turns to point the way the panel will move. */
 .nav-collapse > .ms { transition: transform var(--motion-hover-duration) var(--motion-hover-easing); }
 .shell.nav-collapsed .nav-collapse > .ms { transform: scaleX(-1); }
 
-/* Dark header — the same chrome plane as a dark panel, for a top-nav-only
-   product where the bar IS the navigation and should not read as page content.
-   Selected drops its accent here: see --color-fg-nav-accent. */
-.shell > .hd.dark { background: var(--color-bg-nav); border-color: var(--color-border-on-nav); color: var(--color-fg-on-nav); }
-.shell > .hd.dark { border-block-end-color: transparent; }
-.shell > .hd.dark .brandmark { color: var(--color-fg-on-nav-strong); }
-.shell > .hd.dark .glyph { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
+/* THE SHELL HEADER IS DARK, FULL STOP — the same chrome plane as the side nav,
+   and no longer a .dark opt-in. The bar is navigation whether or not a panel
+   sits beside it, so it reads as chrome rather than as the top of the page.
+   Selected drops its accent here: see --color-neutral-foreground-nav-accent-enabled.
+   The SURFACE treatment is on the base .shell > .hd rule further down, which is
+   authored later at equal specificity; only descendants are set here. */
+.shell > .hd .brandmark { color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+/* Neutral plate, never a brand-accent step — see --color-neutral-background-nav-badge-enabled. */
+.shell > .hd .glyph { background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled); }
 /* The account chip takes the same stable pair as the badge. Its default
-   --color-bg-selected flips with mode and measured 1.5:1 against the fixed dark
+   --color-neutral-background-interaction-toggled flips with mode and measured 1.5:1 against the fixed dark
    header in dark mode — the circle vanished and left the initials floating. */
-.shell > .hd.dark .nav-avatar { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
-.shell > .hd.dark .nav-item { color: var(--color-fg-on-nav); }
-.shell > .hd.dark .nav-item:hover { background: var(--color-bg-nav-hover); color: var(--color-fg-on-nav-strong); }
-.shell > .hd.dark .nav-bar .nav-item.on { background: none; color: var(--color-fg-nav-accent); }
-.shell > .hd.dark .nav-bar .nav-item.on:hover { background: var(--color-bg-nav-hover); }
+.shell > .hd .nav-avatar { background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled); }
+.shell > .hd .nav-item { color: var(--color-neutral-foreground-on-nav-enabled); }
+.shell > .hd .nav-item:hover { background: var(--color-neutral-background-nav-hovered); color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+.shell > .hd .nav-bar .nav-item.on { background: none; color: var(--color-neutral-foreground-nav-accent-enabled); }
+.shell > .hd .nav-bar .nav-item.on:hover { background: var(--color-neutral-background-nav-hovered); }
 
 /* Panel above the header — the side nav owns the full inline edge including the
    top-left corner, and the header starts beside it. Use when the panel carries
@@ -2864,7 +3081,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    by dropping the outline and taking a fill. The distinction is worth drawing:
    a page-level search narrows what is on the screen, the global one leaves it —
    two different promises wearing one control was the thing to fix.
-   --color-bg-muted, the mode-aware "subtle fill", NOT --color-bg-surface-sunken.
+   --color-neutral-background-muted-enabled, the mode-aware "subtle fill", NOT --color-neutral-background-surface-sunken-enabled.
    Sunken was the first choice and it is wrong here for a reason worth keeping:
    in dark it is the DARKEST neutral rung, so a hover step has nowhere to go —
    any move lightens the well toward the header it is supposed to sit inside,
@@ -2875,47 +3092,47 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    The border stays declared and merely transparent, so the box does not move
    when focus colours it — the same reason every other surface here reserves its
    edge rather than adding one.
-   HOVER CANNOT USE --color-bg-hover: that role is neutral-100 in light, which is
+   HOVER CANNOT USE --color-neutral-background-interaction-hovered: that role is neutral-100 in light, which is
    the fill this control already sits on, so the hover step would be invisible.
-   Nor --color-bg-active, which is a step DOWN in light and a step UP in dark and
+   Nor --color-neutral-background-interaction-pressed, which is a step DOWN in light and a step UP in dark and
    would jump past the header's own tone there. Mixing toward the foreground is
    the one move that deepens the well in light and lifts it in dark, which is
    what "one step further into the fill" means in a system that flips. Same idiom
    .bar .acts .btn--ghost:hover already uses. */
-.control.hd-search { border-color: transparent; background: var(--color-bg-muted); }
-.control.hd-search:hover { border-color: transparent; background: color-mix(in oklab, var(--color-fg-default) 6%, var(--color-bg-muted)); }
+.control.hd-search { border-color: transparent; background: var(--color-neutral-background-muted-enabled); }
+.control.hd-search:hover { border-color: transparent; background: color-mix(in oklab, var(--color-neutral-foreground-default-enabled) 6%, var(--color-neutral-background-muted-enabled)); }
 /* Focus is unchanged from every other field — the ring is the system's one focus
    signal and a control that invents its own teaches people to look for two. Only
    the border-color is restated, because the rule above zeroed it; the glow comes
    from .control:focus-within and the fill stays put underneath. */
-.control.hd-search:focus-within { border-color: var(--color-focus-ring); background: var(--color-bg-muted); }
+.control.hd-search:focus-within { border-color: var(--color-neutral-stroke-focus-ring-enabled); background: var(--color-neutral-background-muted-enabled); }
 
-/* ON A DARK BAR the well inverts, because --color-bg-muted is tuned against a
-   light surface and on --color-bg-nav it lands almost the same near-black — a
-   well that separates from nothing. --color-bg-nav-hover is the nav surface's
-   own next rung, so the recess reads here the way --color-bg-muted reads on a
+/* ON A DARK BAR the well inverts, because --color-neutral-background-muted-enabled is tuned against a
+   light surface and on --color-neutral-background-nav-enabled it lands almost the same near-black — a
+   well that separates from nothing. --color-neutral-background-nav-hovered is the nav surface's
+   own next rung, so the recess reads here the way --color-neutral-background-muted-enabled reads on a
    light bar: one deliberate step off the thing it sits in.
    The typed value takes the STRONG nav foreground and the placeholder and glyph
    take the muted one, which is the same split every nav item makes: what the
    user put there outranks the prompt to put something there. */
-/* --color-bg-nav-hover, and it stays. The well measures 1.27:1 against the bar,
+/* --color-neutral-background-nav-hovered, and it stays. The well measures 1.27:1 against the bar,
    which reads thin as a number, so it was lifted and re-measured at three values
    (v159-v161) before coming back here: 18% and 14% both read as a filled FIELD
    rather than a recess, and 12% — the smallest step up, rgb(55,54,53) — was still
    not preferred over this. If it is revisited, two things are already settled:
-     - 16% of --color-fg-on-nav-strong resolves to exactly --color-bg-nav-selected,
+     - 16% of --color-neutral-foreground-on-nav-strong-enabled resolves to exactly --color-neutral-background-nav-toggled,
        which would make the search well identical to a selected nav row. Avoid it
        at any taste.
-     - a value MIXED from --color-bg-nav tracks the surface where this fixed rung
-       does not: --color-bg-nav is redefined in dark mode (--ref-ground-raised)
-       while --color-bg-nav-hover is not, so today the dark bar carries a neutral
+     - a value MIXED from --color-neutral-background-nav-enabled tracks the surface where this fixed rung
+       does not: --color-neutral-background-nav-enabled is redefined in dark mode (--ref-ground-raised)
+       while --color-neutral-background-nav-hovered is not, so today the dark bar carries a neutral
        grey well on a blue-black surface. That is a real flaw in this rule and it
        is accepted, because the lightness is what was being chosen. */
-.shell > .hd.dark .hd-search { background: var(--color-bg-nav-hover); border-color: transparent; }
-.shell > .hd.dark .hd-search:hover { background: color-mix(in oklab, var(--color-fg-on-nav-strong) 6%, var(--color-bg-nav-hover)); }
-.shell > .hd.dark .hd-search input { color: var(--color-fg-on-nav-strong); }
-.shell > .hd.dark .hd-search input::placeholder,
-.shell > .hd.dark .hd-search > .ms { color: var(--color-fg-on-nav); }
+.shell > .hd .hd-search { background: var(--color-neutral-background-nav-hovered); border-color: transparent; }
+.shell > .hd .hd-search:hover { background: color-mix(in oklab, var(--color-neutral-foreground-on-nav-strong-enabled) 6%, var(--color-neutral-background-nav-hovered)); }
+.shell > .hd .hd-search input { color: var(--color-neutral-foreground-on-nav-strong-enabled); }
+.shell > .hd .hd-search input::placeholder,
+.shell > .hd .hd-search > .ms { color: var(--color-neutral-foreground-on-nav-enabled); }
 /* Global chrome sits at --size-icon-md, not the --size-icon-sm every other
    button glyph takes. A bar utility has no label to be read with, so the glyph
    IS the control; at 16px in a 36px button it read as a small mark floating in
@@ -2941,19 +3158,19 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   content: ""; position: absolute; inset-inline-start: calc(-1 * var(--space-md));
   inset-block-start: 50%; transform: translateY(-50%);
   inline-size: var(--border-width-default); block-size: var(--size-icon-lg);
-  background: var(--color-border-muted);
+  background: var(--color-neutral-stroke-muted-enabled);
 }
 /* Dark chrome re-scopes the hairline, the way every other rule on a dark bar
-   does. --color-border-muted is a near-white line against a near-black header;
-   --color-border-on-nav is the whisper the rest of the chrome uses. */
-.shell > .hd.dark .hd-global > .nav-avatar::before { background: var(--color-border-on-nav); }
+   does. --color-neutral-stroke-muted-enabled is a near-white line against a near-black header;
+   --color-neutral-stroke-on-nav-enabled is the whisper the rest of the chrome uses. */
+.shell > .hd .hd-global > .nav-avatar::before { background: var(--color-neutral-stroke-on-nav-enabled); }
 
 /* Same treatment as .nav-drawer — see the standalone-nav note above. */
-.nav-rail { width: 76px; background: var(--color-bg-surface-raised); box-shadow: var(--elevation-raised); border: var(--border-width-default) solid transparent; border-radius: var(--radius-container); padding: var(--space-sm) 0; display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); }
-@media print { .nav-rail { border-color: var(--color-border-muted); box-shadow: none; } }
+.nav-rail { width: 76px; background: var(--color-neutral-background-surface-raised-enabled); box-shadow: var(--elevation-raised); border: var(--border-width-default) solid transparent; border-radius: var(--radius-container); padding: var(--space-sm) 0; display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); }
+@media print { .nav-rail { border-color: var(--color-neutral-stroke-muted-enabled); box-shadow: none; } }
 .nav-rail .ritem { width: 60px; display: flex; flex-direction: column; align-items: center; gap: var(--space-2xs); position: relative; cursor: pointer; }
-.nav-rail .pill { width: 52px; height: 30px; border-radius: var(--radius-pill); display: flex; align-items: center; justify-content: center; color: var(--color-fg-muted); }
-.nav-rail .ritem:hover .pill { background: var(--color-bg-hover); }
+.nav-rail .pill { width: 52px; height: 30px; border-radius: var(--radius-pill); display: flex; align-items: center; justify-content: center; color: var(--color-neutral-foreground-muted-enabled); }
+.nav-rail .ritem:hover .pill { background: var(--color-neutral-background-interaction-hovered); }
 /* The same selected pair as a drawer row, not a solid accent. A drawer and a rail
    are one component and one selection device; expressing it as a tint in one and
    a filled block in the other made them read as two conventions to learn. */
@@ -2962,7 +3179,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    one nav label with no stated overflow behaviour, and a wrapping one pushed the
    pills below it out of the rail's rhythm. A rail label is ONE short word by
    rule; an ellipsis here means the destination needs a drawer, not a wider rail. */
-.nav-rail .rlabel { font-size: var(--type-body-sm-size); color: var(--color-fg-muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-rail .rlabel { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The label follows the pill onto the selected foreground. It sits OUTSIDE the
    tinted pill, so it could have stayed neutral — but the glyph above it is on
    the selected colour, and a rail item is read as one unit: pill and word
@@ -2971,21 +3188,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    The pair is legible on the rail's own surface as well as on the tint — 8.9:1
    in Default, 15.9:1 in Base. */
 .nav-rail .ritem.on .rlabel { color: var(--color-fg-nav-item-selected); font-weight: var(--type-label-weight); }
-/* Dark rail. The rail had no dark variant at all while the drawer did — the same
-   drawer/rail asymmetry as the elevation one, closed here.
-   Placed AFTER the light rules, not with the other dark chrome higher up: several
-   of these pairs are equal-specificity (.nav-rail.dark .rlabel against
-   .nav-rail .rlabel), so source order decides, and authored earlier they lost the
-   colours they were asking for. Same trap the .pn.dark note documents.
-   Selected is the nav's supporting fill plus the strong foreground, matching the
-   drawer — not --color-selection-rest, which is the accent and would put the
-   loudest thing in the product inside its quietest chrome. */
-.nav-rail.dark { background: var(--color-bg-nav); border-color: var(--color-border-on-nav); color: var(--color-fg-on-nav); }
-.nav-rail.dark .pill { color: var(--color-fg-on-nav); }
-.nav-rail.dark .ritem:hover .pill { background: var(--color-bg-nav-hover); color: var(--color-fg-on-nav-strong); }
-.nav-rail.dark .ritem.on .pill { background: var(--color-bg-nav-selected); color: var(--color-fg-on-nav-strong); }
-.nav-rail.dark .rlabel { color: var(--color-fg-on-nav); }
-.nav-rail.dark .ritem.on .rlabel { color: var(--color-fg-on-nav-strong); }
+/* THE RAIL HAS NO DARK VARIANT, and neither does .nav-drawer. Both are PAGE
+   surfaces — a standalone nav that sits in content, not chrome that frames it —
+   so they stay Theme-aware and follow [data-mode] like everything else on the
+   page. The dark treatment belongs to the shell's own .pn and .hd, which are
+   dark by construction. A rail or drawer that wants to look like chrome is
+   asking to be the shell side nav instead. */
 
 /* ── LAYOUT PRIMITIVES ──
    Arrangement only: these carry no colour, no elevation, and no state. They
@@ -3159,10 +3367,10 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 /* margin: 0 on the dd is load-bearing, not tidying: the UA gives it a 40px
    inline-start margin, so an unreset description list indents every value away
    from its own label. */
-.meta-item > dt { font-size: var(--type-body-sm-size); color: var(--color-fg-muted); }
+.meta-item > dt { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); }
 .meta-item > dd {
   margin: 0; font-size: var(--type-body-md-size); line-height: var(--type-body-md-line);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   /* A record carries values nobody sized for — an account name, a URL, a
      reference with no spaces in it. anywhere breaks the unbreakable rather than
      letting it push the column open and the page sideways. */
@@ -3174,7 +3382,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    a dash is announced as an em dash or as nothing at all, and this system has no
    .sr-only utility to hide a better word behind (see the two places that say so).
    The dash is right for an absence nobody needs told about. */
-.meta-item > dd.none { color: var(--color-fg-subtle); }
+.meta-item > dd.none { color: var(--color-neutral-foreground-subtle-enabled); }
 /* Figures that are read as quantities — money, dates, IDs, counts — take
    tabular figures so a column of them lines up on the decimal. */
 .meta-item > dd.num { font-variant-numeric: tabular-nums; }
@@ -3187,12 +3395,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    a form's helper text arriving somewhere it was not invited. */
 .meta-item > dd > .sub {
   display: block; margin-block-start: var(--space-2xs);
-  font-size: var(--type-body-sm-size); color: var(--color-fg-muted);
+  font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* Page shell — header / panel / content / footer. Content is the only region
    that scrolls; the chrome stays put. */
-.shell { display: grid; grid-template-areas: "h h" "p c" "f f"; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-height: 0; background: var(--color-bg-canvas); }
+.shell { display: grid; grid-template-areas: "h h" "p c" "f f"; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-height: 0; background: var(--color-neutral-background-canvas-enabled); }
 /* Wraps rather than clips. The header carries identity, navigation, and account
    chrome on one line, and when the window is too narrow for all three the
    account controls are the ones that would be cut off at the trailing edge —
@@ -3215,7 +3423,13 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    brandmark truncates, and past that the bar has genuinely run out of room —
    which this system already treats as a signal to move to a panel rather than as
    something to absorb. */
-.shell > .hd { grid-area: h; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-16); padding: var(--space-12) var(--page-inset); background: var(--color-bg-surface); border-block-end: var(--border-width-default) solid transparent; position: relative; z-index: var(--z-raised); box-shadow: var(--elevation-chrome-below); }
+/* THE BASE HEADER IS DARK. This is the rule that carries the chrome surface —
+   it is authored after the descendant rules higher up in this file and has equal
+   specificity to any .shell > .hd written there, so the surface must live here
+   or it loses. border-block-end stays TRANSPARENT: it is what forced-colors
+   paints and what the print rule inks, and the header's shared edge with the
+   panel carries no visible seam. */
+.shell > .hd { grid-area: h; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-16); padding: var(--space-12) var(--page-inset); background: var(--color-neutral-background-nav-enabled); color: var(--color-neutral-foreground-on-nav-enabled); border-block-end: var(--border-width-default) solid transparent; position: relative; z-index: var(--z-raised); box-shadow: var(--elevation-chrome-below); }
 /* Without min-width:0 a flex item will not shrink below its own content, so the
    brandmark would push the bar into overflow rather than give up a character. */
 .shell > .hd > .brandmark { min-width: 0; }
@@ -3227,10 +3441,14 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    count on one line without truncating, and 240 is where that stops being true.
    The grid track is auto, so the panel keeps 256 until the window squeezes it and
    then stops at the floor rather than eating the labels. */
-.shell > .pn { grid-area: p; width: var(--shell-panel-w, 256px); min-width: var(--shell-panel-min-w, 240px); overflow: auto; padding: var(--space-12); background: var(--color-bg-surface); border-inline-end: var(--border-width-default) solid transparent; position: relative; z-index: var(--z-raised); box-shadow: var(--elevation-chrome-inline); scrollbar-width: thin; --pn-thumb: var(--color-border-default); scrollbar-color: transparent transparent; }
+/* THE BASE PANEL IS DARK, for the same reason and with the same constraint as
+   the header above: this rule is authored last, so the surface belongs here.
+   --pn-thumb takes the on-nav division token directly — there is no longer a
+   light panel for it to branch on. */
+.shell > .pn { grid-area: p; width: var(--shell-panel-w, 256px); min-width: var(--shell-panel-min-w, 240px); overflow: auto; padding: var(--space-12); background: var(--color-neutral-background-nav-enabled); color: var(--color-neutral-foreground-on-nav-enabled); border-inline-end: var(--border-width-default) solid transparent; position: relative; z-index: var(--z-raised); box-shadow: var(--elevation-chrome-inline); scrollbar-width: thin; --pn-thumb: var(--color-neutral-stroke-on-nav-enabled); scrollbar-color: transparent transparent; }
 /* THE TRACK IS TRANSPARENT, WHICH IS THE WHOLE POINT OF NAMING IT. Left alone,
    the panel scrolls with the platform's default scrollbar, and a default track
-   is painted light — on .pn.dark that is a white gutter down the inline edge of
+   is painted light — on the dark panel that is a white gutter down the inline edge of
    a near-black panel, the brightest thing in the chrome and the one part of it
    nobody chose. Measured: the dark panel is rgb(33,32,31), so a default track is
    the highest-contrast element on the surface.
@@ -3240,8 +3458,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 
    The THUMB takes the surface's own division token rather than a foreground
    rung — a scrollbar is a division of the surface, not text on it.
-     light panel  --color-border-default  rgb(217,217,217) on white, 1.41:1
-     dark panel   --color-border-on-nav   rgb(63,62,61) on rgb(33,32,31), 1.52:1
+     the panel  --color-neutral-stroke-on-nav-enabled   rgb(63,62,61) on rgb(33,32,31), 1.52:1
    Both sit where a thumb belongs: present when you look for it, subordinate when
    you are reading destinations. The foreground alternatives measured 11.52:1 and
    7.83:1 — a bright bar down the edge of the nav.
@@ -3257,7 +3474,6 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    chrome, they do not decide when it is shown. Where a platform or a user
    setting keeps scrollbars permanently visible, that is respected too: nothing
    here hides a desktop scrollbar, and nothing should. */
-.shell > .pn.dark { --pn-thumb: var(--color-border-on-nav); }
 
 /* THE THUMB IS REVEALED, NOT RESIDENT. A nav long enough to scroll is not a
    scrolling REGION the way the content area is — it is a list you read once and
@@ -3306,8 +3522,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    forced-colors paints for users on a system palette, and what the print rule
    below inks — the same contract every shadowed surface in this file keeps. */
 @media print {
-  .shell > .hd, .shell > .pn,
-  .shell > .hd.dark, .shell > .pn.dark { border-color: var(--color-border-muted); box-shadow: none; }
+  .shell > .hd, .shell > .pn { border-color: var(--color-neutral-stroke-muted-enabled); box-shadow: none; }
 }
 /* The content region scrolls full-bleed and its CHILDREN carry the measure, so
    the scrollbar stays at the window edge and the chrome shadow runs the full
@@ -3338,7 +3553,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      push past the content region and scroll the page sideways. */
   max-width: min(100%, var(--container-wide));
 }
-.shell > .ft { grid-area: f; display: flex; align-items: center; gap: var(--space-12); padding: var(--space-12) var(--page-inset); background: var(--color-bg-surface); border-block-start: var(--border-width-default) solid var(--color-border-muted); }
+.shell > .ft { grid-area: f; display: flex; align-items: center; gap: var(--space-12); padding: var(--space-12) var(--page-inset); background: var(--color-neutral-background-surface-enabled); border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); }
 .shell.no-panel { grid-template-areas: "h" "c" "f"; grid-template-columns: minmax(0, 1fr); }
 
 /* The trigger. Hidden above the turn — the panel is already on screen there, and
@@ -3403,33 +3618,12 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   .shell.nav-collapsed.nav-collapsed { --shell-panel-w: var(--shell-panel-w-default); --shell-panel-min-w: var(--shell-panel-w-default); }
   .shell.nav-collapsed :is(.nav-item, .nav-collapse) .lbl,
   .shell.nav-collapsed .brandmark .name { display: revert; }
-  /* THE HEADER FOLLOWS THE PANEL'S PLANE. Above the turn a dark bar is a choice
-     a product makes for a top-nav-only shell, where the bar IS the navigation;
-     below it, the header is ALWAYS the navigation — it carries the trigger, and
-     the panel it opens is the same chrome. So the two should read as one plane
-     rather than as a light bar sitting on top of a dark drawer.
-
-     :has(> .pn.dark) rather than a blanket rule, and that is the whole decision:
-     .pn.dark is the recommended panel treatment, so most products get the dark
-     header for free, and a product that deliberately chose a LIGHT panel keeps a
-     light header instead of being handed two different planes in one shell. The
-     shell already reasons this way — .shell:has(> .hd.dark):has(> .pn.dark)
-     drops both shadows and unifies the canvas — so this is that idea one step
-     earlier, deciding the pairing instead of only reacting to it.
-
-     It sets the class's own selector rather than restating the treatment: every
-     child rule (.brandmark, the glyph plate, .nav-avatar, .btn--ghost, the
-     search well, the avatar hairline) already keys off .hd.dark, and duplicating
-     fifteen declarations here is how a treatment drifts from itself. Verified at
-     393: background rgb(33,32,31), identical to the panel's, with the brandmark
-     at 16.27:1 and the trigger and global utilities at 7.83:1. */
-  .shell:has(> .pn.dark) > .hd { background: var(--color-bg-nav); border-color: var(--color-border-on-nav); color: var(--color-fg-on-nav); border-block-end-color: transparent; }
-  .shell:has(> .pn.dark) > .hd .brandmark { color: var(--color-fg-on-nav-strong); }
-  .shell:has(> .pn.dark) > .hd .glyph,
-  .shell:has(> .pn.dark) > .hd .nav-avatar { background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge); }
-  .shell:has(> .pn.dark) > .hd .hd-global > .nav-avatar::before { background: var(--color-border-on-nav); }
-  .shell:has(> .pn.dark) > .hd .btn--ghost { color: var(--color-fg-on-nav); }
-  .shell:has(> .pn.dark) > .hd .btn--ghost:hover { background: var(--color-bg-nav-hover); color: var(--color-fg-on-nav-strong); }
+  /* THE HEADER FOLLOWS THE PANEL'S PLANE — and now it does so by construction.
+     This block used to restate the whole dark treatment behind
+     .shell:has(> .pn.dark), because above the turn a dark bar was a choice and
+     below it the header is ALWAYS navigation. Both surfaces are dark at every
+     width now, so the pairing needs no rule: every declaration it carried is
+     already on the base .shell > .hd and its descendants. */
 
   /* THE COLLAPSE CONTROL GOES, BECAUSE DOWN HERE IT DOES NOTHING. Collapse is
      already neutralised at this width — the rule above restores the panel's
@@ -3523,7 +3717,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 
   .shell.nav-open::before {
     content: ""; position: fixed; inset: 0;
-    background: var(--color-bg-overlay);
+    background: var(--color-neutral-background-overlay-rest);
     z-index: calc(var(--z-overlay) - 1);
   }
   /* ONE INSET FOR EVERY REGION. On a desktop the shell nests three different
@@ -3552,7 +3746,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 
      Every platform does the opposite — a fixed container, contents centred in it:
      iOS 44pt, Material 2 56dp, Material 3 small 64dp. 56 is the median and the
-     M2 figure exactly, it is already --ref-dimension-700 on the scale, and it
+     M2 figure exactly, it is already --ref-size-700 on the scale, and it
      clears the 44px target by 5.5px top and bottom — M2 itself ran 48dp targets
      in a 56dp bar on less. It returns 21px to the content.
 
@@ -3562,7 +3756,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      here. A bar's top and bottom border no region below it, so nothing goes
      ragged. block-size, not min-block-size: a floor would let the accident
      happen again the next time something tall arrived. */
-  .shell > .hd { --hd-height: var(--ref-dimension-700); block-size: var(--hd-height); padding-block: 0; align-items: center; }
+  .shell > .hd { --hd-height: var(--ref-size-700); block-size: var(--hd-height); padding-block: 0; align-items: center; }
   /* The trigger aligns by its GLYPH, not by its box. Its box starts on the 16px
      inset like everything else, but the art is centred in a 44px touch target, so
      the icon read 10px further in than the title below it and the leading edge of
@@ -3641,7 +3835,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
      in the same rule that asks. */
   .shell > .hd > .hd-global > .btn.icon { --btn-icon-art: var(--size-icon-md); }
   .shell > .hd > .hd-global > .btn.icon:last-child { margin-inline-end: var(--btn-flush-trim); }
-  .shell > .hd > .hd-global .thumb { --thumb-size: var(--ref-dimension-400); }
+  .shell > .hd > .hd-global .thumb { --thumb-size: var(--ref-size-400); }
   /* .btn.icon.nav-toggle, not .nav-toggle: --btn-icon-art is declared on
      .btn.icon at (0,2,0), and a custom property is resolved by the cascade like
      any other declaration — the weaker selector lost silently and the trim kept
@@ -3695,7 +3889,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
 /* margin: 0 because .ttl is a real heading element — an h1 here, an h2 in a
    section — and the UA margins on those would otherwise fight the gap that
    positions the block. */
-.page-hd .ttl { margin: 0; font-size: var(--type-page-title-size); line-height: var(--type-page-title-line); font-weight: var(--type-page-title-weight); letter-spacing: var(--type-page-title-tracking); color: var(--color-fg-default); }
+.page-hd .ttl { margin: 0; font-size: var(--type-page-title-size); line-height: var(--type-page-title-line); font-weight: var(--type-page-title-weight); letter-spacing: var(--type-page-title-tracking); color: var(--color-neutral-foreground-default-enabled); }
 /* No subtitle. A page title names the screen and the screen shows what it holds;
    a line of explanation under it is either restating the title or documenting a
    product that needs the words somewhere else. Framing a title genuinely cannot
@@ -3894,11 +4088,11 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
     justify-content: flex-end; gap: var(--space-sm);
     padding: var(--space-md) var(--space-lg);
     padding-block-end: calc(var(--space-md) + var(--safe-inset-bottom));
-    background: var(--color-bg-surface);
+    background: var(--color-neutral-background-surface-enabled);
     /* A hairline, not a shadow: no elevation token in this system casts UPWARD,
        and the surface footer this bar is a pinned version of (.modal-f, the card
        footer) separates with exactly this muted rule. */
-    border-block-start: var(--border-width-default) solid var(--color-border-muted);
+    border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
   }
   /* THE TWO DECISIONS ARE EQUAL HALVES. flex-basis 0, not auto, so they divide the
      row rather than divide it in proportion to how long their labels happen to be —
@@ -3941,7 +4135,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
   }
 }
 
-.section { display: flex; flex-direction: column; gap: var(--space-16); padding-block: var(--space-32); border-block-end: var(--border-width-default) solid var(--color-border-muted); }
+.section { display: flex; flex-direction: column; gap: var(--space-16); padding-block: var(--space-32); border-block-end: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); }
 .section:last-child { border-block-end: 0; padding-block-end: 0; }
 .section:first-child { padding-block-start: 0; }
 /* A card built out of sections takes the SECTION rhythm on the block axis. The
@@ -3971,7 +4165,7 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    supporting copy is exactly what someone reaches for a <p> for. The UA's 1em
    block margin then added ~16px on top of the intended 4px gap. Same shape as a
    component class that forgets to reset the UA's border or font. */
-.section > .hd .desc { margin: 0; font-size: var(--type-body-sm-size); line-height: var(--type-body-sm-line); color: var(--color-fg-muted); max-width: 68ch; }
+.section > .hd .desc { margin: 0; font-size: var(--type-body-sm-size); line-height: var(--type-body-sm-line); color: var(--color-neutral-foreground-muted-enabled); max-width: 68ch; }
 
 /* ══ THE MOBILE ICON STANDARD ═══════════════════════════════════════════
    Below the turn every icon that belongs to a CONTROL draws at 20px.
@@ -4064,13 +4258,13 @@ button.checkbox:focus-visible, button.radio:focus-visible, button.toggle:focus-v
    that is always visible. Zeroed, this sits under them and the states win:
    verified, a selected row paints the same fill on the pinned cell as on a
    scrolling one. */
-:where(.data-grid.columnar) thead :is(th:first-child, .sel + th) { background: var(--color-bg-table-head); }
-:where(.data-grid.columnar) tbody :is(td:first-child, .sel + td) { background: var(--color-bg-surface-raised); }
+:where(.data-grid.columnar) thead :is(th:first-child, .sel + th) { background: var(--color-neutral-background-table-head-enabled); }
+:where(.data-grid.columnar) tbody :is(td:first-child, .sel + td) { background: var(--color-neutral-background-surface-raised-enabled); }
 
 /* The pinned edge needs to be visible or the held column reads as overlapping
    rather than as anchored. On the LAST pinned cell, so a selection column does not
    get a rule down its middle. */
 .data-grid.columnar :is(th, td):first-child:not(.sel),
 .data-grid.columnar:has(> colgroup) :is(th, td).sel + :is(th, td) {
-  border-inline-end: var(--border-width-default) solid var(--color-border-muted);
+  border-inline-end: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
 }

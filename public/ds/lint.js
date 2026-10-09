@@ -438,6 +438,40 @@
       return out;
     },
 
+    /* —— A timestamp keeps its instant ——
+       The contract has said “always set, whatever the visible string” since this
+       component shipped, and nothing ever checked it. The visible string is a
+       RENDERING of an instant — rounded by the relative ladder, abbreviated by
+       the locale, truncated by its column — and the attribute is the only part
+       that survives all three. Without it a sort, a copy-paste and a screen
+       reader all get the rounded string with no way back to the moment.
+
+       AN EMPTY datetime IS THE SAME DEFECT WEARING THE ATTRIBUTE, so this tests
+       the value rather than its presence: datetime="" is exactly what a template
+       emits when the instant was never passed down, and a presence check would
+       pass it.
+
+       THE ELEMENT IS CHECKED TOO. .ts on a span is a string that looks like a
+       timestamp and is not one — same class of defect as the <svg class="ms x">
+       this linter already catches, where the styling arrived without the
+       semantics. */
+    function tsDatetime(root) {
+      const out = [];
+      within(root, '.ts').forEach(el => {
+        if (el.tagName !== 'TIME') {
+          out.push({ severity: SEV.error, rule: 'Components → Timestamp · element',
+            message: '.ts is on a <' + el.tagName.toLowerCase() + '>, not a <time>. The element is what carries the machine-readable instant; a styled span is a string that looks like a timestamp and is not one.', el: el });
+          return;
+        }
+        const dt = el.getAttribute('datetime');
+        if (!dt || !dt.trim()) {
+          out.push({ severity: SEV.error, rule: 'Components → Timestamp · datetime',
+            message: 'A .ts with no datetime. The visible string is a rendering — the relative ladder rounds it, the locale abbreviates it — and the attribute is the only part that survives. Set the ISO 8601 instant in UTC.', el: el });
+        }
+      });
+      return out;
+    },
+
     /* —— A region scrolls in ONE direction ——
        The rule is not "nothing scrolls sideways" — a carousel track, a data grid
        and the storybook's own wide() frames all scroll horizontally on purpose,
@@ -569,34 +603,139 @@
          went on reading their pointer values while the probe stayed green. This
          asserts the body rung actually differs under the scope, which is the
          cheapest thing that would have failed. */
-      const typeProbe = doc.createElement('div');
-      typeProbe.setAttribute('data-pointer', 'coarse');
-      typeProbe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
-      doc.body.appendChild(typeProbe);
-      const typeUnderScope = px('--type-body-md-size', typeProbe);
-      typeProbe.remove();
-      const typeAtRoot = px('--type-body-md-size');
-      /* THE PRECONDITION IS BOTH AXES QUIET, and getting that wrong made this
-         check cry wolf the moment it was written. The type scale steps on the
-         VIEWPORT as well as the pointer, so in a narrow window the root already
-         holds 16 — scope and root then agree innocently and an assertion that
-         reads equality as failure fires on a page where nothing is wrong. It can
-         only compare the two when neither step is active: a wide window on a
-         fine pointer, where the root is guaranteed to hold pointer values. */
-      const turn = (getComputedStyle(document.documentElement)
-        .getPropertyValue('--bp-turn').trim() || '768px');
-      const bothAxesQuiet = !matchMedia('(pointer: coarse)').matches
-        && !matchMedia('(max-width: ' + turn + ')').matches;
-      if (bothAxesQuiet && typeAtRoot && typeUnderScope && typeUnderScope === typeAtRoot) {
-        out.push({ severity: SEV.error, el: null,
-          rule: 'Foundations \u2192 Layout \u00b7 Interaction harvest',
-          message: 'The derived Touch stylesheet is not moving the TYPE scale: --type-body-md-size ' +
-            'resolves to ' + typeUnderScope + 'px both at the root and under data-pointer="coarse", ' +
-            'though the coarse block re-declares it. Type reaches components through aliases ' +
-            '(--table-cell-size) and through an inherited font-size on body, so a step can be ' +
-            'present in the block and still not arrive: an alias substitutes at the element that ' +
-            'DECLARES it, and an inherited size can only be changed by a declaration on a ' +
-            'descendant.' });
+      /* A SECOND PROBE, ON THE TYPE AXIS, because the first one could not have
+         caught what type steps got wrong. --size-control-md is declared directly
+         in the coarse block, so a probe on it passes as soon as the block is
+         injected; the type rungs are consumed through a second-level alias
+         (--table-cell-size) and through an inherited font-size on body, and both
+         went on reading their pointer values while the probe stayed green.
+
+         ASSERT THE EXPECTED VALUE, NOT A DIFFERENCE. This check used to read
+         "scope === root" as proof the step never arrived. That is invalid: this
+         system has THREE independent axes — viewport width, pointer precision and
+         density — and any of them can legitimately land on the same value. A wide
+         viewport with a coarse pointer is a real device (tablet, kiosk, touchscreen
+         laptop), not a contradiction. Under data-brand="spacious" the density layer
+         already raises --type-body-md-size to 16px at the root, which is exactly
+         what the coarse rule resolves to, and the old assertion fired 29 failures on
+         a page where nothing was wrong. Reproduced on the pre-migration build, so it
+         was never a regression — the combination had simply never been exercised,
+         because the earlier precondition skipped the check below --bp-turn.
+
+         So: read what the coarse block actually DECLARES, resolve it in the current
+         context, and require the scoped probe to equal it. */
+      const coarseDeclared = (prop) => {
+        let found = null;
+        for (const sheet of doc.styleSheets) {
+          let rules; try { rules = sheet.cssRules; } catch (e) { continue; }
+          for (const rule of rules) {
+            if (rule.type !== CSSRule.MEDIA_RULE) continue;
+            const cond = (rule.conditionText || (rule.media && rule.media.mediaText) || '').trim();
+            /* pointer-only, matching the harvest's own refusal to scope a compound
+               condition: `(pointer: coarse) and (max-width: 480px)` is two axes. */
+            if (!/^\(?\s*pointer\s*:\s*coarse\s*\)?$/.test(cond)) continue;
+            for (const inner of rule.cssRules) {
+              if (inner.type !== CSSRule.STYLE_RULE || !inner.style) continue;
+              const v = inner.style.getPropertyValue(prop);
+              if (v && v.trim()) found = v.trim();   /* last declaration wins */
+            }
+          }
+        }
+        return found;
+      };
+      /* Resolve an arbitrary declared expression (var(--ref-font-size-400), 16px …)
+         through a real length property, for the same reason px() does. */
+      const pxOf = (cssValue, host) => {
+        const el = doc.createElement('div');
+        el.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;inline-size:' + cssValue;
+        (host || doc.documentElement).appendChild(el);
+        const v = parseFloat(getComputedStyle(el).inlineSize);
+        el.remove();
+        return isNaN(v) ? 0 : v;
+      };
+
+      const TYPE_PROP = '--type-body-md-size';
+      const declaredCoarse = coarseDeclared(TYPE_PROP);
+      if (declaredCoarse) {
+        /* ── 1. STRUCTURAL CONTRACT ──────────────────────────────────────────
+           Does the DERIVED layer actually carry the property? This runs whatever
+           the density, the viewport or the pointer, because it asks a question
+           about generated CSS rather than about a resolved number — and that is
+           exactly the half the value assertion below cannot answer when the
+           ambient context already sits on the expected value.
+
+           Read the INJECTED sheet, not the harvest report. report.customProps is
+           accurate about what the harvest EMITTED, but it is written in the same
+           loop as report.css, so it cannot tell you the layer failed to inject —
+           and it is also the list the fine-pointer RESET is built from, so a check
+           that trusted it would pass on a document carrying only the reset.
+
+           Hence the selector filter: the layer holds both the coarse rules and a
+           :where([data-pointer="fine"]) reset that re-declares these same custom
+           properties. Only a rule scoped to the COARSE attribute counts. */
+        const layerEl = doc.getElementById('qds-touch-scope');
+        let inLayer = false, layerReadable = false;
+        if (layerEl && layerEl.sheet) {
+          try {
+            for (const r of layerEl.sheet.cssRules) {
+              layerReadable = true;
+              if (r.type !== CSSRule.STYLE_RULE || !r.style) continue;
+              if (!/data-pointer\s*=\s*.coarse./.test(r.selectorText || '')) continue;
+              if (r.style.getPropertyValue(TYPE_PROP)) { inLayer = true; break; }
+            }
+          } catch (e) { layerReadable = false; }
+        }
+        const harvestKnows = Array.isArray(rep.customProps)
+          && rep.customProps.indexOf(TYPE_PROP) !== -1;
+        if (!inLayer) {
+          out.push({ severity: SEV.error, el: null,
+            rule: 'Foundations \u2192 Layout \u00b7 Interaction harvest',
+            message: 'The derived Touch stylesheet does not declare ' + TYPE_PROP + ' on the ' +
+              'coarse scope, though a (pointer: coarse) block declares it as ' + declaredCoarse + '. ' +
+              (!layerEl ? 'No #qds-touch-scope layer is in the document — call QDS_TOUCH_SCOPE() after the sheets are readable.'
+                : !layerReadable ? 'The #qds-touch-scope layer is present but unreadable.'
+                : harvestKnows ? 'The harvest DID collect the property (report.customProps lists it), so the loss is in injection, not in qdsScopeSelector.'
+                : 'The harvest did not collect the property either — fix the transform in qdsScopeSelector (ds/stories-foundations.js).') +
+              ' A property missing from the layer cannot be caught by comparing resolved values: ' +
+              'wherever the ambient context already sits on the coarse value — spacious density, a ' +
+              'narrow viewport, a genuinely coarse pointer — the number looks correct while the rule ' +
+              'is absent.' });
+        }
+
+        /* ── 2. BEHAVIOURAL CONTRACT ─────────────────────────────────────── */
+        const typeProbe = doc.createElement('div');
+        typeProbe.setAttribute('data-pointer', 'coarse');
+        typeProbe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+        doc.body.appendChild(typeProbe);
+        const typeUnderScope = px(TYPE_PROP, typeProbe);
+        typeProbe.remove();
+        const typeAtRoot = px(TYPE_PROP);
+        const typeExpected = pxOf(declaredCoarse);
+
+        /* NO PRECONDITION ON THE ROOT. An earlier draft skipped this whenever the
+           root already sat on the expected value, carried over from the days when
+           the assertion was "scope differs from root". An expected-value assertion
+           does not need that guard and is harmed by it: under spacious the root is
+           16 and so is the expectation, and the guard suppressed a genuine 14px
+           regression in the scope. Control test B caught exactly that.
+
+           Comparing the scope against the DECLARED expectation is safe in every
+           context: when the layer is correct the two agree whatever the density,
+           viewport or pointer, and when they disagree the layer is wrong. What the
+           root cannot do is prove the rule EXISTS when the numbers coincide — that
+           is the structural assertion's job, above, not this one's. */
+        if (typeExpected && typeUnderScope && typeUnderScope !== typeExpected) {
+          out.push({ severity: SEV.error, el: null,
+            rule: 'Foundations \u2192 Layout \u00b7 Interaction harvest',
+            message: 'The derived Touch stylesheet is not moving the TYPE scale: ' + TYPE_PROP +
+              ' resolves to ' + typeUnderScope + 'px under data-pointer="coarse", but the coarse ' +
+              'block declares ' + declaredCoarse + ', which resolves to ' + typeExpected + 'px here ' +
+              '(root is ' + typeAtRoot + 'px). Type reaches components through aliases ' +
+              '(--table-cell-size) and through an inherited font-size on body, so a step can be ' +
+              'present in the block and still not arrive: an alias substitutes at the element that ' +
+              'DECLARES it, and an inherited size can only be changed by a declaration on a ' +
+              'descendant.' });
+        }
       }
       const wantTouch = px('--size-control-touch-md');
       if (wantTouch && underScope !== wantTouch) {
@@ -1169,7 +1308,7 @@
        accent link text pulls the eye through prose, and hue alone does not survive
        greyscale. It holds only where POSITION is the second cue: a field's label
        row, a grid's action cell, a section header's action group. Outside those it
-       is the exact defect --color-fg-link was made neutral to avoid, so the name
+       is the exact defect --color-neutral-foreground-link-enabled was made neutral to avoid, so the name
        is not left to keep people honest. */
     function actionLinkScope(root) {
       const out = [];
@@ -1549,7 +1688,7 @@
        which is why it is mechanical rather than left to the eye. */
     function contentOnCanvas(root) {
       const out = [];
-      const canvas = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-canvas').trim();
+      const canvas = getComputedStyle(document.documentElement).getPropertyValue('--color-neutral-background-canvas-enabled').trim();
       /* Resolve the nearest ancestor that actually paints, the way the eye does:
          a transparent parent is not the background the reader sees. */
       const painted = (el) => {
@@ -1785,7 +1924,7 @@
             message: 'position: sticky with no background of its own, so content will scroll ' +
                      'through it once the region is long enough to scroll — which means it looks ' +
                      'correct in every short specimen and wrong in production. Paint it: the ' +
-                     'surface fill for a bar, --color-bg-table-head for a header cell (thead ' +
+                     'surface fill for a bar, --color-neutral-background-table-head-enabled for a header cell (thead ' +
                      'carries that fill, not the th, so a sticky th is transparent by default). ' +
                      'Declare it through :where() if row or hover state also paints this element, ' +
                      'or the fill will outrank the state.' });

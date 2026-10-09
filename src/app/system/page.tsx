@@ -43,7 +43,7 @@ export default function Home() {
           <CardTitle>Foundation</CardTitle>
         </CardHeader>
         <CardBody>
-          <p style={{ color: "var(--color-fg-muted)" }}>
+          <p style={{ color: "var(--color-neutral-foreground-muted-enabled)" }}>
             Component F1 — scaffold, design system, database and the API
             boundary. Every screen from here reads through <code>/api/*</code>.
           </p>
@@ -92,7 +92,7 @@ export default function Home() {
 
           <p
             style={{
-              color: "var(--color-fg-muted)",
+              color: "var(--color-neutral-foreground-muted-enabled)",
               marginBlockStart: "var(--space-lg)",
             }}
           >

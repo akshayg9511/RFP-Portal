@@ -89,7 +89,7 @@ function SaveAsSetForm({ onClose, styleIds, styles, onSaved }: Props) {
         </div>
 
         <div className="modal-b">
-          <p style={{ color: "var(--color-fg-muted)", marginBlockStart: 0 }}>
+          <p style={{ color: "var(--color-neutral-foreground-muted-enabled)", marginBlockStart: 0 }}>
             {styleIds.length} product{styleIds.length === 1 ? "" : "s"} will be
             grouped. A product can belong to several sets, so nothing is moved
             out of the sets it is already in.

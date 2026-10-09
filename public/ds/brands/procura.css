@@ -28,32 +28,35 @@
   /* — Chrome: the Quince neutral, not navy (Boram, UX v2; Akshay chose
        "nav + logo only", 8 Oct). The nav, header and their hover / selected
        rungs now come straight from the foundation's warm neutral ramp
-       (--ref-neutral-950 / 910 / 900, ground-raised / -base), so Procura's
+       (--ref-color-neutral-solid-950 / 910 / 900, ground-raised / -base), so Procura's
        chrome matches every other Quince tool. Page greys and radii below are
        deliberately left as they were. */
 
   /* — Canvas: a hint cooler than the warm cream, so white cards read as
        white rather than as blue-tinted paper on a yellow ground. */
-  --ref-neutral-50: #f7f8fa; /* canvas */
-  --ref-neutral-100: #f1f3f7; /* sunken · hover fill */
-  --ref-neutral-200: #e6e9f0; /* hairlines */
-  --ref-neutral-250: #dde1ea; /* dividers */
-  --ref-neutral-300: #ccd2e0; /* card edges · control borders */
+  --ref-color-neutral-solid-50: #f7f8fa; /* canvas */
+  --ref-color-neutral-solid-100: #f1f3f7; /* sunken · hover fill */
+  --ref-color-neutral-solid-200: #e6e9f0; /* hairlines */
+  --ref-color-neutral-solid-250: #dde1ea; /* dividers */
+  --ref-color-neutral-solid-300: #ccd2e0; /* card edges · control borders */
 
   /* — Accent: cobalt, mapped from the foundation's palette. No hexes: the
        brand owns which rung plays which role, not what the rung IS. */
-  --ref-hue-tint: var(--ref-cobalt-100);
-  --ref-hue-100: var(--ref-cobalt-100);
-  --ref-hue-200: var(--ref-cobalt-200);
-  --ref-hue-300: var(--ref-cobalt-300);
-  --ref-hue-700: var(--ref-cobalt-700);
-  --ref-hue-800: var(--ref-cobalt-800);
-  --ref-hue-900: var(--ref-cobalt-900);
-  --ref-hue-950: var(--ref-cobalt-950);
+  --ref-hue-tint: var(--ref-color-cobalt-100);
+  --ref-hue-100: var(--ref-color-cobalt-100);
+  --ref-hue-200: var(--ref-color-cobalt-200);
+  --ref-hue-300: var(--ref-color-cobalt-300);
+  --ref-hue-400: var(--ref-color-cobalt-400);
+  --ref-hue-500: var(--ref-color-cobalt-500);
+  --ref-hue-600: var(--ref-color-cobalt-600);
+  --ref-hue-700: var(--ref-color-cobalt-700);
+  --ref-hue-800: var(--ref-color-cobalt-800);
+  --ref-hue-900: var(--ref-color-cobalt-900);
+  --ref-hue-950: var(--ref-color-cobalt-950);
 
-  --ref-hue-tint-bg-on-light: var(--ref-cobalt-50);
+  --ref-hue-tint-bg-on-light: var(--ref-color-cobalt-50);
   --ref-hue-tint-fg-on-light: var(--ref-hue-800);
-  --ref-hue-selected-on-light: var(--ref-cobalt-50);
+  --ref-hue-selected-on-light: var(--ref-color-cobalt-50);
 
   /* On the dark chrome the tint lifts off the raised ground, so it mixes
      toward it. */
@@ -62,7 +65,7 @@
     var(--ref-hue-300) 16%,
     var(--ref-ground-raised)
   );
-  --ref-hue-tint-fg-on-dark: var(--ref-neutral-0);
+  --ref-hue-tint-fg-on-dark: var(--ref-color-neutral-solid-0);
   --ref-hue-selected-on-dark: color-mix(
     in oklch,
     var(--ref-hue-300) 26%,
@@ -72,8 +75,8 @@
   /* The nav's selected item: NEUTRAL, the foundation's toggled nav fill —
      the selected destination reads by its fill and weight, not a blue tint
      on a dark ground. Contract-assigned to the brand. */
-  --color-bg-nav-item-selected: var(--color-bg-nav-selected);
-  --color-fg-nav-item-selected: var(--color-fg-on-nav-strong);
+  --color-bg-nav-item-selected: var(--color-neutral-background-nav-toggled);
+  --color-fg-nav-item-selected: var(--color-neutral-foreground-on-nav-strong-enabled);
 
   /* — Shadow ink: a navy-tinted shadow rather than neutral grey, so a raised
        card lifts within the palette.
@@ -92,11 +95,11 @@
   /* — Radius: softer than Default's crisp operational corners. A product
        card carrying photography wants a rounder frame; a control stays
        tight enough to read as a control. */
-  --radius-inner: var(--ref-radius-100); /* 6px  — images, tiles */
-  --radius-element: var(--ref-radius-150); /* 8px  — inputs, buttons, chips */
-  --radius-container: var(--ref-radius-300); /* 16px — cards, panels */
-  --radius-page: var(--ref-radius-400); /* 24px */
-  --radius-chat: var(--ref-radius-300);
+  --radius-inner: var(--ref-corner-radius-100); /* 6px  — images, tiles */
+  --radius-element: var(--ref-corner-radius-150); /* 8px  — inputs, buttons, chips */
+  --radius-container: var(--ref-corner-radius-300); /* 16px — cards, panels */
+  --radius-page: var(--ref-corner-radius-400); /* 24px */
+  --radius-chat: var(--ref-corner-radius-300);
 
   /* — Density: Default's control ladder, unchanged. This is a data-dense
        product and the grids need it. Only the grid gutter opens up, because

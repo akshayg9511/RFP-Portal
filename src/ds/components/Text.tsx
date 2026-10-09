@@ -46,7 +46,7 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   as?: keyof React.JSX.IntrinsicElements;
   /** --type-emphasis-weight. */
   emphasis?: boolean;
-  /** --color-fg-muted — 4.9:1, and the only step down from default. The system
+  /** --color-neutral-foreground-muted-enabled — 4.9:1, and the only step down from default. The system
    *  carries TWO text tones, not three. */
   tone?: TextTone;
   /** Tabular figures in the brand sans. For a figure read down a column or one
@@ -103,7 +103,7 @@ export function Text({
 export interface TimestampProps extends Omit<React.TimeHTMLAttributes<HTMLTimeElement>, 'dateTime'> {
   /** ISO 8601 instant. Always set, whatever the visible text says. */
   dateTime: string;
-  /** --color-fg-muted, where the time is the row's subject rather than its metadata. */
+  /** --color-neutral-foreground-muted-enabled, where the time is the row's subject rather than its metadata. */
   strong?: boolean;
   /** Inside a sentence — inherits the paragraph size, because a date in prose
    *  is content rather than chrome. */

@@ -45,7 +45,7 @@ body > div:first-of-type {
    aspect ratios load. */
 .set-card-media {
   aspect-ratio: 16 / 10;
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 .set-card-media .carousel-track {
@@ -77,15 +77,15 @@ body > div:first-of-type {
   font-size: var(--type-heading-3-size);
   line-height: var(--type-heading-3-line);
   font-weight: var(--type-heading-3-weight);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 .set-card-title:hover {
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
 }
 
 .set-card-desc {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin-block: var(--space-xs) 0;
 }
 
@@ -100,7 +100,7 @@ body > div:first-of-type {
 
 .set-card-stats dt {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .set-card-stats dd {
@@ -133,7 +133,7 @@ body > div:first-of-type {
 
 .style-card-media {
   aspect-ratio: 1 / 1;
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   position: relative;
 }
 
@@ -146,7 +146,7 @@ body > div:first-of-type {
 
 .style-card .num {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -160,7 +160,7 @@ body > div:first-of-type {
   display: flex;
   justify-content: space-between;
   gap: var(--space-sm);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-body-sm-size);
   font-variant-numeric: tabular-nums;
 }
@@ -175,12 +175,12 @@ body > div:first-of-type {
 }
 
 .style-card.on {
-  /* BLUE, not the system's ink ring. --color-border-selected-surface is
-     --ref-neutral-950, so the DS draws a selected surface in ink; we keep the
+  /* BLUE, not the system's ink ring. --color-neutral-stroke-selected-surface-enabled is
+     --ref-color-neutral-solid-950, so the DS draws a selected surface in ink; we keep the
      accent because selection is the loudest state on these screens. A real
      Tier-2 token either way, so nothing resolves empty — but it is a
      deliberate deviation, raised with the design team rather than assumed. */
-  outline: 2px solid var(--color-fg-accent);
+  outline: 2px solid var(--color-brand-foreground-accent-enabled);
   outline-offset: -2px;
 }
 
@@ -195,7 +195,7 @@ body > div:first-of-type {
   /* The catalogue is shot portrait-ish on a light ground; 4:3 cropped the
      product and left a band of backdrop. 1:1 frames it without cropping. */
   aspect-ratio: 1 / 1;
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   border-radius: var(--radius-inner);
   overflow: hidden;
 }
@@ -228,7 +228,7 @@ body > div:first-of-type {
 }
 
 .detail-thumbs button.on {
-  outline: 2px solid var(--color-fg-accent);
+  outline: 2px solid var(--color-brand-foreground-accent-enabled);
   outline-offset: -2px;
 }
 
@@ -250,7 +250,7 @@ body > div:first-of-type {
    that the surface has failed and should say so. */
 
 .sk {
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   border-radius: var(--radius-inner);
   animation: sk-pulse var(--motion-ambient-duration, 1.6s) ease-in-out infinite;
 }
@@ -258,10 +258,10 @@ body > div:first-of-type {
 @keyframes sk-pulse {
   0%,
   100% {
-    background: var(--color-bg-muted);
+    background: var(--color-neutral-background-muted-enabled);
   }
   50% {
-    background: var(--color-border-muted);
+    background: var(--color-neutral-stroke-muted-enabled);
   }
 }
 
@@ -333,12 +333,12 @@ body > div:first-of-type {
 
 .split-headline .k {
   font-size: var(--type-body-lg-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .split-headline .ms {
   align-self: center;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* A page-level action row: secondary then primary, trailing. */
@@ -490,7 +490,7 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-sm) var(--space-lg);
-  color: var(--color-fg-on-nav-strong);
+  color: var(--color-neutral-foreground-on-nav-strong-enabled);
   text-decoration: none;
 }
 
@@ -501,7 +501,7 @@ body > .drawer-frame .drawer {
   border-radius: var(--radius-element);
   /* The new mark's plate (Open Questions 06): a neutral tile one rung above
      the nav ground, so the artwork carries the colour rather than a gradient. */
-  background: var(--ref-neutral-900);
+  background: var(--ref-color-neutral-solid-900);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -524,7 +524,7 @@ body > .drawer-frame .drawer {
   display: block;
   font-size: var(--type-caption-size);
   line-height: 1.2;
-  color: var(--color-fg-on-nav);
+  color: var(--color-neutral-foreground-on-nav-enabled);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-block-start: 2px;
@@ -534,7 +534,7 @@ body > .drawer-frame .drawer {
 
    Page subtitle under the title. */
 .page-sub {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin: 0;
 }
 
@@ -554,7 +554,7 @@ body > .drawer-frame .drawer {
 }
 
 .fact-list dt {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-body-sm-size);
 }
 
@@ -589,7 +589,7 @@ body > .drawer-frame .drawer {
   inline-size: var(--size-control-sm);
   block-size: var(--size-control-sm);
   border-radius: var(--radius-element);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   box-shadow: var(--elevation-raised);
   opacity: 0;
   transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
@@ -604,7 +604,7 @@ body > .drawer-frame .drawer {
 }
 
 .style-card.on {
-  outline: 2px solid var(--color-fg-accent);
+  outline: 2px solid var(--color-brand-foreground-accent-enabled);
   outline-offset: -2px;
 }
 
@@ -668,19 +668,19 @@ body > .drawer-frame .drawer {
   display: flex;
   gap: var(--space-sm);
   align-items: flex-start;
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
 }
 
 .rfp-group-template {
   font-size: var(--type-heading-3-size);
   line-height: var(--type-heading-3-line);
   font-weight: var(--type-heading-3-weight);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 .rfp-group-path {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rfp-group-stats {
@@ -691,7 +691,7 @@ body > .drawer-frame .drawer {
 
 .rfp-group-stats dt {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rfp-group-stats dd {
@@ -707,7 +707,7 @@ body > .drawer-frame .drawer {
 
 /* The accordion sits flush in the card's footer edge. */
 .rfp-group .acc-item {
-  border-block-start: 1px solid var(--color-border-muted);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .rfp-group .acc-b {
@@ -796,7 +796,7 @@ body > .drawer-frame .drawer {
 
 .vendor-group-label {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-block: var(--space-lg) var(--space-sm);
@@ -807,12 +807,12 @@ body > .drawer-frame .drawer {
 }
 
 .vendor-row {
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   padding-block: var(--space-sm);
 }
 
 .vendor-row.on {
-  background: var(--color-bg-selected-accent);
+  background: var(--color-brand-background-selected-accent-enabled);
   border-radius: var(--radius-inner);
   padding-inline: var(--space-sm);
   margin-inline: calc(var(--space-sm) * -1);
@@ -836,7 +836,7 @@ body > .drawer-frame .drawer {
 
 .vendor-row-id .meta {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -849,7 +849,7 @@ body > .drawer-frame .drawer {
 .vendor-row-note {
   margin-inline-start: var(--space-2xl);
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* The per-vendor product subset — vendor A may get products 1-4, vendor C only
@@ -860,7 +860,7 @@ body > .drawer-frame .drawer {
   display: grid;
   gap: var(--space-2xs);
   padding: var(--space-sm);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   border-radius: var(--radius-inner);
 }
 
@@ -879,7 +879,7 @@ body > .drawer-frame .drawer {
    angle from which the portal looks like ordinary procurement use. */
 
 .vendor-view > .pn {
-  box-shadow: inset calc(var(--space-2xs) * -1) 0 0 var(--color-fg-accent);
+  box-shadow: inset calc(var(--space-2xs) * -1) 0 0 var(--color-brand-foreground-accent-enabled);
 }
 
 .vv-wrap {
@@ -893,8 +893,8 @@ body > .drawer-frame .drawer {
   padding-inline: var(--space-sm);
   padding-block: var(--space-2xs);
   border-radius: var(--radius-element);
-  background: var(--color-accent-tint-bg);
-  color: var(--color-accent-tint-fg);
+  background: var(--color-brand-background-tint-enabled);
+  color: var(--color-brand-foreground-tint-enabled);
   white-space: nowrap;
 }
 
@@ -904,8 +904,8 @@ body > .drawer-frame .drawer {
 
 .vv-exit {
   /* On the tint, a ghost would vanish. */
-  background: var(--color-bg-surface);
-  color: var(--color-fg-default);
+  background: var(--color-neutral-background-surface-enabled);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 .vv-menu {
@@ -913,7 +913,7 @@ body > .drawer-frame .drawer {
   inset-block-start: calc(100% + var(--space-xs));
   inset-inline-end: 0;
   inline-size: 320px;
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-overlay);
   z-index: var(--z-popover);
@@ -923,7 +923,7 @@ body > .drawer-frame .drawer {
 
 .vv-menu-head {
   padding: var(--space-sm);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .vv-menu-list {
@@ -934,7 +934,7 @@ body > .drawer-frame .drawer {
 
 .vv-menu-empty {
   padding: var(--space-md);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin: 0;
 }
 
@@ -947,7 +947,7 @@ body > .drawer-frame .drawer {
 }
 
 .vv-menu-meta {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-caption-size);
   font-variant-numeric: tabular-nums;
 }
@@ -973,20 +973,20 @@ body > .drawer-frame .drawer {
   flex: 1 1 auto;
   block-size: var(--space-xs);
   border-radius: var(--radius-inner);
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   overflow: hidden;
 }
 
 .vendor-progress-bar span {
   display: block;
   block-size: 100%;
-  background: var(--color-action-primary-rest);
+  background: var(--color-brand-background-primary-enabled);
   transition: inline-size var(--motion-enter-duration) var(--motion-enter-easing);
 }
 
 .vendor-progress-label {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   white-space: nowrap;
 }
 
@@ -1017,14 +1017,14 @@ body > .drawer-frame .drawer {
      are exactly where long form content scrolls through. Same defect the
      A15 round recorded on the drawer hero, found here by the first lint
      state to exercise this route. */
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
 }
 
 .quote-side-media {
   aspect-ratio: 1 / 1;
   border-radius: var(--radius-inner);
   overflow: hidden;
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   margin-block-end: var(--space-md);
 }
 
@@ -1041,11 +1041,11 @@ body > .drawer-frame .drawer {
   justify-content: space-between;
   gap: var(--space-sm);
   padding-block-end: var(--space-md);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .quote-total .k {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .quote-total .v {
@@ -1063,7 +1063,7 @@ body > .drawer-frame .drawer {
 }
 
 .quote-buckets dt {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-body-sm-size);
 }
 
@@ -1074,7 +1074,7 @@ body > .drawer-frame .drawer {
 }
 
 .quote-side-note {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-caption-size);
   margin-block: var(--space-md) 0;
 }
@@ -1087,7 +1087,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-lg);
   align-items: start;
   padding-block: var(--space-sm);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .quote-line:last-child {
@@ -1102,7 +1102,7 @@ body > .drawer-frame .drawer {
 
 .quote-line-help {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .quote-line-input input {
@@ -1119,8 +1119,8 @@ body > .drawer-frame .drawer {
   padding-block: var(--space-xs);
   font-variant-numeric: tabular-nums;
   font-weight: var(--type-label-weight);
-  color: var(--color-fg-accent);
-  background: var(--color-bg-surface-sunken);
+  color: var(--color-brand-foreground-accent-enabled);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   border-radius: var(--radius-element);
 }
 
@@ -1138,16 +1138,16 @@ body > .drawer-frame .drawer {
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-element);
   text-decoration: none;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-size: var(--type-body-sm-size);
 }
 
 .quote-nav-item:hover {
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 .quote-nav-item.on {
-  background: var(--color-bg-selected-accent);
+  background: var(--color-brand-background-selected-accent-enabled);
   font-weight: var(--type-label-weight);
 }
 
@@ -1165,7 +1165,7 @@ body > .drawer-frame .drawer {
 .quote-nav-item .id {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .quote-nav-item {
@@ -1194,7 +1194,7 @@ body > .drawer-frame .drawer {
 .quote-section-total {
   font-variant-numeric: tabular-nums;
   font-weight: var(--type-label-weight);
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
 }
 
 /* ---------------------------------------------------------------- style card
@@ -1223,14 +1223,14 @@ body > .drawer-frame .drawer {
 
 .nominated {
   padding: var(--space-md);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   border-radius: var(--radius-container);
   margin-block-end: var(--space-lg);
 }
 
 .nominated-label {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-block-end: var(--space-sm);
@@ -1277,7 +1277,7 @@ body > .drawer-frame .drawer {
   margin-block-start: var(--space-2xs);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ================================================================ vendor list */
@@ -1287,7 +1287,7 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-block-end: var(--space-sm);
@@ -1302,12 +1302,12 @@ body > .drawer-frame .drawer {
   letter-spacing: 0;
   padding-inline: var(--space-xs);
   border-radius: var(--radius-element);
-  background: var(--color-bg-muted);
-  color: var(--color-fg-default);
+  background: var(--color-neutral-background-muted-enabled);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 .vl-empty {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin: 0 0 var(--space-md);
 }
 
@@ -1323,14 +1323,14 @@ body > .drawer-frame .drawer {
 }
 
 .vl-row {
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   padding-block: var(--space-sm);
 }
 
 /* A vendor on the RFP reads as selected — the list IS the state, so the row
    has to carry it. */
 .vl-row.on {
-  background: var(--color-bg-selected-accent);
+  background: var(--color-brand-background-selected-accent-enabled);
   border-radius: var(--radius-inner);
   padding-inline: var(--space-sm);
   margin-inline: calc(var(--space-sm) * -1);
@@ -1359,7 +1359,7 @@ body > .drawer-frame .drawer {
 
 .vl-meta {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1378,14 +1378,14 @@ body > .drawer-frame .drawer {
 .vl-note {
   margin-block-start: var(--space-2xs);
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* The expanded row — what "1 of 4" was failing to say. */
 .vl-products {
   margin-block-start: var(--space-sm);
   padding: var(--space-sm);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   border-radius: var(--radius-inner);
   display: grid;
   gap: var(--space-2xs);
@@ -1408,7 +1408,7 @@ body > .drawer-frame .drawer {
 }
 
 .vl-pending {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-caption-size);
   flex-shrink: 0;
 }
@@ -1426,8 +1426,8 @@ body > .drawer-frame .drawer {
   block-size: var(--size-badge);
   padding-inline: var(--space-sm);
   border-radius: var(--radius-pill);
-  background: var(--color-bg-muted);
-  color: var(--color-fg-muted);
+  background: var(--color-neutral-background-muted-enabled);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-body-sm-size);
   white-space: nowrap;
 }
@@ -1469,7 +1469,7 @@ body > .drawer-frame .drawer {
 /* ---------------------------------------------------------------- bid drawer */
 
 .bid-bucket {
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .bid-bucket:last-child {
@@ -1491,7 +1491,7 @@ body > .drawer-frame .drawer {
 }
 
 .bid-bucket-head:hover .bid-bucket-name {
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
 }
 
 .bid-bucket-name {
@@ -1591,12 +1591,12 @@ body > .drawer-frame .drawer {
    space alone would need more of it than the title row has. */
 .aw-summary + .aw-summary {
   margin-inline-start: var(--space-lg);
-  border-inline-start: 1px solid var(--color-border-muted);
+  border-inline-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .aw-summary .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1605,7 +1605,7 @@ body > .drawer-frame .drawer {
   font-size: var(--type-heading-2-size);
   line-height: 1.1;
   font-weight: var(--type-emphasis-weight);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1628,7 +1628,7 @@ body > .drawer-frame .drawer {
 .aw-filter-count {
   margin-inline-start: auto;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1643,7 +1643,7 @@ body > .drawer-frame .drawer {
 
 .aw-row:hover,
 .aw-row:focus-visible {
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 /* A style with no bids cannot be allocated, so the row does not pretend to be
@@ -1672,14 +1672,14 @@ body > .drawer-frame .drawer {
   inline-size: 44px;
   block-size: 44px;
   border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   object-fit: cover;
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 .aw-thumb--empty {
   display: block;
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .aw-product-text {
@@ -1702,7 +1702,7 @@ body > .drawer-frame .drawer {
 
 .aw-product-name .id {
   flex: 0 0 auto;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1723,7 +1723,7 @@ body > .drawer-frame .drawer {
 
 .aw-product-meta {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1733,11 +1733,11 @@ body > .drawer-frame .drawer {
    It reads as danger because it IS the thing to look at, not because it is an
    error. */
 .aw-neg {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 .aw-muted {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .aw-split {
@@ -1748,7 +1748,7 @@ body > .drawer-frame .drawer {
 
 .aw-split-part {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1757,7 +1757,7 @@ body > .drawer-frame .drawer {
 .aw-split-part .pct {
   display: inline-block;
   inline-size: 34px;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1769,7 +1769,7 @@ body > .drawer-frame .drawer {
   display: flex;
   gap: var(--space-lg);
   padding: var(--space-md) 0;
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .pg-baseline-item {
@@ -1780,7 +1780,7 @@ body > .drawer-frame .drawer {
 
 .pg-baseline-item .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .pg-baseline-item .v {
@@ -1802,12 +1802,12 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-sm);
   padding-block: var(--space-sm);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .pg-vendor--head {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding-block-end: var(--space-xs);
@@ -1833,7 +1833,7 @@ body > .drawer-frame .drawer {
 
 .pg-vendor-meta {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .pg-cost {
@@ -1851,12 +1851,12 @@ body > .drawer-frame .drawer {
    accent because it is the exception worth noticing. */
 .pg-basis {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: help;
 }
 
 .pg-basis.is-ddp {
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
 }
 
 .pg-pct {
@@ -1876,7 +1876,7 @@ body > .drawer-frame .drawer {
 
 .pg-awarded-u {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* THE READOUT — the thing the room watches. It is deliberately the largest
@@ -1889,16 +1889,16 @@ body > .drawer-frame .drawer {
   margin-block: var(--space-lg);
   padding: var(--space-md);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface-sunken);
-  border: 1px solid var(--color-border-muted);
+  background: var(--color-neutral-background-surface-sunken-enabled);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   transition:
     background-color var(--motion-hover-duration) var(--motion-hover-easing),
     border-color var(--motion-hover-duration) var(--motion-hover-easing);
 }
 
 .pg-readout.is-valid {
-  background: var(--color-bg-accent-subtle);
-  border-color: var(--color-border-selected);
+  background: var(--color-brand-background-accent-subtle-enabled);
+  border-color: var(--color-brand-foreground-accent-enabled);
 }
 
 .pg-readout-main {
@@ -1910,7 +1910,7 @@ body > .drawer-frame .drawer {
 
 .pg-readout-main .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1924,7 +1924,7 @@ body > .drawer-frame .drawer {
 
 .pg-readout-main .sub {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 .pg-readout-alloc {
@@ -1936,18 +1936,18 @@ body > .drawer-frame .drawer {
 
 .pg-readout-alloc .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .pg-readout-alloc .v {
   font-size: var(--type-heading-2-size);
   font-weight: var(--type-emphasis-weight);
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .pg-readout-alloc .v.ok {
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 /* Reference lines. Display only — they never write a value, so nothing here is
@@ -1963,7 +1963,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   padding-block: var(--space-xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 .pg-scenario .c,
@@ -1975,9 +1975,9 @@ body > .drawer-frame .drawer {
 /* The user's own split is the one being decided, so it leads and is the only
    line in full-strength ink. */
 .pg-scenario.is-yours {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-size: var(--type-body-sm-size);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   padding-block-end: var(--space-xs);
   margin-block-end: var(--space-xs);
 }
@@ -2006,7 +2006,7 @@ body > .drawer-frame .drawer {
   display: block;
   block-size: 6px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -2017,25 +2017,25 @@ body > .drawer-frame .drawer {
   inset-block: 0;
   inset-inline-start: 70%;
   inline-size: 2px;
-  background: var(--color-border-strong);
+  background: var(--color-neutral-stroke-strong-enabled);
   z-index: 1;
 }
 
 .pg-rail-bar .fill {
   display: block;
   block-size: 100%;
-  background: var(--color-bg-emphasis);
+  background: var(--color-neutral-background-emphasis-enabled);
   transition: inline-size var(--motion-hover-duration) var(--motion-hover-easing);
 }
 
 .pg-rail.is-breached .pg-rail-bar .fill {
-  background: var(--color-feedback-danger-solid);
+  background: var(--color-status-danger-background-solid-enabled);
 }
 
 .pg-rail-v {
   text-align: end;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2066,11 +2066,11 @@ body > .drawer-frame .drawer {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 .pg-invalid {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2112,7 +2112,7 @@ body > .drawer-frame .drawer {
   --chart-cat-3: #c85a2b;
   --chart-cat-4: #7b5bc7;
   --chart-cat-5: #a67c15;
-  --chart-cat-other: var(--color-fg-muted);
+  --chart-cat-other: var(--color-neutral-foreground-muted-enabled);
 }
 
 [data-mode="dark"] {
@@ -2160,7 +2160,7 @@ body > .drawer-frame .drawer {
   display: block;
   block-size: 18px;
   border-radius: var(--radius-element);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -2169,8 +2169,8 @@ body > .drawer-frame .drawer {
 .chart-bar-band {
   position: absolute;
   inset-block: 0;
-  background: var(--color-bg-selected);
-  border-inline: 1px solid var(--color-border-strong);
+  background: var(--color-neutral-background-interaction-toggled);
+  border-inline: 1px solid var(--color-neutral-stroke-strong-enabled);
 }
 
 .chart-bar-fill {
@@ -2185,7 +2185,7 @@ body > .drawer-frame .drawer {
 /* Status tones are RESERVED — they mark out-of-range and are never reused as a
    sixth category colour. */
 .chart-bar-fill.is-outside {
-  background: var(--color-feedback-danger-solid);
+  background: var(--color-status-danger-background-solid-enabled);
 }
 
 .chart-bar-value {
@@ -2198,7 +2198,7 @@ body > .drawer-frame .drawer {
 
 .chart-bar-range {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .chart-bar-state {
@@ -2206,15 +2206,15 @@ body > .drawer-frame .drawer {
 }
 
 .chart-flag.is-over {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 .chart-flag.is-under {
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .chart-flag.is-ok {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- donut -------------------------------------------------------------- */
@@ -2250,7 +2250,7 @@ body > .drawer-frame .drawer {
 
 .chart-donut-center .c {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- progress to cap ---------------------------------------------------- */
@@ -2260,7 +2260,7 @@ body > .drawer-frame .drawer {
   display: block;
   block-size: 8px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -2271,7 +2271,7 @@ body > .drawer-frame .drawer {
   inset-block: 0;
   inset-inline-start: 80%;
   inline-size: 2px;
-  background: var(--color-border-strong);
+  background: var(--color-neutral-stroke-strong-enabled);
   z-index: 1;
 }
 
@@ -2283,7 +2283,7 @@ body > .drawer-frame .drawer {
 }
 
 .chart-cap-fill.is-over {
-  background: var(--color-feedback-danger-solid);
+  background: var(--color-status-danger-background-solid-enabled);
 }
 
 /* --- coverage meter ----------------------------------------------------- */
@@ -2292,7 +2292,7 @@ body > .drawer-frame .drawer {
   display: block;
   block-size: 10px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
   margin-block-start: var(--space-sm);
 }
@@ -2329,7 +2329,7 @@ body > .drawer-frame .drawer {
 
 .wi-cov-main .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -2345,7 +2345,7 @@ body > .drawer-frame .drawer {
 
 .wi-cov-main .s {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 .wi-cov-side {
@@ -2362,7 +2362,7 @@ body > .drawer-frame .drawer {
 
 .wi-stat .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .wi-stat .v {
@@ -2372,12 +2372,12 @@ body > .drawer-frame .drawer {
 }
 
 .wi-stat .v.is-warn {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 .wi-stat .s {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 .wi-caveat {
@@ -2399,9 +2399,9 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   inline-size: 100%;
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-element);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   text-align: start;
   cursor: pointer;
   font: inherit;
@@ -2413,8 +2413,8 @@ body > .drawer-frame .drawer {
 
 .wi-breach:hover,
 .wi-breach:focus-visible {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border-strong);
+  background: var(--color-neutral-background-interaction-hovered);
+  border-color: var(--color-neutral-stroke-strong-enabled);
 }
 
 .wi-breach-text {
@@ -2462,12 +2462,12 @@ body > .drawer-frame .drawer {
 }
 
 .wi-legend-row .p {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .wi-empty {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .wi-increase-list {
@@ -2483,9 +2483,9 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   inline-size: 100%;
   padding: var(--space-sm);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-element);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   text-align: start;
   cursor: pointer;
   font: inherit;
@@ -2495,7 +2495,7 @@ body > .drawer-frame .drawer {
 
 .wi-increase:hover,
 .wi-increase:focus-visible {
-  background: var(--color-bg-hover);
+  background: var(--color-neutral-background-interaction-hovered);
 }
 
 .wi-increase-id {
@@ -2514,13 +2514,13 @@ body > .drawer-frame .drawer {
 
 .wi-increase-id .m {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .wi-increase-v {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 @media (max-width: 1100px) {
@@ -2559,7 +2559,7 @@ body > .drawer-frame .drawer {
 
 .vm-row:hover,
 .vm-row:focus-visible {
-  background: var(--color-bg-hover);
+  background: var(--color-neutral-background-interaction-hovered);
 }
 
 .vm-id {
@@ -2580,7 +2580,7 @@ body > .drawer-frame .drawer {
 
 .vm-meta {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .vm-region {
@@ -2600,7 +2600,7 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-sm);
   padding-block: var(--space-xs);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .vm-style-text {
@@ -2613,7 +2613,7 @@ body > .drawer-frame .drawer {
 
 .vm-style-name {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2641,12 +2641,12 @@ body > .drawer-frame .drawer {
 .score {
   margin-block-start: var(--space-lg);
   padding-block-start: var(--space-md);
-  border-block-start: 1px solid var(--color-border-muted);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .score-hd {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-block-end: var(--space-sm);
@@ -2658,7 +2658,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-element);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 .score-band .dot {
@@ -2677,40 +2677,40 @@ body > .drawer-frame .drawer {
    warning rather than danger — the bid is valid, it is the price that is high,
    and a red banner on a submitted bid reads as a rejection. */
 .score-band.is-strong .dot {
-  background: var(--color-feedback-success-solid);
+  background: var(--color-status-success-background-solid-enabled);
 }
 .score-band.is-strong .n {
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 .score-band.is-competitive .dot {
-  background: var(--color-feedback-info-solid);
+  background: var(--color-status-info-background-solid-enabled);
 }
 
 .score-band.is-needs_work .dot {
-  background: var(--color-feedback-warning-solid);
+  background: var(--color-status-warning-background-solid-enabled);
 }
 .score-band.is-needs_work .n {
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .score-band.is-off_target .dot {
-  background: var(--color-feedback-danger-solid);
+  background: var(--color-status-danger-background-solid-enabled);
 }
 .score-band.is-off_target .n {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 .score-note {
   margin-block: var(--space-sm) 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .score-sub {
   margin-block-start: var(--space-md);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .score-buckets {
@@ -2733,15 +2733,15 @@ body > .drawer-frame .drawer {
 /* Direction is carried by the WORD as well as the colour — a vendor reading
    this on a printout or with CVD still learns where to cut. */
 .score-buckets .flag.is-above {
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .score-buckets .flag.is-below {
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 .score-buckets .flag.is-in_line {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ============================================================================
@@ -2759,9 +2759,9 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   margin-block-end: var(--space-md);
-  border: 1px solid var(--color-border-selected);
+  border: 1px solid var(--color-brand-foreground-accent-enabled);
   border-radius: var(--radius-element);
-  background: var(--color-bg-accent-subtle);
+  background: var(--color-brand-background-accent-subtle-enabled);
   font-size: var(--type-body-sm-size);
 }
 
@@ -2769,7 +2769,7 @@ body > .drawer-frame .drawer {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
   text-decoration: none;
   flex: 0 0 auto;
 }
@@ -2780,7 +2780,7 @@ body > .drawer-frame .drawer {
 
 .ctx-what {
   flex: 1 1 auto;
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 /* --- wave progress breakdown ------------------------------------------- */
@@ -2794,7 +2794,7 @@ body > .drawer-frame .drawer {
 /* The tooltip anchor must not inherit the label's uppercase tracking. */
 .wi-cov-main .k .tip-anchor {
   display: inline-flex;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   letter-spacing: normal;
   text-transform: none;
 }
@@ -2822,7 +2822,7 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   padding-inline-start: var(--space-sm);
 }
 
@@ -2837,7 +2837,7 @@ body > .drawer-frame .drawer {
   inline-size: 6px;
   block-size: 6px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-neutral-stroke-strong-enabled);
   flex: 0 0 auto;
 }
 
@@ -2859,7 +2859,7 @@ body > .drawer-frame .drawer {
 
 .va-row {
   padding-block: var(--space-md);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .va-head {
@@ -2878,7 +2878,7 @@ body > .drawer-frame .drawer {
 
 .va-name {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2900,7 +2900,7 @@ body > .drawer-frame .drawer {
 
 .va-award .d {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2913,7 +2913,7 @@ body > .drawer-frame .drawer {
 
 .va-facts dt {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .va-facts dd {
@@ -2927,7 +2927,7 @@ body > .drawer-frame .drawer {
    in a column of its own. */
 .va-basis {
   margin-inline-start: var(--space-xs);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .va-ddp-toggle {
@@ -2938,7 +2938,7 @@ body > .drawer-frame .drawer {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
   font: inherit;
   font-size: var(--type-caption-size);
   cursor: pointer;
@@ -2954,11 +2954,11 @@ body > .drawer-frame .drawer {
 .va-ddp th,
 .va-ddp td {
   padding: var(--space-xs);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .va-ddp th {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
   text-align: start;
 }
@@ -2973,7 +2973,7 @@ body > .drawer-frame .drawer {
 .va-noddp {
   margin-block: var(--space-sm) 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* Awarding is visible outside the room, so it confirms in place rather than
@@ -3001,7 +3001,7 @@ body > .drawer-frame .drawer {
 
 .vo-detail {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3009,7 +3009,7 @@ body > .drawer-frame .drawer {
    has the bid and has not decided — and it must not read as a result. */
 .vo-pending {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .vo-headline {
@@ -3017,8 +3017,8 @@ body > .drawer-frame .drawer {
   margin-inline-start: var(--space-md);
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-element);
-  background: var(--color-bg-accent-subtle);
-  color: var(--color-fg-accent);
+  background: var(--color-brand-background-accent-subtle-enabled);
+  color: var(--color-brand-foreground-accent-enabled);
   font-size: var(--type-body-sm-size);
 }
 
@@ -3037,7 +3037,7 @@ body > .drawer-frame .drawer {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
   font: inherit;
   font-size: var(--type-body-sm-size);
   cursor: pointer;
@@ -3059,12 +3059,12 @@ body > .drawer-frame .drawer {
 .bd-table th,
 .bd-table td {
   padding: var(--space-xs) var(--space-sm);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   white-space: nowrap;
 }
 
 .bd-table th {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
   text-align: start;
 }
@@ -3077,29 +3077,29 @@ body > .drawer-frame .drawer {
 /* The clean sheet is the reference every other column is read against, so it
    gets a rule rather than a fill — a fill would make it look like a result. */
 .bd-clean {
-  border-inline-end: 1px solid var(--color-border-strong);
-  color: var(--color-fg-muted);
+  border-inline-end: 1px solid var(--color-neutral-stroke-strong-enabled);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* Status tones stay reserved for over/under and are never a category colour. */
 .bd-above {
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .bd-below {
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 .bd-total td {
   border-block-end: 0;
-  border-block-start: 1px solid var(--color-border-strong);
+  border-block-start: 1px solid var(--color-neutral-stroke-strong-enabled);
   font-weight: var(--type-emphasis-weight);
 }
 
 .bd-note {
   margin-block: var(--space-sm) 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- raise an Ask from a flagged cell ----------------------------------
@@ -3126,9 +3126,9 @@ body > .drawer-frame .drawer {
 .bd-ask {
   margin-block-start: var(--space-md);
   padding: var(--space-md);
-  border: 1px solid var(--color-border-selected);
+  border: 1px solid var(--color-brand-foreground-accent-enabled);
   border-radius: var(--radius-element);
-  background: var(--color-bg-accent-subtle);
+  background: var(--color-brand-background-accent-subtle-enabled);
 }
 
 .bd-ask-hd {
@@ -3197,16 +3197,16 @@ body > .drawer-frame .drawer {
   font-size: var(--type-caption-size);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .ask--addressed .ask-state {
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 .ask--reopened .ask-state,
 .ask--open .ask-state {
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .ask-text {
@@ -3214,7 +3214,7 @@ body > .drawer-frame .drawer {
 }
 
 .ask-target {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 /* Before/after, recorded automatically when the vendor changed the value. It
@@ -3222,7 +3222,7 @@ body > .drawer-frame .drawer {
 .ask-delta {
   display: block;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3230,7 +3230,7 @@ body > .drawer-frame .drawer {
   display: block;
   margin-block-start: 2px;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 /* --- shared product gallery (P4) ---------------------------------------
@@ -3327,7 +3327,7 @@ body > .drawer-frame .drawer {
    ==========================================================================*/
 
 .pc-row.is-on {
-  background: var(--color-bg-selected);
+  background: var(--color-neutral-background-interaction-toggled);
 }
 
 /* Department over sub-department: the pair reads as one category, and two
@@ -3340,7 +3340,7 @@ body > .drawer-frame .drawer {
 
 .pc-cat .sub {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* The retail price under the revenue it derives from — revenue is
@@ -3348,7 +3348,7 @@ body > .drawer-frame .drawer {
 .pc-sub {
   display: block;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3390,9 +3390,9 @@ body > .drawer-frame .drawer {
   align-items: stretch;
   padding: var(--space-md) 0;
   margin-block-end: var(--space-lg);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
 }
 
 .rd-sum-item {
@@ -3403,7 +3403,7 @@ body > .drawer-frame .drawer {
 
 .rd-sum-item .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -3417,7 +3417,7 @@ body > .drawer-frame .drawer {
 
 .rd-sum-item .s {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 /* No `margin-inline-start: auto` — the grid's trailing `auto` track already
@@ -3437,7 +3437,7 @@ body > .drawer-frame .drawer {
 }
 
 .rd-row {
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .rd-row:last-child {
@@ -3461,7 +3461,7 @@ body > .drawer-frame .drawer {
 }
 
 .rd-head:hover {
-  background: var(--color-bg-hover);
+  background: var(--color-neutral-background-interaction-hovered);
 }
 
 .rd-id {
@@ -3487,7 +3487,7 @@ body > .drawer-frame .drawer {
 
 .rd-meta {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3509,12 +3509,12 @@ body > .drawer-frame .drawer {
 }
 
 .rd-none {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rd-stat-k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3533,7 +3533,7 @@ body > .drawer-frame .drawer {
   inline-size: 100%;
   block-size: 6px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -3572,7 +3572,7 @@ body > .drawer-frame .drawer {
 
 .rd-bid-meta {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3581,7 +3581,7 @@ body > .drawer-frame .drawer {
 /* Invited and silent. Quiet, because it is a state rather than a result. */
 .rd-bid.is-pending .rd-bid-vendor,
 .rd-pending {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rd-pending {
@@ -3596,7 +3596,7 @@ body > .drawer-frame .drawer {
 .rd-empty,
 .rd-foot {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rd-foot {
@@ -3615,7 +3615,7 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-sm);
   padding-block: var(--space-sm);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   cursor: pointer;
 }
 
@@ -3635,14 +3635,14 @@ body > .drawer-frame .drawer {
 
 .vp-meta {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* §5.3: a clash is per PRODUCT, so adding takes what they can legally have. */
 .vp-note {
   flex: 0 0 auto;
   font-size: var(--type-caption-size);
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 /* A4's per-product comparison page does not exist yet. Saying so beats a
@@ -3651,7 +3651,7 @@ body > .drawer-frame .drawer {
   align-self: flex-start;
   margin-block-start: var(--space-xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* One line. `.rd-stat` is a column flex, so a bare "2" plus "of 2" wrapped —
@@ -3668,7 +3668,7 @@ body > .drawer-frame .drawer {
    save look like a working screen. */
 .rd-held {
   font-size: var(--type-caption-size);
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 /* ============================================================================
@@ -3686,24 +3686,24 @@ body > .drawer-frame .drawer {
    their own class and clear it. Underline appears on hover, where it confirms
    the target rather than decorating five rows at once. */
 .rl-name {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-weight: var(--type-emphasis-weight);
   text-decoration: none;
 }
 
 .rl-name:hover {
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
   text-decoration: underline;
 }
 
 .rl-sub {
   display: block;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rl-none {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rl-resp {
@@ -3718,7 +3718,7 @@ body > .drawer-frame .drawer {
   max-inline-size: 120px;
   block-size: 6px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -3730,7 +3730,7 @@ body > .drawer-frame .drawer {
 
 .rl-resp-k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3738,12 +3738,12 @@ body > .drawer-frame .drawer {
    feedback tones, which keep their meaning across every brand. */
 .rl-save,
 .rd-save {
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 .rl-rise,
 .rd-rise {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 /* --- detail header tiles ------------------------------------------------ */
@@ -3762,7 +3762,7 @@ body > .drawer-frame .drawer {
 
 .rd-tile .k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -3778,18 +3778,18 @@ body > .drawer-frame .drawer {
 }
 
 .rd-tile .v .of {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
 }
 
 .rd-tile .s {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
   white-space: nowrap;
 }
 
 .rd-tile-none {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rd-tile-date {
@@ -3805,7 +3805,7 @@ body > .drawer-frame .drawer {
   block-size: 4px;
   margin-block-start: 2px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -3852,12 +3852,12 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-2xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin-block-end: var(--space-xs);
 }
 
-.pd-trail a { color: var(--color-fg-muted); text-decoration: none; }
-.pd-trail a:hover { color: var(--color-fg-accent); text-decoration: underline; }
+.pd-trail a { color: var(--color-neutral-foreground-muted-enabled); text-decoration: none; }
+.pd-trail a:hover { color: var(--color-brand-foreground-accent-enabled); text-decoration: underline; }
 
 .pd-title {
   font-size: var(--type-page-title-size);
@@ -3868,7 +3868,7 @@ body > .drawer-frame .drawer {
 
 .pd-meta {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin-block-start: var(--space-2xs);
 }
 
@@ -3900,9 +3900,9 @@ body > .drawer-frame .drawer {
   gap: 0;
   margin: 0;
   padding: var(--space-sm) 0;
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
 }
 
 /* Padding on the TILE, not a gap on the strip, so each measure owns its whole
@@ -3914,11 +3914,11 @@ body > .drawer-frame .drawer {
   white-space: nowrap;
 }
 
-.pd-fact + .pd-fact { border-inline-start: 1px solid var(--color-border-muted); }
+.pd-fact + .pd-fact { border-inline-start: 1px solid var(--color-neutral-stroke-muted-enabled); }
 
 .pd-fact dt {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -3937,7 +3937,7 @@ body > .drawer-frame .drawer {
 
 .pd-fact dd .u {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
 }
 
@@ -3972,9 +3972,9 @@ body > .drawer-frame .drawer {
    */
   isolation: isolate;
   margin-block-start: var(--space-lg);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   overflow: hidden;
 }
 
@@ -3993,7 +3993,7 @@ body > .drawer-frame .drawer {
   text-align: right;
   font-size: var(--table-cell-size, var(--type-body-sm-size));
   font-weight: var(--type-body-weight);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   vertical-align: top;
 }
 
@@ -4015,9 +4015,9 @@ body > .drawer-frame .drawer {
    */
   z-index: var(--z-sticky);
   text-align: start !important;
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   min-inline-size: 190px;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 /* The corner cell needs NO extra rung: it lives in thead, which already paints
@@ -4034,25 +4034,25 @@ body > .drawer-frame .drawer {
  * what was asked for, does stay.
  */
 .bc-table thead th {
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   vertical-align: bottom;
-  border-block-end: 1px solid var(--color-border-default);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
 }
 
 .bc-vendor { min-inline-size: 150px; }
 
 .bc-vendor-name {
   display: block;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-weight: var(--type-emphasis-weight);
   text-decoration: none;
 }
-.bc-vendor-name:hover { color: var(--color-fg-accent); text-decoration: underline; }
+.bc-vendor-name:hover { color: var(--color-brand-foreground-accent-enabled); text-decoration: underline; }
 
 .bc-sub {
   display: block;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
   white-space: nowrap;
 }
@@ -4067,31 +4067,31 @@ body > .drawer-frame .drawer {
 /* The reference column sits FIRST, right after the row label, because every
    other number on the row is read against it. */
 .bc-clean {
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   font-variant-numeric: tabular-nums;
   min-inline-size: 110px;
 }
 
 .bc-num { font-variant-numeric: tabular-nums; }
 
-.bc-num.is-above { color: var(--color-feedback-danger-fg); }
-.bc-num.is-below { color: var(--color-feedback-success-fg); }
+.bc-num.is-above { color: var(--color-status-danger-foreground-default-enabled); }
+.bc-num.is-below { color: var(--color-status-success-foreground-default-enabled); }
 
 .bc-flag { margin-inline-start: 4px; font-size: var(--type-caption-size); }
 
 .bc-total th,
 .bc-total td {
-  border-block-start: 1px solid var(--color-border-default);
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
   font-weight: var(--type-emphasis-weight);
 }
 
 .bc-chain td,
-.bc-chain th { color: var(--color-fg-muted); }
+.bc-chain th { color: var(--color-neutral-foreground-muted-enabled); }
 
 .bc-best th,
 .bc-best td {
-  border-block-start: 1px solid var(--color-border-default);
-  background: var(--color-bg-surface-sunken);
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 .bc-best-v {
@@ -4099,20 +4099,20 @@ body > .drawer-frame .drawer {
   font-weight: var(--type-emphasis-weight);
 }
 
-.bc-pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
-.bc-neg { color: var(--color-feedback-danger-fg); font-weight: var(--type-emphasis-weight); }
+.bc-pos { color: var(--color-status-success-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
+.bc-neg { color: var(--color-status-danger-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
 
-.bc-warn { color: var(--color-feedback-warning-fg); display: inline-flex; align-items: center; gap: 4px; }
+.bc-warn { color: var(--color-status-warning-foreground-default-enabled); display: inline-flex; align-items: center; gap: 4px; }
 
-.bc-none { color: var(--color-fg-muted); }
+.bc-none { color: var(--color-neutral-foreground-muted-enabled); }
 
 .bc-drill-row td,
 .bc-drill-row th { border-block-end: 0; }
 
 .bc-drill {
   padding: var(--space-md) var(--space-lg);
-  border-block-start: 1px solid var(--color-border-muted);
-  background: var(--color-bg-surface-sunken);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 
 .bc-drill-h {
@@ -4137,10 +4137,10 @@ body > .drawer-frame .drawer {
   justify-content: space-between;
   gap: var(--space-sm);
   padding-block: 2px;
-  border-block-end: 1px dotted var(--color-border-muted);
+  border-block-end: 1px dotted var(--color-neutral-stroke-muted-enabled);
 }
 
-.bc-line dt { color: var(--color-fg-muted); font-size: var(--type-body-sm-size); }
+.bc-line dt { color: var(--color-neutral-foreground-muted-enabled); font-size: var(--type-body-sm-size); }
 .bc-line dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
@@ -4151,8 +4151,8 @@ body > .drawer-frame .drawer {
   padding: var(--space-sm) var(--space-lg);
   margin: 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
-  border-block-start: 1px solid var(--color-border-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 /* The handoff from comparing to committing — the only thing on A4 that leads
@@ -4165,14 +4165,14 @@ body > .drawer-frame .drawer {
   flex-wrap: wrap;
   margin-block-start: var(--space-lg);
   padding: var(--space-md) var(--space-lg);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
 }
 
 .pd-handoff-sub {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin-block-start: 2px;
 }
 
@@ -4213,15 +4213,15 @@ body > .drawer-frame .drawer {
   gap: var(--space-md);
   margin: 0 0 var(--space-lg);
   padding: var(--space-md) 0;
-  border-block: 1px solid var(--color-border-muted);
+  border-block: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .pd-ro { padding-inline: var(--space-lg); min-inline-size: 0; }
-.pd-ro + .pd-ro { border-inline-start: 1px solid var(--color-border-muted); }
+.pd-ro + .pd-ro { border-inline-start: 1px solid var(--color-neutral-stroke-muted-enabled); }
 
 .pd-ro dt {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -4237,12 +4237,12 @@ body > .drawer-frame .drawer {
 
 .pd-ro dd.s {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
   font-weight: var(--type-body-weight);
 }
 
-.pd-ro dd.pos { color: var(--color-feedback-success-fg); }
-.pd-ro dd.neg { color: var(--color-feedback-danger-fg); }
+.pd-ro dd.pos { color: var(--color-status-success-foreground-default-enabled); }
+.pd-ro dd.neg { color: var(--color-status-danger-foreground-default-enabled); }
 
 .pd-applied {
   display: flex;
@@ -4250,7 +4250,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-2xs);
   margin: 0 0 var(--space-md);
   font-size: var(--type-body-sm-size);
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 /* Allocation table and the region panel side by side: the split and where it
@@ -4267,9 +4267,9 @@ body > .drawer-frame .drawer {
 .pd-table {
   inline-size: 100%;
   border-collapse: collapse;
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   overflow: hidden;
 }
 
@@ -4279,13 +4279,13 @@ body > .drawer-frame .drawer {
   text-align: start;
   font-size: var(--table-cell-size, var(--type-body-sm-size));
   font-weight: var(--type-body-weight);
-  border-block-end: 1px solid var(--color-border-muted);
+  border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled);
   vertical-align: top;
 }
 
 .pd-table thead th {
-  background: var(--color-bg-surface-sunken);
-  border-block-end: 1px solid var(--color-border-default);
+  background: var(--color-neutral-background-surface-sunken-enabled);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
   white-space: nowrap;
 }
 
@@ -4293,14 +4293,14 @@ body > .drawer-frame .drawer {
 .pd-table tbody tr:last-child td { border-block-end: 0; }
 
 /* A row carrying volume is the row you are deciding about. */
-.pd-table tbody tr.is-on { background: var(--color-bg-surface-sunken); }
+.pd-table tbody tr.is-on { background: var(--color-neutral-background-surface-sunken-enabled); }
 
 .pd-vend { display: flex; align-items: center; gap: var(--space-2xs); flex-wrap: wrap; }
 .pd-vend-n { font-weight: var(--type-emphasis-weight); }
 
 .pd-vend-m {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin-block-start: 2px;
 }
 
@@ -4310,35 +4310,35 @@ body > .drawer-frame .drawer {
   gap: 4px;
   margin-block-start: var(--space-2xs);
   font-size: var(--type-caption-size);
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .pd-basis {
   display: block;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .pd-pct { inline-size: 84px; margin-inline-start: auto; }
 .pd-pct input { text-align: right; font-variant-numeric: tabular-nums; }
 
-.pd-none { color: var(--color-fg-muted); }
-.pd-table .pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
-.pd-table .neg { color: var(--color-feedback-danger-fg); font-weight: var(--type-emphasis-weight); }
+.pd-none { color: var(--color-neutral-foreground-muted-enabled); }
+.pd-table .pos { color: var(--color-status-success-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
+.pd-table .neg { color: var(--color-status-danger-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
 
 .pd-comment { margin-block-start: var(--space-lg); }
 
 /* --- the region panel · INFORMATIONAL, never a guardrail ---------------- */
 
 .pd-region {
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   padding: var(--space-md);
 }
 
 .pd-region-h { display: flex; flex-direction: column; margin-block-end: var(--space-md); }
-.pd-region-sub { font-size: var(--type-caption-size); color: var(--color-fg-muted); }
+.pd-region-sub { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); }
 
 .pd-region-rows { display: flex; flex-direction: column; gap: var(--space-sm); }
 
@@ -4351,7 +4351,7 @@ body > .drawer-frame .drawer {
   font-size: var(--type-body-sm-size);
 }
 
-.pd-reg-n { color: var(--color-fg-default); }
+.pd-reg-n { color: var(--color-neutral-foreground-default-enabled); }
 .pd-reg-v { font-variant-numeric: tabular-nums; font-weight: var(--type-emphasis-weight); }
 
 /* NEUTRAL fill, always. A feedback tone here would read as a breach, and there
@@ -4361,7 +4361,7 @@ body > .drawer-frame .drawer {
   block-size: 6px;
   margin-block-start: 4px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -4373,7 +4373,7 @@ body > .drawer-frame .drawer {
 
 .pd-reg-d {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
   margin-block-start: 2px;
 }
@@ -4381,7 +4381,7 @@ body > .drawer-frame .drawer {
 .pd-region-note {
   margin: var(--space-md) 0 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- strategies -------------------------------------------------------- */
@@ -4393,9 +4393,9 @@ body > .drawer-frame .drawer {
 }
 
 .pd-strat {
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-container);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
@@ -4403,8 +4403,8 @@ body > .drawer-frame .drawer {
 }
 
 /* The comparison baseline reads as the reference, not as an option. */
-.pd-strat.is-current { background: var(--color-bg-surface-sunken); }
-.pd-strat.is-applied { border-color: var(--color-fg-accent); }
+.pd-strat.is-current { background: var(--color-neutral-background-surface-sunken-enabled); }
+.pd-strat.is-applied { border-color: var(--color-brand-foreground-accent-enabled); }
 .pd-strat.is-off { opacity: 0.7; }
 
 .pd-strat-h {
@@ -4415,10 +4415,10 @@ body > .drawer-frame .drawer {
 }
 
 .pd-strat-n { font-weight: var(--type-emphasis-weight); }
-.pd-strat-r { font-size: var(--type-caption-size); color: var(--color-fg-muted); margin-block-start: 2px; }
+.pd-strat-r { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); margin-block-start: 2px; }
 
-.pd-strat-tag { font-size: var(--type-caption-size); color: var(--color-fg-muted); white-space: nowrap; }
-.pd-strat-tag.is-warn { color: var(--color-feedback-warning-fg); }
+.pd-strat-tag { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); white-space: nowrap; }
+.pd-strat-tag.is-warn { color: var(--color-status-warning-foreground-default-enabled); }
 
 .pd-strat-nums { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
 
@@ -4433,14 +4433,14 @@ body > .drawer-frame .drawer {
   line-height: 1.15;
 }
 
-.pd-strat-sav .pos { color: var(--color-feedback-success-fg); }
-.pd-strat-sav .neg { color: var(--color-feedback-danger-fg); }
-.pd-strat-k { font-size: var(--type-caption-size); color: var(--color-fg-muted); }
+.pd-strat-sav .pos { color: var(--color-status-success-foreground-default-enabled); }
+.pd-strat-sav .neg { color: var(--color-status-danger-foreground-default-enabled); }
+.pd-strat-k { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); }
 
 .pd-strat-best {
   align-self: flex-start;
   font-size: var(--type-caption-size);
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -4452,8 +4452,8 @@ body > .drawer-frame .drawer {
   font-size: var(--type-caption-size);
   padding: 2px var(--space-xs);
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
-  border: 1px solid var(--color-border-muted);
+  background: var(--color-neutral-background-surface-sunken-enabled);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   white-space: nowrap;
 }
 
@@ -4462,7 +4462,7 @@ body > .drawer-frame .drawer {
   flex-wrap: wrap;
   gap: var(--space-sm);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* Each region label. The container was styled and this was not, so the
@@ -4479,14 +4479,14 @@ body > .drawer-frame .drawer {
   gap: var(--space-2xs);
   margin: 0;
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .pd-strats-note {
   grid-column: 1 / -1;
   margin: 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- the pinned footer · where the commit lives ------------------------- */
@@ -4504,8 +4504,8 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
-  background: var(--color-bg-surface);
-  border-block-start: 1px solid var(--color-border-default);
+  background: var(--color-neutral-background-surface-enabled);
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
   box-shadow: var(--elevation-overlay);
   animation: rise-in var(--motion-enter-duration) var(--motion-enter-easing);
 }
@@ -4526,15 +4526,15 @@ body > .drawer-frame .drawer {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-feedback-success-fg);
+  color: var(--color-status-success-foreground-default-enabled);
   font-weight: var(--type-emphasis-weight);
 }
 
-.pd-invalid { color: var(--color-feedback-warning-fg); font-weight: var(--type-emphasis-weight); }
+.pd-invalid { color: var(--color-status-warning-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
 
 .pd-footer-sav {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4542,7 +4542,7 @@ body > .drawer-frame .drawer {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 .aw-awarded-bar { margin-block-end: var(--space-md); }
@@ -4559,7 +4559,7 @@ body > .drawer-frame .drawer {
    needs a row-gap it never needed with four. */
 .aw-filters { row-gap: var(--space-sm); }
 
-.aw-pos { color: var(--color-feedback-success-fg); font-weight: var(--type-emphasis-weight); }
+.aw-pos { color: var(--color-status-success-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
 
 /* Share of allocated value in the CURRENT filter. Neutral fill: this is a
    distribution, not a threshold, and a feedback tone would imply a cap that
@@ -4572,7 +4572,7 @@ body > .drawer-frame .drawer {
   max-inline-size: 140px;
   block-size: 6px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
 }
 
@@ -4584,7 +4584,7 @@ body > .drawer-frame .drawer {
 
 .aw-share-k {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
 }
@@ -4601,12 +4601,12 @@ body > .drawer-frame .drawer {
   border: 0;
   padding: 0;
   cursor: pointer;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font: inherit;
   text-align: start;
 }
 
-.bc-expand:hover { color: var(--color-fg-accent); }
+.bc-expand:hover { color: var(--color-brand-foreground-accent-enabled); }
 
 /* A bucket with no template lines gets no chevron, but must still align with
    the ones that do — otherwise the labels sit on two different left edges. */
@@ -4618,9 +4618,9 @@ body > .drawer-frame .drawer {
    them"). It carries no values — it labels the rows beneath it. */
 .bc-group th,
 .bc-group td {
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding-block: var(--space-2xs);
@@ -4633,7 +4633,7 @@ body > .drawer-frame .drawer {
 .bc-line-row td {
   padding-block: 2px;
   border-block-end: 0;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .bc-line-row .bc-rowhead {
@@ -4641,14 +4641,14 @@ body > .drawer-frame .drawer {
   font-weight: var(--type-body-weight);
 }
 
-.bc-line-label { color: var(--color-fg-default); }
+.bc-line-label { color: var(--color-neutral-foreground-default-enabled); }
 
 /* The unit rides with the label, not the value: repeating "Meters" in every
    vendor column would triple the noise for one piece of information. */
 .bc-line-unit {
   margin-inline-start: var(--space-2xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 /* A text answer ("Ponte knit", "Vietnam") can be long, and one long cell must
@@ -4664,7 +4664,7 @@ body > .drawer-frame .drawer {
 
 /* The last row before a bucket's expansion ends needs its rule back. */
 .bc-line-row:last-of-type td,
-.bc-line-row:last-of-type th { border-block-end: 1px solid var(--color-border-muted); }
+.bc-line-row:last-of-type th { border-block-end: 1px solid var(--color-neutral-stroke-muted-enabled); }
 
 /* --- saved strategies -------------------------------------------------- */
 
@@ -4675,17 +4675,17 @@ body > .drawer-frame .drawer {
   font-size: var(--type-caption-size);
   padding: 2px var(--space-xs);
   border-radius: var(--radius-full);
-  background: var(--color-feedback-success-bg);
-  color: var(--color-feedback-success-fg);
+  background: var(--color-status-success-background-subtle-enabled);
+  color: var(--color-status-success-foreground-default-enabled);
   white-space: nowrap;
 }
 
-.pd-strat.is-saved { border-inline-start: 2px solid var(--color-fg-accent); }
+.pd-strat.is-saved { border-inline-start: 2px solid var(--color-brand-foreground-accent-enabled); }
 
 .pd-strat-mine {
   margin-inline-start: var(--space-xs);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-weight: var(--type-body-weight);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -4696,7 +4696,7 @@ body > .drawer-frame .drawer {
 .pd-strat-note {
   margin-block-start: 2px;
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 .pd-strat-form {
@@ -4704,7 +4704,7 @@ body > .drawer-frame .drawer {
   flex-direction: column;
   gap: var(--space-sm);
   padding-block-start: var(--space-sm);
-  border-block-start: 1px solid var(--color-border-muted);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .pd-strat-formacts { display: flex; gap: var(--space-xs); justify-content: flex-end; }
@@ -4715,7 +4715,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-2xs);
   margin: 0;
   font-size: var(--type-body-sm-size);
-  color: var(--color-feedback-warning-fg);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 
 /* Delete sits at the trailing edge, away from Apply — the two must not be
@@ -4731,7 +4731,7 @@ body > .drawer-frame .drawer {
   /* Replaces the padding the negative offset cancels, so the breadcrumb does
      not sit flush against the chrome once pinned. */
   padding-block-start: var(--space-xl);
-  border-block-start: 1px solid var(--color-border-muted);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
   font-size: var(--type-body-sm-size);
 }
 
@@ -4740,7 +4740,7 @@ body > .drawer-frame .drawer {
 /* The affirmative on an inline delete confirm. A ghost by weight — the pinned
    footer owns the page's secondary — marked by the danger foreground and by
    being last, which is the system's rule for a destructive menu item. */
-.pd-del-yes { color: var(--color-feedback-danger-fg); }
+.pd-del-yes { color: var(--color-status-danger-foreground-default-enabled); }
 
 /* --- A15 · product page polish ----------------------------------------- */
 
@@ -4772,7 +4772,7 @@ body > .drawer-frame .drawer {
    */
   inset-block-start: calc(var(--space-xl) * -1);
   z-index: var(--z-sticky);
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
   margin-inline: calc(var(--space-xl) * -1);
   padding-inline: var(--space-xl);
   padding-block-start: var(--space-xs);
@@ -4812,9 +4812,9 @@ body > .drawer-frame .drawer {
   inline-size: 66px;
   block-size: 88px;
   padding: 0;
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-neutral-stroke-muted-enabled);
   border-radius: var(--radius-inner);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   overflow: hidden;
   cursor: pointer;
 }
@@ -4826,7 +4826,7 @@ body > .drawer-frame .drawer {
   display: block;
 }
 
-.pd-thumb:hover { border-color: var(--color-border-strong); }
+.pd-thumb:hover { border-color: var(--color-neutral-stroke-strong-enabled); }
 
 /* The count is the affordance: it says there is more behind this one image. */
 .pd-thumb-n {
@@ -4838,8 +4838,8 @@ body > .drawer-frame .drawer {
   justify-content: center;
   gap: 2px;
   padding-block: 2px;
-  background: var(--color-bg-emphasis);
-  color: var(--color-fg-on-emphasis);
+  background: var(--color-neutral-background-emphasis-enabled);
+  color: var(--color-neutral-foreground-on-emphasis-enabled);
   font-size: var(--type-caption-size);
   line-height: 1;
 }
@@ -4850,7 +4850,7 @@ body > .drawer-frame .drawer {
   border: 0;
   padding: 0;
   font: inherit;
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -4879,7 +4879,7 @@ body > .drawer-frame .drawer {
   /* xs, not sm. The span already begins with a space in the markup, so sm on
      both sides rendered as a visibly doubled gap. */
   margin-inline: var(--space-xs);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 /* Clears the content column's gutter so the state text does not sit flush
@@ -4899,7 +4899,7 @@ body > .drawer-frame .drawer {
   display: grid;
   place-items: center;
   padding: var(--space-lg);
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
 }
 
 .gate-card {
@@ -4915,8 +4915,8 @@ body > .drawer-frame .drawer {
   display: grid;
   place-items: center;
   border-radius: var(--radius-element);
-  background: var(--color-bg-accent-subtle);
-  color: var(--color-fg-accent);
+  background: var(--color-brand-background-accent-subtle-enabled);
+  color: var(--color-brand-foreground-accent-enabled);
 }
 
 .gate-ttl {
@@ -4928,7 +4928,7 @@ body > .drawer-frame .drawer {
 .gate-sub {
   margin: 0 0 var(--space-lg);
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .gate-err { margin-block-end: var(--space-md); text-align: start; }
@@ -4944,7 +4944,7 @@ body > .drawer-frame .drawer {
 .gate-note {
   margin: var(--space-lg) 0 0;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
   line-height: 1.5;
 }
 
@@ -4957,14 +4957,14 @@ body > .drawer-frame .drawer {
   max-inline-size: 68ch;
   font-size: var(--type-body-sm-size);
   line-height: var(--type-body-sm-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* A product already at the finest grain has no move to offer. Saying so
    beats an empty cell, which reads as a missing control. */
 .vs-leaf {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .vs-actions {
@@ -4975,7 +4975,7 @@ body > .drawer-frame .drawer {
 
 .vs-bulk-label {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-on-emphasis);
+  color: var(--color-neutral-foreground-on-emphasis-enabled);
   align-self: center;
 }
 
@@ -4995,13 +4995,13 @@ body > .drawer-frame .drawer {
   border: 0;
   border-radius: var(--radius-inner);
   background: none;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: pointer;
 }
 
 .pc-chev:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-fg-default);
+  background: var(--color-neutral-background-interaction-hovered);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 /* A style-grained product has nothing to expand. The slot is held so every
@@ -5013,7 +5013,7 @@ body > .drawer-frame .drawer {
 /* Variation rows are siblings in the SAME table, so they inherit the
    colgroup and their figures stay under the right columns. */
 .pc-var-row > td {
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   padding-block: var(--space-xs);
 }
 
@@ -5033,7 +5033,7 @@ body > .drawer-frame .drawer {
 .pc-var-meta,
 .pc-var-none {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- Style set variation membership (phase 1d) --- */
@@ -5053,9 +5053,9 @@ body > .drawer-frame .drawer {
 .sc-var {
   padding: 2px var(--space-xs);
   border-radius: var(--radius-inner);
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 
 /* Excluded variations are GREYED, not omitted — "which sizes did we leave
@@ -5063,7 +5063,7 @@ body > .drawer-frame .drawer {
    answer it. */
 .sc-var.is-out {
   background: none;
-  color: var(--color-fg-disabled);
+  color: var(--color-neutral-foreground-disabled-rest);
   text-decoration: line-through;
   cursor: help;
 }
@@ -5084,7 +5084,7 @@ body > .drawer-frame .drawer {
 /* The axis name ("Size") is quieter than the value it introduces, the same
    relationship the DS Token uses for its qualifier. */
 .vsw-axis {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .vsw-menu {
@@ -5107,7 +5107,7 @@ body > .drawer-frame .drawer {
 
 .sd-switch-note {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- Create RFP variation rows (phase 1.5d) --- */
@@ -5117,7 +5117,7 @@ body > .drawer-frame .drawer {
 .rg-var-count {
   margin-inline-start: var(--space-sm);
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* --- RFP detail variation strip (phase 1.5e) --- */
@@ -5135,12 +5135,12 @@ body > .drawer-frame .drawer {
   margin-block: 0 var(--space-lg);
   font-size: var(--type-body-sm-size);
   line-height: var(--type-body-sm-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rv-product {
   padding-block: var(--space-md);
-  border-block-start: 1px solid var(--color-border-muted);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .rv-product:first-of-type {
@@ -5168,7 +5168,7 @@ body > .drawer-frame .drawer {
 .rv-var-meta,
 .rv-whole {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rv-whole {
@@ -5210,7 +5210,7 @@ body > .drawer-frame .drawer {
 }
 
 .rd-vgroup + .rd-vgroup {
-  border-block-start: 1px solid var(--color-border-muted);
+  border-block-start: 1px solid var(--color-neutral-stroke-muted-enabled);
 }
 
 .rd-vgroup-h {
@@ -5227,13 +5227,13 @@ body > .drawer-frame .drawer {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 .rd-vgroup-count {
   flex: 0 0 auto;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 
@@ -5281,7 +5281,7 @@ body > .drawer-frame .drawer {
   margin-block-start: var(--space-2xs);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ─ Vendor quote form · per-variant + DDP (2a.4) ───────────────────────────── */
@@ -5299,34 +5299,34 @@ body > .drawer-frame .drawer {
   gap: 2px;
   min-inline-size: 104px;
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
   background: transparent;
   text-align: start;
   cursor: pointer;
 }
 .qv-tab:hover {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-neutral-stroke-strong-enabled);
 }
 /* The selected variant takes the system's selected-SURFACE token — a tab is a
    surface, not a field. Same token as a selected style card. */
 .qv-tab.on {
-  border-color: var(--color-border-selected-surface);
-  background: var(--color-bg-muted);
+  border-color: var(--color-neutral-stroke-selected-surface-enabled);
+  background: var(--color-neutral-background-muted-enabled);
 }
 .qv-tab-l {
   font-weight: var(--type-emphasis-weight);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 .qv-tab-v {
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .qv-count {
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* The LIGHT template's folded line items. Present but never required, so a
@@ -5336,19 +5336,19 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: var(--space-sm);
   padding-block: var(--space-sm);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: pointer;
 }
 .qv-detail-opt {
   padding-inline: 6px;
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
 }
 .qv-detail-b {
   padding-block-start: var(--space-sm);
-  border-block-start: 1px solid var(--color-border-default);
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
 }
 
 /* DDP — two modes side by side, so air and ocean read as one decision. */
@@ -5360,14 +5360,14 @@ body > .drawer-frame .drawer {
 }
 .qv-ddp-h {
   padding-block-end: var(--space-sm);
-  border-block-end: 1px solid var(--color-border-default);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
   font-weight: var(--type-emphasis-weight);
 }
 .qv-ddp-total {
   padding-inline-start: var(--space-sm);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   white-space: nowrap;
 }
 
@@ -5404,17 +5404,17 @@ body > .drawer-frame .drawer {
 }
 /* The reader owes something: warning, the DS's "you must act" tone. */
 .bl-turn.is-vendor {
-  background: var(--color-feedback-warning-bg);
-  color: var(--color-feedback-warning-fg);
+  background: var(--color-status-warning-background-subtle-enabled);
+  color: var(--color-status-warning-foreground-default-enabled);
 }
 /* Waiting on the other side: quiet, no call to action. */
 .bl-turn.is-quince {
-  background: var(--color-bg-muted);
-  color: var(--color-fg-muted);
+  background: var(--color-neutral-background-muted-enabled);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bl-turn.is-done {
-  background: var(--color-feedback-success-bg);
-  color: var(--color-feedback-success-fg);
+  background: var(--color-status-success-background-subtle-enabled);
+  color: var(--color-status-success-foreground-default-enabled);
 }
 
 /* The hover target is the WRAPPER, so moving between the icon and the
@@ -5429,11 +5429,11 @@ body > .drawer-frame .drawer {
   border: 0;
   border-radius: var(--radius-inner);
   background: transparent;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: pointer;
 }
 .bl-info:hover {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 /* The conversation sits at the trailing edge — it is a way out of this
    panel, not one of its own controls. */
@@ -5445,14 +5445,14 @@ body > .drawer-frame .drawer {
   margin: var(--space-xs) 0 0;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bl-detail {
   margin-block-start: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   font-size: var(--type-body-sm-size);
   line-height: var(--type-body-sm-line);
 }
@@ -5480,24 +5480,24 @@ body > .drawer-frame .drawer {
   gap: 6px;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bl-dot {
   inline-size: 8px;
   block-size: 8px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-neutral-stroke-strong-enabled);
   border-radius: 50%;
 }
 .bl-step.done .bl-dot {
-  background: var(--color-border-strong);
+  background: var(--color-neutral-stroke-strong-enabled);
 }
 .bl-step.on {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-weight: var(--type-emphasis-weight);
 }
 .bl-step.on .bl-dot {
-  border-color: var(--color-fg-accent);
-  background: var(--color-fg-accent);
+  border-color: var(--color-brand-foreground-accent-enabled);
+  background: var(--color-brand-foreground-accent-enabled);
 }
 
 .bl-act {
@@ -5506,13 +5506,13 @@ body > .drawer-frame .drawer {
   justify-items: start;
   margin-block-start: var(--space-md);
   padding-block-start: var(--space-md);
-  border-block-start: 1px solid var(--color-border-default);
+  border-block-start: 1px solid var(--color-neutral-stroke-default-enabled);
 }
 .bl-act-l,
 .bl-will {
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bl-act > .control,
 .bl-act > select.control {
@@ -5532,9 +5532,9 @@ body > .drawer-frame .drawer {
   inline-size: 100%;
   max-inline-size: 420px;
   padding: var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
   text-align: start;
 }
 .bl-withdraw-acts {
@@ -5557,13 +5557,13 @@ body > .drawer-frame .drawer {
 }
 .bt-msg {
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
 }
 /* The reader's own messages take the muted fill. Authorship is never carried
    by the fill alone — every message names its author. */
 .bt-msg.mine {
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
 }
 .bt-msg-h {
   display: flex;
@@ -5571,7 +5571,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bt-msg-h time {
   margin-inline-start: auto;
@@ -5598,7 +5598,7 @@ body > .drawer-frame .drawer {
 .bt-panel {
   margin-block-start: var(--space-md);
   padding: var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
 }
 .bt-panel-h {
@@ -5623,7 +5623,7 @@ body > .drawer-frame .drawer {
   inset-inline-end: 0;
   inline-size: 260px;
   padding-block: var(--space-xs);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-overlay);
   z-index: var(--z-popover);
@@ -5634,12 +5634,12 @@ body > .drawer-frame .drawer {
 /* A destructive item is marked by being LAST and by the danger foreground —
    never by a bare divider, which the system does not have. */
 .qa-danger {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 
 .sq-lede {
   margin-block: 0 var(--space-md);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .sq-all {
   display: flex;
@@ -5647,7 +5647,7 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   padding-block-end: var(--space-sm);
   margin-block-end: var(--space-sm);
-  border-block-end: 1px solid var(--color-border-default);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
   font-weight: var(--type-emphasis-weight);
   cursor: pointer;
 }
@@ -5670,13 +5670,13 @@ body > .drawer-frame .drawer {
    right-aligned against the tick column rather than floating mid-row. */
 .sq-fob {
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .sq-done,
 .sq-note {
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ─ Product page at variation grain (Phase 2b) ───────────────────────────── */
@@ -5700,9 +5700,9 @@ body > .drawer-frame .drawer {
   gap: var(--space-sm);
   margin-block: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-inner);
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
 }
 
 /* Apply + Apply to all sit together on a strategy card. */
@@ -5727,12 +5727,12 @@ body > .drawer-frame .drawer {
   border: 0;
   border-radius: var(--radius-inner);
   background: none;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: pointer;
 }
 .aw-chev:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-fg-default);
+  background: var(--color-neutral-background-interaction-hovered);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 /* A single-group product holds the slot, so every name starts on one edge. */
 .aw-chev-gap {
@@ -5741,12 +5741,12 @@ body > .drawer-frame .drawer {
 }
 /* Siblings in the SAME table, so their figures stay under the right columns. */
 .aw-var-row > td {
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   padding-block: var(--space-xs);
   cursor: pointer;
 }
 .aw-var-row:hover > td {
-  background: var(--color-bg-hover);
+  background: var(--color-neutral-background-interaction-hovered);
 }
 /* Indented past the chevron + thumbnail, so a size reads as belonging to
    the product above it. */
@@ -5759,7 +5759,7 @@ body > .drawer-frame .drawer {
   margin-block-start: 2px;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ─ Split cap bar · incumbent / existing / new (N14) ───────────────────────
@@ -5771,7 +5771,7 @@ body > .drawer-frame .drawer {
   box-shadow: inset 0 0 0 1px transparent;
 }
 .chart-cap--split.is-over {
-  box-shadow: inset 0 0 0 2px var(--color-feedback-danger-solid);
+  box-shadow: inset 0 0 0 2px var(--color-status-danger-background-solid-enabled);
 }
 .chart-cap-stack {
   display: flex;
@@ -5799,7 +5799,7 @@ body > .drawer-frame .drawer {
   position: absolute;
   inset-block: -1px;
   inline-size: 2px;
-  background: var(--color-fg-default);
+  background: var(--color-neutral-foreground-default-enabled);
   z-index: 2;
 }
 /* Named apart from .wi-legend, which is the vendor-type donut's legend —
@@ -5811,7 +5811,7 @@ body > .drawer-frame .drawer {
   margin-block-end: var(--space-md);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .wi-caplegend-sw {
   display: inline-block;
@@ -5828,7 +5828,7 @@ body > .drawer-frame .drawer {
   display: block;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ─ Bid summary (Phase 3) ──────────────────────────────────────────────────
@@ -5850,27 +5850,27 @@ body > .drawer-frame .drawer {
   align-items: center;
   gap: 6px;
   padding: 4px var(--space-md);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
   border-radius: var(--radius-pill);
-  background: var(--color-bg-surface);
-  color: var(--color-fg-default);
+  background: var(--color-neutral-background-surface-enabled);
+  color: var(--color-neutral-foreground-default-enabled);
   cursor: pointer;
 }
-.bs-view:hover { background: var(--color-bg-hover); }
+.bs-view:hover { background: var(--color-neutral-background-interaction-hovered); }
 .bs-view.on {
-  border-color: var(--color-border-selected-surface);
-  background: var(--color-bg-muted);
+  border-color: var(--color-neutral-stroke-selected-surface-enabled);
+  background: var(--color-neutral-background-muted-enabled);
   font-weight: var(--type-emphasis-weight);
 }
 .bs-view .ct {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 .bs-views-total {
   margin-inline-start: auto;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* 17 columns do not fit at 1440 (U5): the grid scrolls sideways inside its
@@ -5895,26 +5895,26 @@ body > .drawer-frame .drawer {
   /* The named layer, not a bare 1 — pinned chrome orders against dropdowns
      and overlays by name (DS lint). */
   z-index: var(--z-sticky);
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
 }
-thead .bs-sticky { background: var(--color-bg-table-head); }
+thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled); }
 .bs-c-check { inset-inline-start: 0; inline-size: 40px; }
 .bs-c-vendor {
   inset-inline-start: 40px;
   min-inline-size: 200px;
-  box-shadow: inset -1px 0 0 var(--color-border-default);
+  box-shadow: inset -1px 0 0 var(--color-neutral-stroke-default-enabled);
 }
 /* The two-tier header: the band names the freight basis its three columns
    belong to. */
 .bs-band {
   text-align: center;
-  border-block-end: 1px solid var(--color-border-default);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
 }
 .bs-sub { font-weight: var(--type-body-weight); }
 
 /* The variant header row (U1). */
 .bs-group > td {
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   padding-block: var(--space-sm);
 }
 .bs-group-in {
@@ -5925,7 +5925,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   z-index: var(--z-sticky);
   /* Opaque, like every sticky surface: without a fill the price columns
      scroll visibly through the header (A15; caught by the DS lint). */
-  background: var(--color-bg-muted);
+  background: var(--color-neutral-background-muted-enabled);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -5943,15 +5943,15 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .bs-group-var {
   padding: 1px var(--space-sm);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-surface);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
+  background: var(--color-neutral-background-surface-enabled);
   font-size: var(--type-caption-size);
 }
 .bs-fact {
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
-.bs-fact strong { color: var(--color-fg-default); }
+.bs-fact strong { color: var(--color-neutral-foreground-default-enabled); }
 .bs-group-alloc {
   display: inline-flex;
   align-items: center;
@@ -5965,17 +5965,17 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   display: block;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 /* The basis NOT in use recedes (U2); the blend in use is the one figure
    that carries weight in the price block. */
-.bs-muted { color: var(--color-fg-muted); }
+.bs-muted { color: var(--color-neutral-foreground-muted-enabled); }
 .bs-used { font-weight: var(--type-emphasis-weight); }
 .bs-mark {
   margin-inline-start: 4px;
-  color: var(--color-fg-accent);
+  color: var(--color-brand-foreground-accent-enabled);
 }
-.bs-row.is-nobid > td { color: var(--color-fg-muted); }
+.bs-row.is-nobid > td { color: var(--color-neutral-foreground-muted-enabled); }
 .bs-nobid-cell { font-style: italic; }
 
 /* The split editor (U3). */
@@ -5989,10 +5989,10 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   border-radius: var(--radius-inner);
   background: transparent;
   font-size: var(--type-caption-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: pointer;
 }
-.bs-split-btn:hover { background: var(--color-bg-hover); color: var(--color-fg-default); }
+.bs-split-btn:hover { background: var(--color-neutral-background-interaction-hovered); color: var(--color-neutral-foreground-default-enabled); }
 .bs-split-pop {
   position: absolute;
   inset-block-start: calc(100% + var(--space-xs));
@@ -6002,7 +6002,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   gap: var(--space-sm);
   inline-size: 260px;
   padding: var(--space-md);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-overlay);
   white-space: normal;
@@ -6010,48 +6010,48 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .bs-split-l {
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bs-split-row { display: flex; align-items: center; gap: var(--space-sm); }
 .bs-split-row .control { inline-size: 90px; }
-.bs-split-ocean { font-size: var(--type-caption-size); color: var(--color-fg-muted); }
+.bs-split-ocean { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); }
 .bs-split-acts { display: flex; justify-content: flex-end; gap: var(--space-sm); }
 
 /* Filters size to their content here, not the leftover line — "All Vendors"
    stretched to 330px and pushed the rest onto another row. */
 .bs-filters select.control { flex: 0 1 auto; inline-size: auto; max-inline-size: 220px; }
 /* An unset split is the wave default: shown muted rather than labelled. */
-.bs-split-btn.is-default { color: var(--color-fg-muted); }
-.bs-split-btn:not(.is-default) { color: var(--color-fg-default); font-weight: var(--type-emphasis-weight); }
+.bs-split-btn.is-default { color: var(--color-neutral-foreground-muted-enabled); }
+.bs-split-btn:not(.is-default) { color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
 
 /* Bid rows open the drawer (U6). The open row stays marked, so you can see
    where you are in the list while working through it with previous / next. */
 .bs-row { cursor: pointer; }
-.bs-row:hover > td { background: var(--color-bg-hover); }
-.bs-row.is-open > td { background: var(--color-bg-muted); }
-.bs-row.is-open > td.bs-c-vendor { box-shadow: inset 3px 0 0 var(--color-border-selected-surface), inset -1px 0 0 var(--color-border-default); }
+.bs-row:hover > td { background: var(--color-neutral-background-interaction-hovered); }
+.bs-row.is-open > td { background: var(--color-neutral-background-muted-enabled); }
+.bs-row.is-open > td.bs-c-vendor { box-shadow: inset 3px 0 0 var(--color-neutral-stroke-selected-surface-enabled), inset -1px 0 0 var(--color-neutral-stroke-default-enabled); }
 
 /* ─ Bid drawer ─────────────────────────────────────────────────────────── */
 .bd-vars { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 .bd-freight { display: grid; gap: var(--space-xs); margin-block-end: var(--space-md); }
 .bd-radio { display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; }
-.bd-radio.is-off { color: var(--color-fg-muted); cursor: not-allowed; }
-.bd-err { color: var(--color-feedback-danger-fg); margin: 0 0 var(--space-sm); }
+.bd-radio.is-off { color: var(--color-neutral-foreground-muted-enabled); cursor: not-allowed; }
+.bd-err { color: var(--color-status-danger-foreground-default-enabled); margin: 0 0 var(--space-sm); }
 .bd-chain { inline-size: 100%; border-collapse: collapse; margin-block-end: var(--space-sm); }
 .bd-chain th, .bd-chain td {
   padding: var(--space-xs) var(--space-sm);
-  border-block-end: 1px solid var(--color-border-default);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
   text-align: start;
 }
 .bd-chain .num { text-align: end; font-variant-numeric: tabular-nums; }
-.bd-chain thead th { font-weight: var(--type-body-weight); color: var(--color-fg-muted); }
+.bd-chain thead th { font-weight: var(--type-body-weight); color: var(--color-neutral-foreground-muted-enabled); }
 /* The basis in use is the row that carries weight, as in the grid. */
 .bd-chain tr.is-used th, .bd-chain tr.is-used td { font-weight: var(--type-emphasis-weight); }
 .bd-note {
   margin: 0 0 var(--space-sm);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* Bid summary · second pass (5 Oct). */
@@ -6062,7 +6062,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .bs-c-product { inset-inline-start: 40px; inline-size: 120px; min-inline-size: 120px; max-inline-size: 120px; }
 .bs-c-vendor { inset-inline-start: 160px; }
 /* Collapsed headers carry the one thing worth acting on in bold. */
-.bs-await { color: var(--color-feedback-warning-fg); }
+.bs-await { color: var(--color-status-warning-foreground-default-enabled); }
 
 /* ===================================================== allocate overlay (5 Oct)
 
@@ -6085,7 +6085,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   max-inline-size: 1440px;
   inline-size: 100%;
   margin-inline: auto;
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-overlay);
   overflow: hidden;
@@ -6098,8 +6098,8 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
-  background: var(--color-bg-surface);
-  border-block-end: 1px solid var(--color-border-default);
+  background: var(--color-neutral-background-surface-enabled);
+  border-block-end: 1px solid var(--color-neutral-stroke-default-enabled);
 }
 .ao-title {
   margin-inline-end: auto;
@@ -6159,20 +6159,20 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   padding: 0;
   margin-block-end: var(--space-sm);
   font-weight: var(--type-label-weight);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 .fb-group .fb-n {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
 }
 .fb-none {
   margin: 0;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 /* A facet that lands unset reads in the placeholder tone, so "I chose this"
    and "this was chosen for me" are distinguishable at a glance. */
 .filter-bar select.fb-ph {
-  color: var(--color-fg-subtle);
+  color: var(--color-neutral-foreground-subtle-enabled);
 }
 
 /* ── PEOPLE PICKER + CREATE FORM (UX v2) ──────────────────────────────────── */
@@ -6186,7 +6186,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   border: 0;
   background: transparent;
   font: inherit;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   min-inline-size: 160px;
   flex: 1 1 160px;
   padding-block: var(--space-2xs);
@@ -6205,10 +6205,10 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .rfp-create-note {
   padding-block-start: 0;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .rfp-create-missing {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   margin-inline-end: var(--space-sm);
 }
 .rl-new {
@@ -6219,7 +6219,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .rl-created-note {
   margin-block-start: var(--space-xs);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 
 /* ── RFP DETAIL, ONE PAGE (UX v2) ─────────────────────────────────────────── */
@@ -6244,7 +6244,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-lg);
-  border-block-start: var(--border-width-default) solid var(--color-border-muted);
+  border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
 }
 .rd-pid {
   display: flex;
@@ -6264,11 +6264,11 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   font-size: var(--type-body-sm-size);
   padding-inline: var(--space-sm);
   border-radius: var(--radius-element);
-  background: var(--color-bg-muted);
-  color: var(--color-fg-muted);
+  background: var(--color-neutral-background-muted-enabled);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .rd-pmeta {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -6299,7 +6299,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   z-index: var(--z-popover);
   inline-size: 240px;
   padding-block: var(--space-xs);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-overlay);
 }
@@ -6308,7 +6308,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   text-align: start;
 }
 .bm-danger {
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 .bm-note {
   position: absolute;
@@ -6320,11 +6320,11 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .bm-will {
   margin: 0;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bm-error {
   margin: 0;
-  color: var(--color-feedback-danger-fg);
+  color: var(--color-status-danger-foreground-default-enabled);
 }
 /* Bid drawer: status row, message bar, tabs. */
 .qd-status {
@@ -6335,7 +6335,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   margin-block-end: var(--space-md);
 }
 .qd-vendor-sees {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-body-sm-size);
 }
 .qd-status-acts {
@@ -6349,7 +6349,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   border: 0;
   padding: 0;
   font: inherit;
-  color: var(--color-fg-link);
+  color: var(--color-neutral-foreground-link-enabled);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -6362,7 +6362,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .bt-inline .bt-compose {
   position: sticky;
   inset-block-end: 0;
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   padding-block: var(--space-sm);
 }
 /* Lifecycle tooltip beside a status badge. */
@@ -6374,7 +6374,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   background: none;
   border: 0;
   padding: var(--space-2xs);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   cursor: pointer;
   border-radius: var(--radius-element);
 }
@@ -6389,7 +6389,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   z-index: var(--z-popover);
   inline-size: 260px;
   padding: var(--space-md);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-overlay);
   display: flex;
@@ -6398,18 +6398,18 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   font-size: var(--type-body-sm-size);
 }
 .bsi-detail {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bsi-steps {
   margin: 0;
   padding-inline-start: var(--space-lg);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bsi-steps li.done {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 .bsi-steps li.on {
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   font-weight: var(--type-label-weight);
 }
 
@@ -6439,10 +6439,10 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .rd-pempty {
   padding: var(--space-lg);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .rfp-products {
-  border-block-start: var(--border-width-default) solid var(--color-border-muted);
+  border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
   padding: var(--space-md) var(--space-lg) var(--space-lg);
   display: flex;
   flex-direction: column;
@@ -6475,7 +6475,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) 0;
-  border-block-end: var(--border-width-default) solid var(--color-border-muted);
+  border-block-end: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
 }
 .ap-id {
   display: flex;
@@ -6517,17 +6517,17 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .sum-card .k {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .sum-card .v {
   font-size: var(--type-heading-3-size);
   font-weight: var(--type-label-weight);
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 .sum-card .s {
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .vs-rule {
   margin-block-end: 0;
@@ -6543,7 +6543,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
   padding-block: var(--space-sm);
   margin-block-end: var(--space-md);
 }
@@ -6553,7 +6553,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   min-inline-size: 0;
 }
 .ss-meta {
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   white-space: nowrap;
 }
 /* Review variation level: accordion rows with a product checkbox before the
@@ -6570,7 +6570,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 }
 .rv-acc .trail {
   margin-inline-start: auto;
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 /* Header Vendor view trigger: outlined in the header's own ink. */
 .vv-trigger {
@@ -6594,7 +6594,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .pd-ro,
 .pd-ro + .pd-ro {
   border-inline-start: 0;
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-raised);
   padding: var(--space-md) var(--space-lg);
@@ -6621,7 +6621,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   position: sticky;
   inset-inline-start: 240px;
   z-index: var(--z-sticky);
-  box-shadow: inset calc(-1 * var(--border-width-default)) 0 0 var(--color-border-default);
+  box-shadow: inset calc(-1 * var(--border-width-default)) 0 0 var(--color-neutral-stroke-default-enabled);
 }
 /* Strategy cards (C44, D9): Apply is the heavier action (secondary), Apply to
    all the lighter (ghost), and both sit at the BOTTOM of the card. The header
@@ -6656,10 +6656,10 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 /* Wave insights region bars (D10): neutral by default, status colour only
    outside the range. */
 .chart-bar-fill {
-  background: var(--color-fg-muted);
+  background: var(--color-neutral-foreground-muted-enabled);
 }
 .chart-bar-fill.is-under {
-  background: var(--color-feedback-warning-solid);
+  background: var(--color-status-warning-background-solid-enabled);
 }
 /* Wave insights (C46-C51). */
 .wi-head-filters {
@@ -6678,7 +6678,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
   font-size: var(--type-body-sm-size);
 }
 .wi-caveat {
@@ -6700,10 +6700,10 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   margin-block-start: calc(-1 * var(--page-inset));
   padding-block-start: var(--page-inset);
   z-index: var(--z-sticky);
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
   padding-block-end: var(--space-sm);
   margin-block-end: var(--space-md);
-  box-shadow: 0 var(--space-sm) var(--space-sm) calc(-1 * var(--space-sm)) var(--color-bg-canvas);
+  box-shadow: 0 var(--space-sm) var(--space-sm) calc(-1 * var(--space-sm)) var(--color-neutral-background-canvas-enabled);
 }
 /* The summary column sticks BELOW that header, never under it. The header's
    live height is written to --vq-sticky-h by the page. */
@@ -6724,7 +6724,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   border-radius: var(--radius-container);
   box-shadow: var(--elevation-raised);
 }
@@ -6753,11 +6753,11 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
 .bt .bt-compose {
   position: sticky;
   inset-block-end: 0;
-  background: var(--color-bg-surface-raised);
+  background: var(--color-neutral-background-surface-raised-enabled);
   padding-block: var(--space-sm);
 }
 .vd-instructions { margin-block-end: var(--space-lg); }
-.bl-withdraw-err { margin: var(--space-2xs) 0 0; color: var(--color-feedback-danger-fg); font-size: var(--type-body-sm-size); }
+.bl-withdraw-err { margin: var(--space-2xs) 0 0; color: var(--color-status-danger-foreground-default-enabled); font-size: var(--type-body-sm-size); }
 
 /* ── BID STATUS PANEL (src/components/BidStatusPanel.tsx) ─────────────────── */
 .bsp {
@@ -6766,12 +6766,12 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   margin-block-end: var(--space-md);
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
   border-radius: var(--radius-container);
-  border-inline-start: 3px solid var(--color-border-strong);
+  border-inline-start: 3px solid var(--color-neutral-stroke-strong-enabled);
 }
-.bsp--attention { border-inline-start-color: var(--color-feedback-warning-solid); }
-.bsp--closed { border-inline-start-color: var(--color-border-default); }
+.bsp--attention { border-inline-start-color: var(--color-status-warning-background-solid-enabled); }
+.bsp--closed { border-inline-start-color: var(--color-neutral-stroke-default-enabled); }
 .bsp-top {
   display: flex;
   align-items: center;
@@ -6788,14 +6788,14 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   inline-size: 8px;
   block-size: 8px;
   border-radius: var(--radius-full);
-  background: var(--color-fg-muted);
+  background: var(--color-neutral-foreground-muted-enabled);
   flex: 0 0 auto;
 }
-.bsp--attention .bsp-dot { background: var(--color-feedback-warning-solid); }
+.bsp--attention .bsp-dot { background: var(--color-status-warning-background-solid-enabled); }
 .bsp-label {
   font-size: var(--type-body-lg-size);
   font-weight: var(--type-label-weight);
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 .bsp-meta {
   display: flex;
@@ -6803,7 +6803,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   align-items: center;
   gap: var(--space-2xs) var(--space-md);
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bsp-steps-toggle {
   display: inline-flex;
@@ -6813,7 +6813,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   border: 0;
   background: none;
   font: inherit;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
   cursor: pointer;
 }
 .bsp-steps-toggle:focus-visible {
@@ -6821,7 +6821,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   box-shadow: var(--focus-ring);
   border-radius: var(--radius-element);
 }
-.bsp-other strong { color: var(--color-fg-default); font-weight: var(--type-label-weight); }
+.bsp-other strong { color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-label-weight); }
 /* The lifecycle, in place: a vertical stepper. */
 .bsp-steps {
   list-style: none;
@@ -6831,7 +6831,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   flex-direction: column;
   gap: var(--space-xs);
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bsp-steps li {
   display: flex;
@@ -6842,35 +6842,35 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   inline-size: 16px;
   block-size: 16px;
   border-radius: var(--radius-full);
-  border: var(--border-width-default) solid var(--color-border-strong);
+  border: var(--border-width-default) solid var(--color-neutral-stroke-strong-enabled);
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
 }
-.bsp-steps li.is-done { color: var(--color-fg-default); }
+.bsp-steps li.is-done { color: var(--color-neutral-foreground-default-enabled); }
 .bsp-steps li.is-done .bsp-step-mark {
-  background: var(--color-fg-default);
-  border-color: var(--color-fg-default);
-  color: var(--color-bg-surface);
+  background: var(--color-neutral-foreground-default-enabled);
+  border-color: var(--color-neutral-foreground-default-enabled);
+  color: var(--color-neutral-background-surface-enabled);
 }
-.bsp-steps li.is-here { color: var(--color-fg-default); font-weight: var(--type-label-weight); }
+.bsp-steps li.is-here { color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-label-weight); }
 .bsp-steps li.is-here .bsp-step-mark {
   border-width: 5px;
-  border-color: var(--color-fg-default);
+  border-color: var(--color-neutral-foreground-default-enabled);
 }
 /* The latest note, as a quotation. */
 .bsp-note {
   margin: 0;
   padding-block-start: var(--space-sm);
-  border-block-start: var(--border-width-default) solid var(--color-border-muted);
+  border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
 }
 .bsp-note blockquote {
   margin: 0;
-  color: var(--color-fg-default);
+  color: var(--color-neutral-foreground-default-enabled);
 }
 .bsp-note blockquote::before { content: "\201C"; }
 .bsp-note blockquote::after { content: "\201D"; }
@@ -6880,7 +6880,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   justify-content: space-between;
   gap: var(--space-md);
   font-size: var(--type-body-sm-size);
-  color: var(--color-fg-muted);
+  color: var(--color-neutral-foreground-muted-enabled);
 }
 .bsp-link {
   display: inline-flex;
@@ -6890,7 +6890,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   border: 0;
   background: none;
   font: inherit;
-  color: var(--color-fg-link);
+  color: var(--color-neutral-foreground-link-enabled);
   cursor: pointer;
 }
 
@@ -6924,7 +6924,7 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   margin-block-start: calc(-1 * var(--page-inset));
   padding-block-start: var(--page-inset);
   z-index: var(--z-sticky);
-  background: var(--color-bg-canvas);
+  background: var(--color-neutral-background-canvas-enabled);
 }
 .fb-sticky > .filter-bar {
   margin-block: 0;
@@ -6939,5 +6939,5 @@ thead .bs-sticky { background: var(--color-bg-table-head); }
   position: sticky;
   inset-block-start: calc(var(--fb-h, 0px) - var(--page-inset));
   z-index: calc(var(--z-sticky) - 1);
-  background: var(--color-bg-table-head);
+  background: var(--color-neutral-background-table-head-enabled);
 }

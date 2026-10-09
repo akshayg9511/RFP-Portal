@@ -26,31 +26,35 @@
    cleared by the component, not by whoever writes the markup. */
 .select {
   display: inline-flex; align-items: center; gap: var(--space-sm); text-align: start;
-  min-height: var(--size-control-md); min-width: 220px; padding: var(--space-2xs) var(--space-md);  border: var(--border-width-default) solid var(--color-border-control);
-  border-radius: var(--radius-control); background: var(--color-bg-surface);
-  color: var(--color-fg-default); font-size: var(--type-body-md-size); cursor: pointer;
+  min-height: var(--size-control-md); min-width: 220px; padding: var(--space-2xs) var(--space-md);  border: var(--border-width-default) solid var(--color-neutral-stroke-control-enabled);
+  border-radius: var(--radius-control); background: var(--color-neutral-background-surface-enabled);
+  color: var(--color-neutral-foreground-default-enabled); font-size: var(--type-body-md-size); cursor: pointer;
   transition: border-color var(--motion-hover-duration) var(--motion-hover-easing);
 }
 /* The chevron is an affordance, not content: 16px keeps it subordinate to the
    14px value beside it, where 20px read as the loudest thing in the field. The
    stroke compensation holds its line at 1px. */
 .select .ms { font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); }
-.select:hover { border-color: var(--color-border-strong); }
-.select.open { border-color: var(--color-focus-ring); box-shadow: var(--border-glow-emphasis); }
+.select:hover { border-color: var(--color-neutral-stroke-strong-enabled); }
+.select.open { border-color: var(--color-neutral-stroke-focus-ring-enabled); box-shadow: var(--border-glow-emphasis); }
 /* The value is never truncated. A clipped option label hides the part that
    distinguishes it from the option below, and an ellipsis in a field asks the
    user to guess what they picked — so a long value wraps and the control grows
    (height is a floor, not a fixed value). If a value wraps in the field, the
    fix is shorter option copy, not a narrower field. */
 .select .val { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.select .val.ph { color: var(--color-fg-subtle); }
+.select .val.ph { color: var(--color-neutral-foreground-subtle-enabled); }
 /* The chevron is pinned to the trailing edge, not left sitting after the value.
    .val carries flex:1 and does that on its own, but a select written with a
    bare text node has no .val to grow — and that is the common way to write one
    in a toolbar, so the field is fixed rather than the markup. */
 .select > .ms:last-child { margin-inline-start: auto; }
-.select > .ms { color: var(--color-fg-subtle); transition: transform var(--motion-hover-duration) var(--motion-hover-easing); }
-.select.open > .ms { transform: rotate(180deg); }
+.select > .ms { color: var(--color-neutral-foreground-subtle-enabled); transition: transform var(--motion-hover-duration) var(--motion-hover-easing); }
+/* ONLY THE CHEVRON TURNS. This used to rotate every direct .ms, which was
+   harmless while the chevron was the only one — and would spin a leading icon
+   the moment a trigger carried one. :last-child is the same test the pin above
+   already uses, so the two stay in step. */
+.select.open > .ms:last-child { transform: rotate(180deg); }
 /* Small — the same rung as .btn.sm, so a facet select lines up with the buttons
    beside it (28 Default · 36 Spacious). Without it a toolbar select stood 8px
    taller than the controls next to it and broke the row's baseline. The min-width
@@ -67,7 +71,7 @@
 /* DISABLED MATCHES THE REST OF THE FAMILY, and until v171 it was the only member
    outside it. Every other disabled bordered control mutes its edge — Input,
    Textarea, Search, Stepper, both Buttons, Checkbox — and Select kept
-   --color-border-control at full strength because this rule set background,
+   --color-neutral-stroke-control-enabled at full strength because this rule set background,
    colour and cursor and simply never mentioned the border. Measured against the
    disabled fill: 4.20:1 here against 1.09:1 everywhere else, so a disabled select
    sat in a form with a dark edge while the input beside it read as borderless.
@@ -78,26 +82,37 @@
    question and deliberately not reopened here.
 
    :hover is pinned for the same reason .control.disabled pins it — otherwise
-   .select:hover restores --color-border-strong on a control that cannot be used. */
-.select[disabled], .select.disabled { background: var(--color-bg-disabled); color: var(--color-fg-disabled); border-color: var(--color-border-muted); cursor: not-allowed; }
-.select[disabled]:hover, .select.disabled:hover { border-color: var(--color-border-muted); }
+   .select:hover restores --color-neutral-stroke-strong-enabled on a control that cannot be used. */
+/* READ-ONLY, the same treatment .control.readonly already defines for an input:
+   sunken fill, muted edge, no hover response. Still readable, still selectable,
+   nothing to change. It is NOT disabled — the value is live information the user
+   is meant to read, so the text keeps its full foreground while a disabled
+   select greys everything. That difference is the whole point of having both.
+   The chevron STAYS, at the subtle tone it already has, matching what
+   .select[disabled] does rather than hiding it: a trigger that loses its chevron
+   changes width between states, and a form that flips a field to read-only would
+   reflow the row around it. */
+.select.readonly { background: var(--color-neutral-background-surface-sunken-enabled); border-color: var(--color-neutral-stroke-muted-enabled); cursor: default; }
+.select.readonly:hover { border-color: var(--color-neutral-stroke-muted-enabled); }
+.select[disabled], .select.disabled { background: var(--color-neutral-background-disabled-rest); color: var(--color-neutral-foreground-disabled-rest); border-color: var(--color-neutral-stroke-muted-enabled); cursor: not-allowed; }
+.select[disabled]:hover, .select.disabled:hover { border-color: var(--color-neutral-stroke-muted-enabled); }
 /* The chevron takes the disabled foreground rather than staying subtle. At (0,2,0)
    `.select > .ms` outranked the inherited colour, so the affordance measured 4.20:1
    while the value it acts on measured 3.40 — the arrow was louder than the content,
    on a control where the arrow no longer does anything. Same declaration
    .control.disabled already makes for its own glyphs. */
-.select[disabled] > .ms, .select.disabled > .ms { color: var(--color-fg-disabled); }
+.select[disabled] > .ms, .select.disabled > .ms { color: var(--color-neutral-foreground-disabled-rest); }
 /* Invalid uses the danger FOREGROUND, matching .control — the border role is a
    decorative panel edge (1.75:1 in light) and this edge is a state signal. */
-.select.invalid { border-color: var(--color-feedback-danger-fg); }
+.select.invalid { border-color: var(--color-status-danger-foreground-default-enabled); }
 /* Open while invalid: the danger ring carries focus and error together, so the
    accent ring never replaces the error signal. */
-.select.invalid.open { border-color: var(--color-feedback-danger-fg); box-shadow: var(--border-glow-emphasis-danger); }
-.select.invalid:focus-visible { outline: none; border-color: var(--color-feedback-danger-fg); box-shadow: var(--border-glow-emphasis-danger); }
+.select.invalid.open { border-color: var(--color-status-danger-foreground-default-enabled); box-shadow: var(--border-glow-emphasis-danger); }
+.select.invalid:focus-visible { outline: none; border-color: var(--color-status-danger-foreground-default-enabled); box-shadow: var(--border-glow-emphasis-danger); }
 
 /* option list — also used by combobox and menu-style pickers */
 .select-menu {
-  background: var(--color-bg-surface-raised); border: var(--border-width-default) solid transparent;
+  background: var(--color-neutral-background-surface-raised-enabled); border: var(--border-width-default) solid transparent;
   border-radius: var(--radius-overlay); box-shadow: var(--elevation-overlay);
   padding: var(--space-xs); min-width: 220px; display: flex; flex-direction: column; gap: 1px;
 }
@@ -116,12 +131,12 @@
    trade a correct touch floor for a 4px consistency nobody can see, and the menu
    holds only one kind of row anyway. */
 .select-menu > .opt { padding-inline: var(--space-sm); border-radius: var(--radius-control); }
-.select-menu > .opt:hover { background: var(--color-bg-hover); }
+.select-menu > .opt:hover { background: var(--color-neutral-background-interaction-hovered); }
 
 .select-opt {
   display: flex; align-items: center; gap: var(--space-sm); min-height: var(--size-control-md);
   padding: 0 var(--space-sm); border-radius: var(--radius-control);
-  font-size: var(--type-body-md-size); color: var(--color-fg-default); cursor: pointer;
+  font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-default-enabled); cursor: pointer;
 }
 /* An option with a supporting line stacks: the label and its description are
    two facts about one option, so reading them across a single line makes the
@@ -129,18 +144,32 @@
    rather than a fixed height, and the check stays centred against the pair. */
 .select-opt .txt { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .select-opt:has(.sub) { min-height: auto; padding: var(--space-sm); }
-.select-opt:hover { background: var(--color-bg-hover); }
-.select-opt.on { background: var(--color-bg-selected); color: var(--color-fg-default); font-weight: var(--type-label-weight); }
-.select-opt .ms { margin-left: auto; color: var(--color-fg-default); }
+.select-opt:hover { background: var(--color-neutral-background-interaction-hovered); }
+.select-opt.on { background: var(--color-neutral-background-interaction-toggled); color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-label-weight); }
+.select-opt .ms { margin-left: auto; color: var(--color-neutral-foreground-default-enabled); }
+/* A LEADING GLYPH ON AN OPTION — a payment method's card brand, a file's type, a
+   status. The rule above pins any glyph in the row to the trailing edge, because
+   for years the only one was the selected check; a leading icon inherited that
+   auto margin and was pushed 41px off the leading edge, sitting in the middle of
+   the row with the label after it. FIRST CHILD IS THE SLOT: the check is written
+   last, after .txt, so the two cannot be confused by a selector and an option may
+   carry both at once.
+   colour: inherit, not the pinned foreground the check takes — the glyph belongs
+   to the row, so it follows the row into .on, into hover and into a disabled
+   option instead of staying lit while the label around it dims. Same reasoning
+   as the toast glyph: everything inside a state inherits it.
+   flex-shrink: 0 so a long label takes the room from itself, not from the mark
+   that says which KIND of option this is. */
+.select-opt > .ms:first-child { margin-left: 0; color: inherit; flex-shrink: 0; }
 /* Regular, explicitly: the selected option is medium, and without this the
    supporting line inherited that weight and read as emphasised too. Only the
    option's own label carries the selected weight. */
-.select-opt .sub { color: var(--color-fg-muted); font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular); line-height: var(--ref-line-height-normal); }
-/* On a selected option the fill is --color-bg-selected, not the panel, and
-   --color-fg-subtle is tuned against the panel — it eroded to 3.30:1 there.
+.select-opt .sub { color: var(--color-neutral-foreground-muted-enabled); font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular); line-height: var(--ref-line-height-normal); }
+/* On a selected option the fill is --color-neutral-background-interaction-toggled, not the panel, and
+   --color-neutral-foreground-subtle-enabled is tuned against the panel — it eroded to 3.30:1 there.
    The muted role clears AA on the selected fill in all six brand × mode pairs
    while staying visibly quieter than the option label. */
-.select-opt.on .sub { color: var(--color-fg-muted); }
+.select-opt.on .sub { color: var(--color-neutral-foreground-muted-enabled); }
 /* Group headings are sentence case: caps are reserved for the welcome screen
    and the logo. Without the caps texture the separation comes from a centred
    label between two hairlines — the rule reads as a seam between groups, and
@@ -158,23 +187,23 @@
 .select-group {
   display: flex; align-items: center; gap: var(--space-md);
   font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular);
-  color: var(--color-fg-subtle); padding: var(--space-md) var(--space-sm) var(--space-sm);
+  color: var(--color-neutral-foreground-subtle-enabled); padding: var(--space-md) var(--space-sm) var(--space-sm);
   user-select: none;
 }
-/* --color-border-default: this is a CAPTIONED seam, not a bare divider. The rule
+/* --color-neutral-stroke-default-enabled: this is a CAPTIONED seam, not a bare divider. The rule
    and its measurements are stated once, above .divider-label — do not localise a
    copy of the argument here. The select-specific fact that makes it matter: with
    caps gone, this rule is the ONLY separator between groups in the panel, so if
    the hairlines fade the caption is the sole break left. */
 .select-group::before, .select-group::after {
   content: ""; flex: 1; height: var(--border-width-default);
-  background: var(--color-border-default);
+  background: var(--color-neutral-stroke-default-enabled);
 }
 .select-group:first-child { padding-top: var(--space-sm); }
 
 /* ── MENU (context / overflow) ──────────────────────────── */
 .menu {
-  background: var(--color-bg-surface-raised); border: var(--border-width-default) solid transparent;
+  background: var(--color-neutral-background-surface-raised-enabled); border: var(--border-width-default) solid transparent;
   border-radius: var(--radius-overlay); box-shadow: var(--elevation-overlay);
   padding: var(--space-xs); min-width: 220px; display: flex; flex-direction: column; gap: 1px;
 }
@@ -187,19 +216,19 @@
 .menu-label {
   display: flex; align-items: center; gap: var(--space-md);
   font-size: var(--type-body-sm-size); font-weight: var(--ref-font-weight-regular);
-  color: var(--color-fg-subtle); padding: var(--space-md) var(--space-sm) var(--space-sm);
+  color: var(--color-neutral-foreground-subtle-enabled); padding: var(--space-md) var(--space-sm) var(--space-sm);
   user-select: none;
 }
-/* --color-border-default — the captioned-seam role, shared with .select-group,
+/* --color-neutral-stroke-default-enabled — the captioned-seam role, shared with .select-group,
    the nav .grp and the .divider-label primitive that defines it (see the rule
-   above .divider-label). This was the odd one out on --color-border-muted until
+   above .divider-label). This was the odd one out on --color-neutral-stroke-muted-enabled until
    v183: it made the nav comment's "all three read alike" false, and left the
    menu's seam at 1.38:1 in dark while the identical construct one component over
    sat at 2.34:1. Do not move it back to match the structural edges nearby — a
    captioned seam and a block edge are different roles, deliberately. */
 .menu-label::before, .menu-label::after {
   content: ""; flex: 1; height: var(--border-width-default);
-  background: var(--color-border-default);
+  background: var(--color-neutral-stroke-default-enabled);
 }
 .menu-label:first-child { padding-top: var(--space-sm); }
 /* There is no bare divider in a menu. The only break a menu draws is a
@@ -209,31 +238,31 @@
 .menu-item {
   display: flex; align-items: center; gap: var(--space-md); min-height: var(--size-control-md);
   padding: 0 var(--space-sm); border-radius: var(--radius-control);
-  font-size: var(--type-body-md-size); color: var(--color-fg-default); cursor: pointer;
+  font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-default-enabled); cursor: pointer;
 }
-.menu-item:hover { background: var(--color-bg-hover); }
+.menu-item:hover { background: var(--color-neutral-background-interaction-hovered); }
 /* Same system ring — see .nav-item. Keyboard navigation gets the same visible
    row treatment as the pointer; a menu that only answers hover is one a keyboard
    user reads blind. */
 .menu-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.menu-item > .ms:first-child { color: var(--color-fg-subtle); }
-.menu-item:hover > .ms:first-child { color: var(--color-fg-default); }
+.menu-item > .ms:first-child { color: var(--color-neutral-foreground-subtle-enabled); }
+.menu-item:hover > .ms:first-child { color: var(--color-neutral-foreground-default-enabled); }
 .menu-item .kbd, .menu-item .trail { margin-left: auto; }
-.menu-item.danger { color: var(--color-feedback-danger-fg); }
-.menu-item.danger > .ms:first-child { color: var(--color-feedback-danger-fg); }
-.menu-item.danger:hover { background: var(--color-feedback-danger-bg); }
+.menu-item.danger { color: var(--color-status-danger-foreground-default-enabled); }
+.menu-item.danger > .ms:first-child { color: var(--color-status-danger-foreground-default-enabled); }
+.menu-item.danger:hover { background: var(--color-status-danger-background-subtle-enabled); }
 /* One step lighter than the shared disabled colour. A disabled control elsewhere is
    the only thing in its slot, so it reads as unavailable from position alone; a
    disabled menu item sits in a run of live ones and needs the extra separation to
    be scannable. */
-.menu-item.disabled { color: var(--menu-fg-disabled, var(--ref-neutral-400)); cursor: not-allowed; }
-.menu-item.disabled > .ms:first-child { color: var(--menu-fg-disabled, var(--ref-neutral-400)); }
+.menu-item.disabled { color: var(--menu-fg-disabled, var(--ref-color-neutral-solid-400)); cursor: not-allowed; }
+.menu-item.disabled > .ms:first-child { color: var(--menu-fg-disabled, var(--ref-color-neutral-solid-400)); }
 /* Dark mode steps the other way — one rung darker, since dimmer on a dark surface
    means closer to it. */
-[data-mode="dark"] .menu, [data-mode="dark"] .menu-item.disabled { --menu-fg-disabled: var(--ref-neutral-600); }
+[data-mode="dark"] .menu, [data-mode="dark"] .menu-item.disabled { --menu-fg-disabled: var(--ref-color-neutral-solid-600); }
 /* A shortcut key lives in a menu, which is product UI, so it stays in the brand
    face — the monospace stack is reserved for code and docs. */
-.kbd { font-size: var(--type-caption-size); color: var(--color-fg-subtle); border: var(--border-width-default) solid var(--color-border-muted); border-radius: var(--ref-radius-25); padding: 1px 5px; background: var(--color-bg-surface); }
+.kbd { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); border: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); border-radius: var(--ref-corner-radius-25); padding: 1px 5px; background: var(--color-neutral-background-surface-enabled); }
 /* FLUSH — the menu IS the surface rather than sitting on one. A raised card
    inside a full-screen search view draws a second edge a hand's width from the
    screen's own, and the shadow has nothing to lift off. Drops the surface, the
@@ -276,7 +305,7 @@
      reaches the case by design: the `use` entry is "explains a TRUNCATED value",
      and a truncated value is exactly the kind of thing that is one long token. */
   overflow-wrap: anywhere;
-  background: var(--color-bg-emphasis); color: var(--color-fg-on-emphasis);
+  background: var(--color-neutral-background-emphasis-enabled); color: var(--color-neutral-foreground-on-emphasis-enabled);
   font-size: var(--type-body-sm-size); line-height: var(--ref-line-height-snug);
   padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-control);
   box-shadow: var(--elevation-overlay); position: relative;
@@ -297,13 +326,36 @@
    PLACEMENT NAMES WHERE THE TOOLTIP SITS, and the arrow goes on the OPPOSITE edge so
    it points back at the anchor: .top is above the trigger with the arrow underneath,
    .left is to its left with the arrow on the right. */
-.tip::after { content: ''; position: absolute; width: 8px; height: 8px; background: var(--color-bg-emphasis); transform: rotate(45deg); }
+.tip::after { content: ''; position: absolute; width: 8px; height: 8px; background: var(--color-neutral-background-emphasis-enabled); transform: rotate(45deg); }
 .tip.top::after    { bottom: -4px; left: 50%; margin-left: -4px; }
 .tip.bottom::after { top: -4px;    left: 50%; margin-left: -4px; }
 .tip.left::after   { right: -4px;  top: 50%;  margin-top: -4px; }
 .tip.right::after  { left: -4px;   top: 50%;  margin-top: -4px; }
 
 /* live hover tooltip wrapper */
+/* ── A TOOLTIP WITH A HIERARCHY ──
+   DO NOT REPEAT WHAT THE SURFACE ALREADY SAYS. A bar sits above its own axis
+   label, so a tooltip that opens with that label has spent its first line telling
+   the reader something they are already looking at. The overlay is for what is
+   NOT on the page: the exact figure, the full date behind an abbreviated tick,
+   the series name when several share a category.
+
+   WHEN IT CARRIES MORE THAN ONE THING, RANK THEM. .val is the figure and takes
+   the emphasis weight and tabular figures; .sub is the context and takes the
+   muted ink for this ground. Unranked, a two-line tooltip makes the reader decide
+   which line they came for.
+
+   .rows IS FOR SEVERAL LABELLED FIGURES - a stacked column's parts, every series
+   at one x. Label left, figure right, baseline-aligned, so the numbers form a
+   column that can be compared down rather than read across. */
+.tip .val { font-weight: var(--type-emphasis-weight); font-variant-numeric: tabular-nums; }
+.tip .sub { color: var(--color-neutral-foreground-on-emphasis-muted-enabled); }
+.tip.rows {
+  display: grid; grid-template-columns: auto auto;
+  gap: var(--space-2xs) var(--space-md); align-items: baseline;
+}
+.tip.rows > .val { justify-self: end; }
+
 .tip-anchor { position: relative; display: inline-flex; }
 .tip-anchor > .tip { position: absolute; bottom: calc(100% + var(--space-sm)); left: 50%; transform: translateX(-50%); opacity: 0; pointer-events: none; transition: opacity var(--motion-enter-duration) var(--motion-enter-easing); z-index: var(--z-popover); }
 /* THE ANCHOR POSITIONED ONE PLACEMENT AND THE COMPONENT SHIPPED FOUR. The rule above
@@ -373,7 +425,7 @@
   --popover-group-gap: var(--space-24);
   --surface-f-pad-x: var(--popover-pad);
   --surface-f-pad-y: var(--popover-pad);
-  width: 300px; background: var(--color-bg-surface-raised);
+  width: 300px; background: var(--color-neutral-background-surface-raised-enabled);
   border: var(--border-width-default) solid transparent;
   /* clip, not hidden: a focused menu row sits flush to this edge and its
      outline is painted outside the border box. */
@@ -410,7 +462,7 @@
    checkbox or radio group stacks. */
 .popover-b > .opt + .opt { margin-top: calc(var(--space-sm) - var(--space-md)); }
 .popover-b > .field + .field { margin-top: calc(var(--popover-group-gap) - var(--space-md)); }
-.popover-b { padding: var(--popover-pad); font-size: var(--type-body-md-size); color: var(--color-fg-default); line-height: var(--ref-line-height-normal); display: flex; flex-direction: column; gap: var(--space-md); }
+.popover-b { padding: var(--popover-pad); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-default-enabled); line-height: var(--ref-line-height-normal); display: flex; flex-direction: column; gap: var(--space-md); }
 /* COLUMNS, so a filter popover is not a tall thin column of groups. Four groups
    stacked measured 567px — it did not scroll, so the rule held, but an anchored
    overlay that tall has nowhere to go near the bottom of a short viewport. Laid
@@ -448,7 +500,7 @@
   display: block;
   columns: var(--popover-cols, 2);
   column-gap: var(--popover-col-gap);
-  column-rule: var(--border-width-default) solid var(--color-border-muted);
+  column-rule: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
 }
 .popover.cols > .popover-b > * { break-inside: avoid; margin-block-end: var(--popover-group-gap); }
 .popover.cols > .popover-b > :last-child { margin-block-end: 0; }
@@ -471,14 +523,14 @@
    The body gets its top padding back. With no rule above it the header's own
    padding is the whole gap, which is why .popover-h + .popover-b zeroes it — but
    a hairline needs air on both sides or the first label sits on the line. */
-.popover.divided > .popover-h { border-bottom-color: var(--color-border-muted); }
-.popover.divided > .popover-f { border-top-color: var(--color-border-muted); }
+.popover.divided > .popover-h { border-bottom-color: var(--color-neutral-stroke-muted-enabled); }
+.popover.divided > .popover-f { border-top-color: var(--color-neutral-stroke-muted-enabled); }
 .popover.divided > .popover-h + .popover-b { padding-top: var(--popover-pad); }
 
 /* ── MODAL ──────────────────────────────────────────────── */
-.scrim { background: var(--color-bg-overlay); padding: var(--space-2xl); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-container); }
+.scrim { background: var(--color-neutral-background-overlay-rest); padding: var(--space-2xl); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-container); }
 .modal {
-  width: 100%; max-width: var(--container-modal-default); background: var(--color-bg-surface-raised);
+  width: 100%; max-width: var(--container-modal-default); background: var(--color-neutral-background-surface-raised-enabled);
   /* Transparent, like every other elevated surface — box-sizing: border-box, so
      the 480px cap is unchanged. Without a border in the box, a printed modal is
      a white panel with no shadow and no scrim: nothing at all. */
@@ -519,7 +571,7 @@
 
    A body with no footer keeps the full --space-xl: nothing below it is paying. */
 .modal-b:has(+ .modal-f) { padding-bottom: var(--space-lg); }
-.modal-b { padding: 0 var(--space-xl) var(--space-xl); font-size: var(--type-body-md-size); color: var(--color-fg-muted); line-height: var(--ref-line-height-normal); display: flex; flex-direction: column; gap: var(--space-lg); }
+.modal-b { padding: 0 var(--space-xl) var(--space-xl); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); line-height: var(--ref-line-height-normal); display: flex; flex-direction: column; gap: var(--space-lg); }
 .modal-f { --surface-f-pad-y: var(--space-lg); --surface-f-pad-x: var(--space-xl); }
 /* No lead glyph. A modal already has the user's full attention — the scrim bought
    it — so a tinted circle beside the title restates the tone the title and the
@@ -529,7 +581,7 @@
 /* hidden, not clip + margin: the drawer inside carries a solid fill, and a
    6px clip margin would let it square off this frame's rounded corners. The
    margin is only for surfaces whose children paint outlines. */
-.drawer-frame { background: var(--color-bg-overlay); border-radius: var(--radius-container); overflow: hidden; display: flex; justify-content: flex-end; height: 420px; }
+.drawer-frame { background: var(--color-neutral-background-overlay-rest); border-radius: var(--radius-container); overflow: hidden; display: flex; justify-content: flex-end; height: 420px; }
 /* Only the page-facing edge. A drawer is flush to three sides of the viewport,
    so a full box would ink three lines that are not edges of anything. */
 /* Three widths, and the reason there are only three: a drawer is a side view of
@@ -545,7 +597,7 @@
 .drawer {
   --drawer-w: var(--container-drawer-default);
   inline-size: min(var(--drawer-w), 100% - var(--drawer-peek, var(--space-3xl)));
-  background: var(--color-bg-surface); box-shadow: var(--elevation-modal);
+  background: var(--color-neutral-background-surface-enabled); box-shadow: var(--elevation-modal);
   display: flex; flex-direction: column; min-height: 0;
   border-inline-start: var(--border-width-default) solid transparent;
 }
@@ -559,7 +611,7 @@
   .drawer { inline-size: 100%; }
 }
 .drawer.left { margin-right: auto; border-inline-start: 0; border-inline-end: var(--border-width-default) solid transparent; }
-.drawer-h { padding: calc(var(--space-xl) - (var(--type-heading-4-line) - 1) * var(--type-heading-4-size) / 2) var(--space-xl) var(--space-xl); border-bottom: var(--border-width-default) solid var(--color-border-muted); flex-shrink: 0; }
+.drawer-h { padding: calc(var(--space-xl) - (var(--type-heading-4-line) - 1) * var(--type-heading-4-size) / 2) var(--space-xl) var(--space-xl); border-bottom: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); flex-shrink: 0; }
 .drawer-h .row { display: flex; align-items: center; gap: var(--space-md); }
 .drawer-h .ttl { font-size: var(--type-heading-4-size); line-height: var(--type-heading-4-line); font-weight: var(--type-heading-4-weight); letter-spacing: var(--type-heading-4-tracking); }
 .drawer-h button.x { margin-left: auto; }
@@ -570,7 +622,7 @@
    the 20px title is carried by tone (fg-muted) and the size gap to the title, not
    by shrinking the description below everything it introduces. Same correction
    the accordion body took in v110. */
-.drawer-h .sub { font-size: var(--type-body-md-size); color: var(--color-fg-muted); margin-top: var(--space-xs); }
+.drawer-h .sub { font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); margin-top: var(--space-xs); }
 .drawer-b { flex: 1; overflow-y: auto; padding: var(--space-xl); display: flex; flex-direction: column; gap: var(--space-lg); min-height: 0; }
 /* A surface HOLDING FIELDS is a form and spaces them like one. The separation
    between fields lived only on .form, which almost nothing uses: every real form
@@ -617,7 +669,7 @@
    That is why there is no .desc part and every row here is centred. */
 .toast {
   display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg);
-  background: var(--color-bg-emphasis); border: 0; color: var(--color-fg-on-emphasis);
+  background: var(--color-neutral-background-emphasis-enabled); border: 0; color: var(--color-neutral-foreground-on-emphasis-enabled);
   border-radius: var(--radius-container); box-shadow: var(--elevation-overlay); font-size: var(--type-body-md-size);
 }
 .toast .body { flex: 1; min-width: 0; }
@@ -648,7 +700,7 @@
 .toast .ttl {
   display: block; min-inline-size: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  font-weight: var(--ref-font-weight-regular); color: var(--color-fg-on-emphasis);
+  font-weight: var(--ref-font-weight-regular); color: var(--color-neutral-foreground-on-emphasis-enabled);
 }
 /* The action sits on the trailing edge, on the same line as the message — the
    same rule the banner follows, so glyph, title, and action all read as one
@@ -658,14 +710,14 @@
    as a surface on a surface. A stacked row of buttons underneath was also the
    heaviest part of the component, on the surface that lives the shortest. */
 .toast .acts { display: flex; gap: var(--space-md); align-items: center; margin-left: auto; flex-shrink: 0; font-size: var(--type-body-md-size); }
-.toast .acts .lnk { color: var(--color-fg-on-emphasis); }
-.toast .acts .lnk:hover { color: var(--color-fg-on-emphasis); opacity: .8; }
+.toast .acts .lnk { color: var(--color-neutral-foreground-on-emphasis-enabled); }
+.toast .acts .lnk:hover { color: var(--color-neutral-foreground-on-emphasis-enabled); opacity: .8; }
 /* No resting opacity: the dismiss takes the MESSAGE's colour at full strength.
    At .75 it composited to #cfcfce on the inverse surface — read as a greyed-out
    control rather than a dimmer one, and it was the only mark on the surface not
    sharing the title's colour. Size already demotes it: 12px against the 20px
    status glyph. */
-.toast button.x { color: var(--color-fg-on-emphasis); }
+.toast button.x { color: var(--color-neutral-foreground-on-emphasis-enabled); }
 /* 0.667, not the 0.25 that pairs with 16px: the compensation is (20 / size − 1) and
    this glyph is 12. It carried the 16px value for as long as the rule existed, which
    drew a 0.76px line — visibly lighter than the chip dismiss at the identical size,
@@ -705,14 +757,23 @@
    red sentence. That keeps them inverse like every other toast — dark against a
    light page — while saying which kind of event this is. Everything inside runs
    on-solid: no separate glyph tone is needed once the whole surface carries it. */
-.toast--warning { background: var(--color-feedback-warning-solid); color: var(--color-feedback-warning-on-solid); }
-.toast--danger  { background: var(--color-feedback-danger-solid); color: var(--color-feedback-danger-on-solid); }
-/* button.x is in this list, and was the bug: it kept --color-fg-on-emphasis while
+.toast--warning { background: var(--color-status-warning-background-solid-enabled); color: var(--color-status-warning-foreground-on-solid-enabled); }
+.toast--danger  { background: var(--color-status-danger-background-solid-enabled); color: var(--color-status-danger-foreground-on-solid-enabled); }
+/* SUCCESS FILLS TOO, as of v486. It was deliberately left as a hook that drew
+   nothing — the argument was that an inverted toast is already the loudest thing
+   on the page, so tinting the quiet three would make every notification an
+   alarm. That holds for info and loading, which report rather than conclude. It
+   does not hold for success: a completed save is the one outcome a user scans
+   for and dismisses, and reading it off a glyph alone made the confirmation the
+   quietest part of a surface built to be read at a glance. Green now carries it,
+   the way red already carries failure. info and loading stay hooks. */
+.toast--success { background: var(--color-status-success-background-solid-enabled); color: var(--color-status-success-foreground-on-solid-enabled); }
+/* button.x is in this list, and was the bug: it kept --color-neutral-foreground-on-emphasis-enabled while
    everything beside it inherited the tone's on-solid. In light mode both are white,
    so it only showed in DARK, where on-emphasis is #1a1b24 and the dismiss came out
    near-black against a title in #492f08. The comment above already promised
    "everything inside runs on-solid" — this makes it true. */
-:is(.toast--warning, .toast--danger) :is(.ttl, .acts .lnk, .acts .lnk:hover, button.x) { color: inherit; }
+:is(.toast--warning, .toast--danger, .toast--success) :is(.ttl, .acts .lnk, .acts .lnk:hover, button.x) { color: inherit; }
 /* The glyph is not tinted. On the filled toasts the whole surface already carries
    the tone, and on the inverse ones the SHAPE says which tone it is — a check, a
    triangle, a circle — so colouring it repeated the message in the one place
@@ -721,7 +782,7 @@
 /* The spinner takes its head and track from the page-surface tokens, so on the
    one always-inverse surface both had to be re-derived from the surface's own
    foreground — otherwise the head, the part that shows motion, disappears. */
-.toast .spinner { border-color: color-mix(in oklab, var(--color-fg-on-emphasis) 25%, transparent); border-top-color: var(--color-fg-on-emphasis); }
+.toast .spinner { border-color: color-mix(in oklab, var(--color-neutral-foreground-on-emphasis-enabled) 25%, transparent); border-top-color: var(--color-neutral-foreground-on-emphasis-enabled); }
 
 /* ── BREADCRUMB ─────────────────────────────────────────── */
 .crumbs { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; font-size: var(--type-body-sm-size); }
@@ -731,8 +792,8 @@
    which turned this hover rule into a no-op and made a trail shout like a row
    of body links. A crumb is chrome — position in the trail is the affordance,
    so the underline waits for hover. */
-.crumbs .crumb { color: var(--color-fg-muted); cursor: pointer; padding: 2px var(--space-2xs); border-radius: var(--ref-radius-25); }
-.crumbs .crumb:hover { color: var(--color-fg-default); text-decoration: underline; text-underline-offset: 2px; }
+.crumbs .crumb { color: var(--color-neutral-foreground-muted-enabled); cursor: pointer; padding: 2px var(--space-2xs); border-radius: var(--ref-corner-radius-25); }
+.crumbs .crumb:hover { color: var(--color-neutral-foreground-default-enabled); text-decoration: underline; text-underline-offset: 2px; }
 /* xs — the separator is punctuation, and at sm it out-measured the 12px crumb
    text it sits between. */
 /* --icon-stroke IS DECLARED HERE and not left to .ms.sm, and this selector is the
@@ -743,7 +804,7 @@
    one selector and its stroke from another is the whole failure mode; stating both here
    makes the pair travel together, and makes .sep correct on a glyph written without
    'sm'. QDS_LINT checks the rendered pair, so this cannot come apart again unnoticed. */
-.crumbs .sep { color: var(--color-fg-disabled); display: inline-flex; font-size: var(--size-icon-xs); --icon-stroke: var(--icon-stroke-xs); }
+.crumbs .sep { color: var(--color-neutral-foreground-disabled-rest); display: inline-flex; font-size: var(--size-icon-xs); --icon-stroke: var(--icon-stroke-xs); }
 /* NO WEIGHT STEP ON THE CURRENT CRUMB, and the declaration is written out even though
    regular is what it would inherit. Two reasons to keep it: it makes the decision
    visible where someone would otherwise add a step, and it survives a change to the
@@ -755,8 +816,8 @@
    underlines on hover). A third signal would make the trail compete with the page title
    it sits above, and a trail is orientation rather than the heading. The contract
    documented "label weight" here until v179 and no implementation ever agreed with it. */
-.crumbs .cur { color: var(--color-fg-default); font-weight: var(--ref-font-weight-regular); }
-.crumbs .ellip { color: var(--color-fg-muted); cursor: pointer; }
+.crumbs .cur { color: var(--color-neutral-foreground-default-enabled); font-weight: var(--ref-font-weight-regular); }
+.crumbs .ellip { color: var(--color-neutral-foreground-muted-enabled); cursor: pointer; }
 
 /* ── PAGINATION ─────────────────────────────────────────── */
 /* No borders on the targets. A pager is a row of a dozen small controls; giving
@@ -772,7 +833,7 @@
   /* Muted at rest. Every number full strength made the row a wall of equal
      figures; the pages you are not on are navigation, and only the one you are
      on is a statement about where you are. */
-  color: var(--color-fg-muted); cursor: pointer;
+  color: var(--color-neutral-foreground-muted-enabled); cursor: pointer;
   /* A pager is navigation, so its numbers are proportional. It is also the worst
      place for the footed 1: pages 1 and 11 sit in the same row, so both drawings
      of the digit would appear inches apart. Each number is centred in its own
@@ -781,8 +842,8 @@
   display: inline-flex; align-items: center; justify-content: center;
   transition: background var(--motion-hover-duration) var(--motion-hover-easing);
 }
-.pager button:hover { background: var(--color-bg-hover); color: var(--color-fg-default); }
-.pager button:active { background: var(--color-bg-active); }
+.pager button:hover { background: var(--color-neutral-background-interaction-hovered); color: var(--color-neutral-foreground-default-enabled); }
+.pager button:active { background: var(--color-neutral-background-interaction-pressed); }
 .pager button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Current page: a quiet fill, not the primary action colour. The primary fill
    means "commit this"; the page you are already on is a location, not an action.
@@ -790,16 +851,16 @@
    greyscale, and the unvisited numbers sit a shade lighter so the current one is
    the only full-strength figure in the row. */
 .pager button.on:not(.dot) {
-  /* One rung lighter than --color-bg-selected: a page number is a smaller mark than
+  /* One rung lighter than --color-neutral-background-interaction-toggled: a page number is a smaller mark than
      a selected row, so the same fill read heavier here. */
-  background: var(--pager-on-bg, var(--ref-neutral-200)); color: var(--color-fg-default);
+  background: var(--pager-on-bg, var(--ref-color-neutral-solid-200)); color: var(--color-neutral-foreground-default-enabled);
   font-weight: var(--type-label-weight);
 }
-.pager button.on:not(.dot):hover { background: var(--pager-on-bg, var(--ref-neutral-200)); }
-[data-mode="dark"] .pager { --pager-on-bg: var(--ref-neutral-910); }
-.pager button[disabled] { color: var(--color-fg-disabled); cursor: not-allowed; background: transparent; }
+.pager button.on:not(.dot):hover { background: var(--pager-on-bg, var(--ref-color-neutral-solid-200)); }
+[data-mode="dark"] .pager { --pager-on-bg: var(--ref-color-neutral-solid-910); }
+.pager button[disabled] { color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed; background: transparent; }
 .pager button[disabled]:hover { background: transparent; }
-.pager .ellip { min-width: var(--space-lg); text-align: center; color: var(--color-fg-muted); font-size: var(--type-body-md-size); }
+.pager .ellip { min-width: var(--space-lg); text-align: center; color: var(--color-neutral-foreground-muted-enabled); font-size: var(--type-body-md-size); }
 /* The arrows are glyph-only and sit slightly apart from the numbers, so the
    two ends of the row read as movement rather than as more pages. */
 .pager .nav { margin-inline: var(--space-2xs); }
@@ -808,8 +869,8 @@
 /* Readout variants — the same chassis with a label between the arrows instead
    of a number row. .count states the item range for a large list; .compact
    states the page for tight spaces. */
-.pager .readout { padding: 0 var(--space-md); font-size: var(--type-body-md-size); color: var(--color-fg-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.pager .readout b { color: var(--color-fg-default); font-weight: var(--type-label-weight); }
+.pager .readout { padding: 0 var(--space-md); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pager .readout b { color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-label-weight); }
 
 /* Dots — carousels only, where the count is small and the content is the point.
    The dot is 8px but its target is the full control height, so a thumb has
@@ -820,18 +881,18 @@
   padding: 0; border: none; background: transparent; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
-/* Three genuinely distinct steps. Rest was --color-border-control and hover
-   --color-fg-subtle, which resolve to the SAME neutral in all six themes, so
+/* Three genuinely distinct steps. Rest was --color-neutral-stroke-control-enabled and hover
+   --color-neutral-foreground-subtle-enabled, which resolve to the SAME neutral in all six themes, so
    hovering a dot did nothing — and with no border either, the dot read as a
    decorative indicator rather than a control. Rest also sat far too dark
    against the active dot; the default border step matches the reference. */
 .pager.dots .dot::before {
   content: ""; width: 8px; height: 8px; border-radius: var(--radius-pill);
-  background: var(--color-border-default);
+  background: var(--color-neutral-stroke-default-enabled);
   transition: background var(--motion-hover-duration) var(--motion-hover-easing);
 }
-.pager.dots .dot:hover::before { background: var(--color-border-control); }
-.pager.dots .dot.on::before { background: var(--color-fg-default); }
+.pager.dots .dot:hover::before { background: var(--color-neutral-stroke-control-enabled); }
+.pager.dots .dot.on::before { background: var(--color-neutral-foreground-default-enabled); }
 .pager.dots .dot:hover { background: transparent; }
 .pager.dots .dot:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-control); }
 
@@ -943,7 +1004,7 @@
   .pager:has(> .readout) > :is(button:not(.nav):not(.dot), .ellip) { display: none; }
   .pager:has(> button:not(.nav):not(.dot)) > .readout { display: revert; }
 }
-.pager-info { font-size: var(--type-body-sm-size); color: var(--color-fg-muted); }
+.pager-info { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); }
 /* A range readout is a sentence — “Showing 241–260 of 4,812 invoices” — so its
    figures are proportional, like any number inside running text. And it is ONE
    colour: darkening the figures made them the loudest thing in a line whose whole
@@ -966,8 +1027,8 @@
    the basis, and the rule still lets the field take the leftover width in a
    .search-row. */
 .search { flex: 1 1 auto; min-width: var(--search-min-width); }
-.search > .ms:first-child { font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); color: var(--color-fg-subtle); flex-shrink: 0; }
-.search:focus-within > .ms:first-child { color: var(--color-fg-default); }
+.search > .ms:first-child { font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); color: var(--color-neutral-foreground-subtle-enabled); flex-shrink: 0; }
+.search:focus-within > .ms:first-child { color: var(--color-neutral-foreground-default-enabled); }
 /* THERE IS NO .search.sm — RETIRED v170. Search is where people TYPE, and a
    place to write is never the control you shrink to save a row: at the small
    rung its input drops to 14px, which is under the 16px threshold that makes
@@ -1106,7 +1167,7 @@
 }
 /* A hairline between the two halves, drawn by the select so focus on either
    side can override it without a second element. */
-.search-scope > .select { box-shadow: inset -1px 0 0 0 var(--color-border-control); }
+.search-scope > .select { box-shadow: inset -1px 0 0 0 var(--color-neutral-stroke-control-enabled); }
 .search-scope > .select:focus-within, .search-scope > .select.open { box-shadow: var(--border-glow-emphasis); }
 
 /* The row a search sits in: field first, then the controls that narrow it. */
@@ -1121,9 +1182,9 @@
 /* Body size, not small: this row names what is currently narrowing the results,
    which is the second most important thing on the screen after the results. It
    was reading as fine print beside them. */
-.search-applied .lbl { font-size: var(--type-body-md-size); color: var(--color-fg-muted); margin-inline-end: var(--space-2xs); }
+.search-applied .lbl { font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); margin-inline-end: var(--space-2xs); }
 /* Result count and sort, on the line between the criteria and the results. */
-.search-meta { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; font-size: var(--type-body-md-size); color: var(--color-fg-muted); }
+.search-meta { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); }
 /* Same as .pager-info b: a result count is a number in a sentence. */
 .search-meta b { color: inherit; font-weight: var(--type-body-weight); font-variant-numeric: proportional-nums; }
 .search-meta .sp { margin-inline-start: auto; }
@@ -1131,7 +1192,7 @@
    except the anchor and the term highlight. */
 .search-anchor { position: relative; }
 .search-anchor > .menu { position: absolute; left: 0; right: 0; top: calc(100% + var(--space-2xs)); z-index: var(--z-dropdown); }
-.search-anchor .menu-item mark { background: transparent; color: var(--color-fg-default); font-weight: var(--type-emphasis-weight); }
+.search-anchor .menu-item mark { background: transparent; color: var(--color-neutral-foreground-default-enabled); font-weight: var(--type-emphasis-weight); }
 /* Grouping inside the list reuses .menu-label — a suggestion list is a menu. */
 
 /* ── GLOBAL SEARCH ON A PHONE ───────────────────────────── */
@@ -1170,15 +1231,15 @@
 .search-view {
   position: fixed; inset: 0; z-index: var(--z-overlay);
   display: flex; flex-direction: column;
-  background: var(--color-bg-surface);
+  background: var(--color-neutral-background-surface-enabled);
 }
 /* The bar matches the shell's own mobile header height, so opening search does
    not move the line the user was already reading against. */
 .search-view-h {
-  flex-shrink: 0; block-size: var(--ref-dimension-700);
+  flex-shrink: 0; block-size: var(--ref-size-700);
   display: flex; align-items: center; gap: var(--space-sm);
   padding-inline: var(--space-lg);
-  border-block-end: var(--border-width-default) solid var(--color-border-muted);
+  border-block-end: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
 }
 /* The back glyph takes the mobile icon standard and the same flush trim the nav
    toggle takes, measured from the ART rather than the box — so its drawing lands
@@ -1450,7 +1511,7 @@
     inset-inline-start: calc(50% + var(--size-icon-md) / 2 - var(--fb-dot) * 0.75);
     inline-size: var(--fb-dot); block-size: var(--fb-dot);
     border-radius: var(--radius-pill);
-    background: var(--color-selection-rest);
+    background: var(--color-brand-background-selection-enabled);
   }
   /* A bar that nests its search field inside .fb-filters rather than beside it —
      the anatomy diagrams do, and it is legal — loses the flex basis further down
@@ -1539,18 +1600,18 @@
   width: max-content; max-width: calc(100% - var(--space-32) * 2);
   display: flex; align-items: center; flex-wrap: wrap;
   padding: var(--space-sm) var(--space-md);
-  background: var(--color-bg-emphasis); color: var(--color-fg-on-emphasis);
+  background: var(--color-neutral-background-emphasis-enabled); color: var(--color-neutral-foreground-on-emphasis-enabled);
   border-radius: var(--radius-container); box-shadow: var(--elevation-overlay);
 }
 /* A shell with a side panel: the content region starts after the panel, so the
    window's centre is not the collection's. Half the panel width puts it back. */
 .shell:has(.pn) { --sel-bar-offset: var(--shell-panel-w, 256px); }
 /* Its ghosts ride the inverse foreground, and their hover wash is mixed from
-   currentColor — --color-bg-hover is tuned against a light surface and disappears
+   currentColor — --color-neutral-background-interaction-hovered is tuned against a light surface and disappears
    on this one. Same idiom the Banner's ghost action uses on a tinted fill. */
-.sel-bar .btn--ghost { color: var(--color-fg-on-emphasis); }
-.sel-bar .btn--ghost:hover { background: color-mix(in oklab, currentColor 12%, transparent); color: var(--color-fg-on-emphasis); }
-.sel-bar .btn--ghost:active { background: color-mix(in oklab, currentColor 20%, transparent); color: var(--color-fg-on-emphasis); }
+.sel-bar .btn--ghost { color: var(--color-neutral-foreground-on-emphasis-enabled); }
+.sel-bar .btn--ghost:hover { background: color-mix(in oklab, currentColor 12%, transparent); color: var(--color-neutral-foreground-on-emphasis-enabled); }
+.sel-bar .btn--ghost:active { background: color-mix(in oklab, currentColor 20%, transparent); color: var(--color-neutral-foreground-on-emphasis-enabled); }
 /* The menu keeps its own light surface and its own foregrounds — it is a separate
    overlay that happens to be anchored inside this one, not part of the dark bar. */
 /* SYMMETRY IS MEASURED AT THE INK, not at the boxes. The leading .cnt already
@@ -1579,7 +1640,7 @@
 .sel-bar > * + * {
   border-inline-start: var(--border-width-default) solid color-mix(in oklab, currentColor 22%, transparent);
 }
-.sel-bar .menu { color: var(--color-fg-default); }
+.sel-bar .menu { color: var(--color-neutral-foreground-default-enabled); }
 /* Fixed instead of absolute when the bar belongs to the viewport rather than to a
    framed region — a full-page list, where there is no scroll container to pin to. */
 /* Retained as a no-op: the base is fixed now. Kept so markup written against the
@@ -1592,7 +1653,7 @@
    so every label in the row sits the same distance from the next. */
 .sel-bar > .cnt {
   flex-shrink: 0; font-size: var(--type-body-sm-size); font-weight: var(--type-label-weight);
-  color: color-mix(in oklab, var(--color-fg-on-emphasis) 72%, var(--color-bg-emphasis));
+  color: color-mix(in oklab, var(--color-neutral-foreground-on-emphasis-enabled) 72%, var(--color-neutral-background-emphasis-enabled));
   padding-inline: var(--space-md);
   margin-inline-start: calc(var(--space-md) * -1);
 }
@@ -1601,7 +1662,7 @@
 /* Counts on an inverted or dark surface drop out of the accent family — see the
    note on .btn .ct. Measured, not assumed: 1.22:1 on emphasis, 1.86:1 on nav. */
 .sel-bar .btn .ct, .shell > .hd.dark .btn .ct, .pn.dark .btn .ct, .nav-drawer.dark .btn .ct {
-  background: var(--color-bg-nav-badge); color: var(--color-fg-on-nav-badge);
+  background: var(--color-neutral-background-nav-badge-enabled); color: var(--color-neutral-foreground-on-nav-badge-enabled);
 }
 /* A menu on a bar pinned to the bottom opens UPWARD — downward it leaves the
    region entirely. */
@@ -1616,7 +1677,7 @@
    One family reads as one thing. Sized on --size-count like the nav badge, so
    one digit is a circle.
    INVERTED on a dark surface, and that is not a preference: accent measures
-   1.22:1 against --color-bg-emphasis and 1.86:1 against --color-bg-nav, so an
+   1.22:1 against --color-neutral-background-emphasis-enabled and 1.86:1 against --color-neutral-background-nav-enabled, so an
    accent pill on the selection bar or the dark header is a shape you cannot
    see. Those take the nav badge's neutral fill instead. */
 .btn .ct {
@@ -1625,8 +1686,8 @@
      as a floor, so one digit is a ~24px capsule and every count is one family. */
   min-width: var(--size-count); height: var(--size-count);
   padding-inline: var(--space-sm); margin-inline-start: var(--space-2xs);
-  border-radius: var(--radius-pill); background: var(--color-selection-rest);
-  color: var(--color-fg-on-accent); font-size: var(--type-caption-size);
+  border-radius: var(--radius-pill); background: var(--color-brand-background-selection-enabled);
+  color: var(--color-neutral-foreground-on-brand-enabled); font-size: var(--type-caption-size);
   line-height: 1; font-variant-numeric: tabular-nums; flex-shrink: 0;
 }
 /* Applied criteria and the result count. Same rules the search pattern already
@@ -1742,7 +1803,7 @@
    .filter-meta.row is the flex variant, for a count that carries a control beside
    it — there the items really are separate objects. */
 .filter-meta {
-  font-size: var(--type-body-md-size); color: var(--color-fg-muted);
+  font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled);
   /* The line describes the RESULTS, so it sits closer to them than to the
      controls. The bar's own band gap is --space-sm; this adds to it, which is what
      tells the eye the count belongs to the grid below rather than to the toolbar
@@ -1770,9 +1831,9 @@
 
 
 /* ── PROGRESS & SPINNER ─────────────────────────────────── */
-.progress { height: var(--space-sm); background: var(--color-bg-surface-sunken); border-radius: var(--radius-pill); overflow: hidden; width: 100%; }
-.progress.thin { height: var(--ref-dimension-50); }
-.progress > i { display: block; height: 100%; background: var(--color-action-primary-rest); border-radius: var(--radius-pill); transition: width var(--motion-enter-duration) var(--motion-enter-easing); }
+.progress { height: var(--space-sm); background: var(--color-neutral-background-surface-sunken-enabled); border-radius: var(--radius-pill); overflow: hidden; width: 100%; }
+.progress.thin { height: var(--ref-size-50); }
+.progress > i { display: block; height: 100%; background: var(--color-brand-background-primary-enabled); border-radius: var(--radius-pill); transition: width var(--motion-enter-duration) var(--motion-enter-easing); }
 /* One fill colour only. A green bar at 100% and a red bar at failure restate what
    the surrounding copy already says, and tone on a progress bar competes with the
    feedback surfaces that own success and failure. */
@@ -1780,13 +1841,13 @@
 /* Tabular, and one of the few labels that is: the value ticks in place inside a
    fixed 40px right-aligned slot, so proportional digits would make it shuffle
    on every update. Alignment against its own previous value is still alignment. */
-.progress-row .pct { font-size: var(--type-caption-size); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; }
+.progress-row .pct { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-muted-enabled); font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; }
 
-.spinner { width: var(--size-icon-md); height: var(--size-icon-md); border-radius: var(--radius-pill); border: var(--border-width-emphasis) solid var(--color-border-muted); border-top-color: var(--color-action-primary-rest); animation: qds-spin 1100ms linear infinite; display: inline-block; flex-shrink: 0; }
+.spinner { width: var(--size-icon-md); height: var(--size-icon-md); border-radius: var(--radius-pill); border: var(--border-width-emphasis) solid var(--color-neutral-stroke-muted-enabled); border-top-color: var(--color-brand-background-primary-enabled); animation: qds-spin 1100ms linear infinite; display: inline-block; flex-shrink: 0; }
 .spinner.sm { width: var(--size-icon-sm); height: var(--size-icon-sm); }
-.spinner.lg { width: var(--size-icon-lg); height: var(--size-icon-lg); border-width: var(--ref-border-width-75); }
+.spinner.lg { width: var(--size-icon-lg); height: var(--size-icon-lg); border-width: var(--ref-stroke-width-75); }
 /* currentColor, not the primary foreground. This track is for a spinner ON a filled
-   button, and it was pinned to --color-action-primary-fg — which is correct for the
+   button, and it was pinned to --color-neutral-foreground-on-brand-primary-enabled — which is correct for the
    primary fill and wrong for every other one the moment a mode flips. Measured on a
    DANGER button in dark: fill #B1262A, arc #020F37, track #031138 — 2.82:1 and 2.79:1,
    with arc-to-track at 1.01, so the ring read as a solid dark circle with no visible
@@ -1812,7 +1873,7 @@
 /* ── ACCORDION ──────────────────────────────────────────── */
 /* overflow-clip-margin lets a header's focus outline paint past the panel edge
    while the rounded corners still clip their rows. */
-.acc { border: var(--border-width-default) solid var(--color-border-muted); border-radius: var(--radius-container); background: var(--color-bg-surface); overflow: clip; overflow-clip-margin: 6px; }
+.acc { border: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); border-radius: var(--radius-container); background: var(--color-neutral-background-surface-enabled); overflow: clip; overflow-clip-margin: 6px; }
 /* No rule between items in the bordered variant. The container edge already
    says where the group starts and stops, and the row carries its own
    affordances — a full-width header, a hover fill, a chevron — so an
@@ -1825,28 +1886,28 @@
    Note the weight sits AFTER `font: inherit` deliberately — the shorthand resets
    weight, so a declaration written above it is silently discarded. The first
    attempt at this change did exactly that and measured 400. */
-.acc-h { display: flex; align-items: center; gap: var(--space-md); width: 100%; min-height: var(--size-touch-min); padding: var(--space-md) var(--space-lg); background: transparent; border: none; font: inherit; font-size: var(--type-body-md-size); font-weight: var(--type-label-weight); color: var(--color-fg-default); cursor: pointer; text-align: left; }
+.acc-h { display: flex; align-items: center; gap: var(--space-md); width: 100%; min-height: var(--size-touch-min); padding: var(--space-md) var(--space-lg); background: transparent; border: none; font: inherit; font-size: var(--type-body-md-size); font-weight: var(--type-label-weight); color: var(--color-neutral-foreground-default-enabled); cursor: pointer; text-align: left; }
 /* HOVER MOVES THE CHEVRON, NOT THE ROW. The header used to take
-   --color-bg-hover across its full width, and the reasoning was sound as far as
+   --color-neutral-background-interaction-hovered across its full width, and the reasoning was sound as far as
    it went: the whole row is the target, so the whole row should light up. What it
    cost was the flush variant — .acc.flush has no border and no background,
    sitting inside a drawer body or a card, so a full-width fill painted a band
    across a container-less surface and read as a stray selection.
 
    The label cannot carry the response instead: .acc-h is already
-   --color-fg-default, the top of the text ladder, so there is nowhere brighter
+   --color-neutral-foreground-default-enabled, the top of the text ladder, so there is nowhere brighter
    for it to go. The chevron is the one mark in the row with headroom — it rests
-   at --color-fg-subtle — so it takes the hover and steps to --color-fg-default.
+   at --color-neutral-foreground-subtle-enabled — so it takes the hover and steps to --color-neutral-foreground-default-enabled.
 
    THE TRADE IS REAL AND IS WRITTEN DOWN. The row still triggers on its full
    width; only the visible feedback is now chevron-only, which is a weaker signal
    that the whole header is the target. See the Header hover state row in
    ds/usage.js, which used to argue the opposite and now records this. */
-.acc-h:hover .chev { color: var(--color-fg-default); }
+.acc-h:hover .chev { color: var(--color-neutral-foreground-default-enabled); }
 /* Same system ring — see .nav-item. The header is a real button; it showed the
    UA outline and now shows the system's. */
 .acc-h:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.acc-h .chev { margin-left: auto; color: var(--color-fg-subtle); transition: transform var(--motion-hover-duration) var(--motion-hover-easing), color var(--motion-hover-duration) var(--motion-hover-easing); }
+.acc-h .chev { margin-left: auto; color: var(--color-neutral-foreground-subtle-enabled); transition: transform var(--motion-hover-duration) var(--motion-hover-easing), color var(--motion-hover-duration) var(--motion-hover-easing); }
 .acc-item.open .acc-h .chev { transform: rotate(180deg); }
 /* THE TRAIL IS A SLOT, NOT A TYPE STYLE. It used to declare its own colour, size
    and weight, which made it a caption sitting beside a label — two rungs down and
@@ -1861,7 +1922,7 @@
    below it in the same drawer. Colour still steps back — muted against the
    header's default ink — so the hierarchy is carried by tone and weight rather
    than by making the thing you opened the section to read smaller. */
-.acc-b { display: none; padding: 0 var(--space-lg) var(--space-lg); font-size: var(--type-body-md-size); color: var(--color-fg-muted); line-height: var(--ref-line-height-relaxed); }
+.acc-b { display: none; padding: 0 var(--space-lg) var(--space-lg); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); line-height: var(--ref-line-height-relaxed); }
 .acc-item.open .acc-b { display: block; }
 /* borderless variant for docs/FAQ */
 /* FLUSH MEANS FLUSH, INCLUDING THE INSET. This used to strip only the chrome —
@@ -1880,7 +1941,7 @@
    still something a finger has to hit. */
 .acc.flush { border: none; border-radius: 0; background: transparent; }
 .acc.flush .acc-h, .acc.flush .acc-b { padding-inline: 0; }
-.acc.flush .acc-item + .acc-item { border-top: var(--border-width-default) solid var(--color-border-muted); }
+.acc.flush .acc-item + .acc-item { border-top: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); }
 
 /* ── DATE PICKER ────────────────────────────────────────── */
 /* ONE WIDTH, DERIVED FROM THE TOUCH FLOOR, SPENT DIFFERENTLY BY EACH POINTER.
@@ -1897,7 +1958,7 @@
    max-width keeps it honest below 320, where the surface cannot have its 314:
    the cells fall to 40.3 there, which is the compact touch target, not a
    failure of the floor. */
-.cal { width: calc(var(--size-touch-min) * 7 + var(--space-2) * 2 + var(--border-width-default) * 2); max-width: 100%; background: var(--color-bg-surface-raised); border: var(--border-width-default) solid transparent; border-radius: var(--radius-overlay); box-shadow: var(--elevation-overlay); padding: var(--space-md); }
+.cal { width: calc(var(--size-touch-min) * 7 + var(--space-2) * 2 + var(--border-width-default) * 2); max-width: 100%; background: var(--color-neutral-background-surface-raised-enabled); border: var(--border-width-default) solid transparent; border-radius: var(--radius-overlay); box-shadow: var(--elevation-overlay); padding: var(--space-md); }
 .cal-h { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs) var(--space-2xs) var(--space-md); }
 .cal-h .mo { flex: 1; text-align: center; font-size: var(--type-body-md-size); font-weight: var(--ref-font-weight-regular); }
 /* Element-agnostic, because this control is a BUTTON and was written as if it
@@ -1910,11 +1971,11 @@
   appearance: none; -webkit-appearance: none;
   border: none; background: none; margin: 0;
   font-family: inherit; cursor: pointer;
-  width: var(--ref-dimension-400); height: var(--ref-dimension-400); border-radius: var(--radius-control); display: inline-flex; align-items: center; justify-content: center; color: var(--color-fg-muted); cursor: pointer;
+  width: var(--ref-size-400); height: var(--ref-size-400); border-radius: var(--radius-control); display: inline-flex; align-items: center; justify-content: center; color: var(--color-neutral-foreground-muted-enabled); cursor: pointer;
 }
-.cal-h .nav:hover { background: var(--color-bg-hover); color: var(--color-fg-default); }
+.cal-h .nav:hover { background: var(--color-neutral-background-interaction-hovered); color: var(--color-neutral-foreground-default-enabled); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-2); }
-.cal-dow { font-size: var(--type-caption-size); color: var(--color-fg-subtle); text-align: center; padding-bottom: var(--space-xs); font-weight: var(--ref-font-weight-regular); }
+.cal-dow { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); text-align: center; padding-bottom: var(--space-xs); font-weight: var(--ref-font-weight-regular); }
 /* min-width is a FLOOR, not the width. A day cell has no width of its own: it is
    sized by the 1fr track, which is why 296px of surface makes a 36.86px cell and
    why the same button dropped into a flex row collapses to 28.9 — the digit plus
@@ -1928,9 +1989,9 @@
    stay honest in a cramped container, and this preserves it.
    So the rule states the real division of labour: inside the grid the TRACK owns
    the width, outside it the floor keeps the cell square. */
-.cal-day { height: var(--ref-dimension-400); min-width: var(--ref-dimension-400); display: inline-flex; align-items: center; justify-content: center; font-size: var(--type-body-sm-size); color: var(--color-fg-default); border-radius: var(--radius-control); cursor: pointer; font-variant-numeric: tabular-nums; }
+.cal-day { height: var(--ref-size-400); min-width: var(--ref-size-400); display: inline-flex; align-items: center; justify-content: center; font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-default-enabled); border-radius: var(--radius-control); cursor: pointer; font-variant-numeric: tabular-nums; }
 .cal-grid .cal-day { min-width: 0; }
-.cal-day:hover { background: var(--color-bg-hover); }
+.cal-day:hover { background: var(--color-neutral-background-interaction-hovered); }
 /* A DAY GRID GROWS RATHER THAN OVERLAYS. Every other small control here takes a
    centred overlay because its neighbours are far enough away to spare the room;
    a calendar is 42 cells, so 44px overlays on 32px cells would overlap each
@@ -1938,13 +1999,13 @@
    and the surface is already sized to hold them — see the width formula above.
    The whole coarse treatment lives in one block at the end of this file, next
    to the arithmetic it depends on, rather than being split across two. */
-.cal-day.muted { color: var(--color-fg-disabled); }
-.cal-day.today { box-shadow: inset 0 0 0 var(--border-width-default) var(--color-border-strong); }
-.cal-day.range { background: var(--color-bg-selected); border-radius: 0; color: var(--color-fg-default); }
-.cal-day.on { background: var(--color-action-primary-rest); color: var(--color-action-primary-fg); font-weight: var(--type-label-weight); }
+.cal-day.muted { color: var(--color-neutral-foreground-disabled-rest); }
+.cal-day.today { box-shadow: inset 0 0 0 var(--border-width-default) var(--color-neutral-stroke-strong-enabled); }
+.cal-day.range { background: var(--color-neutral-background-interaction-toggled); border-radius: 0; color: var(--color-neutral-foreground-default-enabled); }
+.cal-day.on { background: var(--color-brand-background-primary-enabled); color: var(--color-neutral-foreground-on-brand-primary-enabled); font-weight: var(--type-label-weight); }
 .cal-day.on.start { border-radius: var(--radius-control) 0 0 var(--radius-control); }
 .cal-day.on.end { border-radius: 0 var(--radius-control) var(--radius-control) 0; }
-.cal-day.off { color: var(--color-fg-disabled); cursor: not-allowed; text-decoration: line-through; }
+.cal-day.off { color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed; text-decoration: line-through; }
 /* The calendar's footer is flush inside an already-padded popover, so it drops
    the side padding and the fill and separates on its hairline alone. */
 .cal-f { --surface-f-pad-x: 0; --surface-f-pad-y: 0; padding-top: var(--space-md); margin-top: var(--space-sm); }
@@ -1965,37 +2026,37 @@
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: var(--space-sm);
   padding: var(--space-3xl) var(--space-xl); text-align: center;
-  /* One rung darker than --color-border-default (the card-edge neutral) so the dash
+  /* One rung darker than --color-neutral-stroke-default-enabled (the card-edge neutral) so the dash
      is findable without becoming a text-weight line. There is no border token at
      this rung, so the reference value is named directly. */
-  --drop-line: var(--drop-line-rest, var(--ref-neutral-400));
+  --drop-line: var(--drop-line-rest, var(--ref-color-neutral-solid-400));
   border: var(--border-width-default) dashed var(--drop-line);
-  border-radius: var(--radius-container); background: var(--color-bg-surface); cursor: pointer;
+  border-radius: var(--radius-container); background: var(--color-neutral-background-surface-enabled); cursor: pointer;
   transition: background var(--motion-hover-duration) var(--motion-hover-easing), border-color var(--motion-hover-duration) var(--motion-hover-easing);
 }
-.drop:hover { --drop-line: var(--color-border-control); background: var(--color-bg-hover); }
-[data-mode="dark"] .drop { --drop-line-rest: var(--ref-neutral-600); }
+.drop:hover { --drop-line: var(--color-neutral-stroke-control-enabled); background: var(--color-neutral-background-interaction-hovered); }
+[data-mode="dark"] .drop { --drop-line-rest: var(--ref-color-neutral-solid-600); }
 /* Drag-over is the one moment that earns colour: line, fill, and glyph all move to
    the accent, at three different strengths so the zone still reads as a surface
    rather than a block of tone. The dash stays dashed — the zone has not become a
    different object, it has woken up. */
 .drop.on {
-  --drop-line: var(--color-action-primary-rest);
+  --drop-line: var(--color-brand-background-primary-enabled);
   /* The plate inverts: accent fill, contrast glyph. It is the one moment the zone
      is a live target, and an inverted lead reads as a state change from across the
      page in a way a tinted glyph on a white plate does not. */
-  --drop-plate-bg: var(--color-action-primary-rest);
-  --drop-glyph: var(--color-fg-on-accent);
-  background: var(--color-bg-accent-subtle);
+  --drop-plate-bg: var(--color-brand-background-primary-enabled);
+  --drop-glyph: var(--color-neutral-foreground-on-brand-enabled);
+  background: var(--color-brand-background-accent-subtle-enabled);
 }
-.drop.on .ttl { color: var(--color-fg-default); }
+.drop.on .ttl { color: var(--color-neutral-foreground-default-enabled); }
 /* Rejected carries the tone the whole way through, and inverts its plate the same
    way drag-over does — the two states differ by hue, not by construction. */
 .drop.invalid {
-  --drop-line: var(--color-feedback-danger-fg);
-  --drop-plate-bg: var(--color-feedback-danger-fg);
-  --drop-glyph: var(--color-fg-on-accent);
-  background: var(--color-feedback-danger-bg);
+  --drop-line: var(--color-status-danger-foreground-default-enabled);
+  --drop-plate-bg: var(--color-status-danger-foreground-default-enabled);
+  --drop-glyph: var(--color-neutral-foreground-on-brand-enabled);
+  background: var(--color-status-danger-background-subtle-enabled);
 }
 /* The zone shows focus when the control INSIDE it takes focus — the browse
    action is a real <button class="lnk">, not an <em>, so a keyboard user can
@@ -2009,15 +2070,15 @@
    this size comes from the container rather than a heavier line. */
 /* Plate and glyph follow the state through two variables, so a state declares its
    tone once and the whole lead moves with it. */
-.drop > .plate, .drop > .ms { color: var(--drop-glyph, var(--color-fg-default)); }
+.drop > .plate, .drop > .ms { color: var(--drop-glyph, var(--color-neutral-foreground-default-enabled)); }
 .drop > .plate {
   width: var(--size-illus-spot); height: var(--size-illus-spot); border-radius: var(--radius-pill);
-  background: var(--drop-plate-bg, var(--color-bg-surface-sunken));
+  background: var(--drop-plate-bg, var(--color-neutral-background-surface-sunken-enabled));
   display: inline-flex; align-items: center; justify-content: center;
   transition: background var(--motion-hover-duration) var(--motion-hover-easing), color var(--motion-hover-duration) var(--motion-hover-easing);
 }
-.drop .ttl { font-size: var(--type-body-md-size); font-weight: var(--ref-font-weight-regular); color: var(--color-fg-default); }
-.drop .ttl em { font-style: normal; color: var(--color-fg-link); text-decoration: underline; text-underline-offset: 2px; }
+.drop .ttl { font-size: var(--type-body-md-size); font-weight: var(--ref-font-weight-regular); color: var(--color-neutral-foreground-default-enabled); }
+.drop .ttl em { font-style: normal; color: var(--color-neutral-foreground-link-enabled); text-decoration: underline; text-underline-offset: 2px; }
 /* ══ THE ZONE IS A LABEL AND THE INPUT IS REAL ═══════════════════════════════
    Which is what the a11y contract has always required — "A real <input
    type='file'> behind the zone; the zone is a label" — and what .drop was already
@@ -2053,13 +2114,13 @@
      row elements take in components.css. */
   appearance: none; border: 0; background: none; font: inherit; margin: 0;
 }
-.drop .hint { font-size: var(--type-body-sm-size); color: var(--color-fg-subtle); }
+.drop .hint { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-subtle-enabled); }
 .file-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-.file-row { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--border-width-default) solid var(--color-border-muted); border-radius: var(--radius-control); background: var(--color-bg-surface); }
-.file-row > .ms:first-child { color: var(--color-fg-subtle); }
+.file-row { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); border-radius: var(--radius-control); background: var(--color-neutral-background-surface-enabled); }
+.file-row > .ms:first-child { color: var(--color-neutral-foreground-subtle-enabled); }
 .file-row .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2xs); }
-.file-row .fn { font-size: var(--type-body-sm-size); color: var(--color-fg-default); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.file-row .fs { font-size: var(--type-caption-size); color: var(--color-fg-subtle); font-variant-numeric: tabular-nums; }
+.file-row .fn { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-default-enabled); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-row .fs { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); font-variant-numeric: tabular-nums; }
 /* A ROW IS ONE HEIGHT FOR ITS WHOLE LIFE. The uploading row swaps the .fs status
    line for a 4px bar, and before v146 the only thing accounting for the difference
    was an inline `margin-top: 6px` in the story — so the row measured 57.5 against
@@ -2080,7 +2141,7 @@
    that reaches it would leave Spacious ~1px short per side. Trace the token from the
    rule that applies, not from the name that sounds right. */
 .file-row .meta > .progress {
-  margin-block: calc((var(--type-caption-size) * var(--type-body-md-line) - var(--ref-dimension-50)) / 2);
+  margin-block: calc((var(--type-caption-size) * var(--type-body-md-line) - var(--ref-size-50)) / 2);
 }
 /* button.x, not a bare .x. It was the one element-agnostic .x rule in the
    system, and it handed cursor: pointer to whatever carried the class — which
@@ -2089,23 +2150,23 @@
    defeated the element-qualified-class lint for .x entirely, since one bare
    rule is enough to make the class look element-agnostic everywhere. The
    rendered story already used a real button here; only this selector lagged. */
-.file-row button.x { color: var(--color-fg-subtle); cursor: pointer; }
-.file-row.error { border-color: var(--color-feedback-danger-border); background: var(--color-feedback-danger-bg); }
-.file-row.error .fs { color: var(--color-feedback-danger-fg); }
-.file-row.error > .ms:first-child { color: var(--color-feedback-danger-fg); }
+.file-row button.x { color: var(--color-neutral-foreground-subtle-enabled); cursor: pointer; }
+.file-row.error { border-color: var(--color-status-danger-stroke-subtle-enabled); background: var(--color-status-danger-background-subtle-enabled); }
+.file-row.error .fs { color: var(--color-status-danger-foreground-default-enabled); }
+.file-row.error > .ms:first-child { color: var(--color-status-danger-foreground-default-enabled); }
 /* The trailing check on a finished row takes the success foreground. It is the one
    glyph in the list that reports an outcome rather than naming a file, so it reads
    in the tone of that outcome — the same way a failed row's leading glyph does. */
-.file-row > svg.ms.fill { color: var(--color-feedback-success-fg); }
+.file-row > svg.ms.fill { color: var(--color-status-success-foreground-default-enabled); }
 
 /* ── EMPTY STATE ────────────────────────────────────────── */
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-md); padding: var(--space-48) var(--space-24); }
-.empty .glyph { width: var(--size-illus-spot); height: var(--size-illus-spot); border-radius: var(--radius-pill); background: var(--color-bg-surface-sunken); color: var(--color-fg-subtle); display: inline-flex; align-items: center; justify-content: center; }
-.empty .ttl { font-size: var(--type-heading-4-size); line-height: var(--type-heading-4-line); font-weight: var(--type-heading-4-weight); letter-spacing: var(--ref-letter-spacing-tight); color: var(--color-fg-default); }
-.empty .desc { margin: 0; font-size: var(--type-body-md-size); color: var(--color-fg-muted); max-width: 380px; line-height: var(--ref-line-height-normal); }
+.empty .glyph { width: var(--size-illus-spot); height: var(--size-illus-spot); border-radius: var(--radius-pill); background: var(--color-neutral-background-surface-sunken-enabled); color: var(--color-neutral-foreground-subtle-enabled); display: inline-flex; align-items: center; justify-content: center; }
+.empty .ttl { font-size: var(--type-heading-4-size); line-height: var(--type-heading-4-line); font-weight: var(--type-heading-4-weight); letter-spacing: var(--ref-letter-spacing-tight); color: var(--color-neutral-foreground-default-enabled); }
+.empty .desc { margin: 0; font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-muted-enabled); max-width: 380px; line-height: var(--ref-line-height-normal); }
 .empty .acts { display: flex; gap: var(--space-sm); margin-top: var(--space-xs); }
 .empty.compact { padding: var(--space-2xl) var(--space-lg); gap: var(--space-sm); }
-.empty.compact .glyph { width: var(--ref-dimension-500); height: var(--ref-dimension-500); }
+.empty.compact .glyph { width: var(--ref-size-500); height: var(--ref-size-500); }
 .empty.compact .ttl { font-size: var(--type-body-lg-size); }
 
 /* ── DIVIDER ────────────────────────────────────────────
@@ -2116,7 +2177,7 @@
    text on top of the line — and takes a STRONGER border role than the bare rule,
    because framing a caption is a different job from confirming a boundary. The
    rule is stated in full above .divider-label below. */
-.divider { border: none; margin: 0; flex-shrink: 0; align-self: stretch; background: var(--color-border-muted); block-size: var(--border-width-default); inline-size: 100%; }
+.divider { border: none; margin: 0; flex-shrink: 0; align-self: stretch; background: var(--color-neutral-stroke-muted-enabled); block-size: var(--border-width-default); inline-size: 100%; }
 .divider.vert { inline-size: var(--border-width-default); block-size: auto; min-block-size: var(--space-lg); }
 /* Inset for a divider inside a padded surface, so it starts where the text does
    rather than running under the container's own padding. */
@@ -2124,13 +2185,13 @@
 /* ── THE CAPTIONED-SEAM RULE — CANONICAL. Stated here, not repeated. ──────────
    This library draws hairlines in two ROLES, and they take different tokens:
 
-     BARE structural divider        --color-border-muted
+     BARE structural divider        --color-neutral-stroke-muted-enabled
        .divider, and every block edge that separates two regions the layout has
        ALREADY separated: a bar from its content, a header from a body, a row
        from the next row, a composer from the log above it. It only has to
        confirm a boundary that already exists, so it stays incidental.
 
-     CAPTIONED seam                 --color-border-default
+     CAPTIONED seam                 --color-neutral-stroke-default-enabled
        .divider-label and the three group headings that reuse its shape. Here the
        two hairlines FRAME A CAPTION, and they are the separation rather than a
        confirmation of one. A caption suspended between two lines that have all
@@ -2156,8 +2217,8 @@
    Bare .divider stays muted, one declaration above. That the two variants of one
    component take different border roles is the POINT, not an inconsistency: the
    caption is what changes the job of the line. */
-.divider-label { display: flex; align-items: center; gap: var(--space-md); font-size: var(--type-caption-size); color: var(--color-fg-subtle); }
-.divider-label::before, .divider-label::after { content: ''; flex: 1; height: var(--border-width-default); background: var(--color-border-default); }
+.divider-label { display: flex; align-items: center; gap: var(--space-md); font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); }
+.divider-label::before, .divider-label::after { content: ''; flex: 1; height: var(--border-width-default); background: var(--color-neutral-stroke-default-enabled); }
 
 /* ── TEXT ───────────────────────────────────────────────
    Inline text primitives. Everything here is a constraint on text that already
@@ -2168,8 +2229,8 @@
    reasoning. Do not collapse them, and do not reach for one to make text look weaker
    than the other: they render identically, so a visible step needs a different
    property. */
-.txt-muted { color: var(--color-fg-muted); }
-.txt-subtle { color: var(--color-fg-subtle); }
+.txt-muted { color: var(--color-neutral-foreground-muted-enabled); }
+.txt-subtle { color: var(--color-neutral-foreground-subtle-enabled); }
 /* Tabular figures for anything a user compares down a column — and for
    identifiers, which are read character by character. One utility, the brand
    face: --font-family-mono is for code, not for product UI, so there is no
@@ -2189,21 +2250,21 @@
    vertical room for the eye to find the return sweep. So the class carries the
    relaxed line height as well as the width: measure and leading are one decision. */
 .txt-prose { max-width: 68ch; line-height: var(--ref-line-height-relaxed); text-wrap: pretty; }
-.txt-strike { text-decoration: line-through; color: var(--color-fg-subtle); }
+.txt-strike { text-decoration: line-through; color: var(--color-neutral-foreground-subtle-enabled); }
 
 /* ── TIMESTAMP ──────────────────────────────────────────
    Metadata, so caption size and subtle text, and tabular figures so a column of
    times lines up. It is a <time datetime> element: the visible string is for
    people, the attribute is the machine-readable instant. */
-.ts { font-size: var(--type-caption-size); color: var(--color-fg-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ts { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Promoted from metadata to content, for a row whose SUBJECT is the time. The weight
-   is what carries that promotion, not the colour: --color-fg-muted and
-   --color-fg-subtle are deliberately the same value (see foundation.css), so this
+   is what carries that promotion, not the colour: --color-neutral-foreground-muted-enabled and
+   --color-neutral-foreground-subtle-enabled are deliberately the same value (see foundation.css), so this
    rule was a complete no-op until v165 — every one of eleven computed type
    properties measured identical to plain .ts, in both modes. Keep the colour
    declaration: it states which role this text plays, and it starts working the day
    the two roles ever diverge. The WEIGHT is the part that must not be removed. */
-.ts.strong { color: var(--color-fg-muted); font-weight: var(--type-emphasis-weight); }
+.ts.strong { color: var(--color-neutral-foreground-muted-enabled); font-weight: var(--type-emphasis-weight); }
 /* Inline in a sentence, where it inherits the paragraph's size instead. */
 .ts.inline { font-size: inherit; color: inherit; }
 
@@ -2211,14 +2272,14 @@
    The smallest status mark, for a dense row where a badge would be the widest
    thing in it. The dot never carries the meaning alone — a label sits beside it,
    which is also what keeps it legible in greyscale. */
-.sdot { width: 8px; height: 8px; border-radius: var(--radius-pill); flex-shrink: 0; display: inline-block; background: var(--color-feedback-neutral-solid); }
-.sdot--info { background: var(--color-feedback-info-solid); }
-.sdot--success { background: var(--color-feedback-success-solid); }
-.sdot--warning { background: var(--color-feedback-warning-solid); }
-.sdot--danger { background: var(--color-feedback-danger-solid); }
+.sdot { width: 8px; height: 8px; border-radius: var(--radius-pill); flex-shrink: 0; display: inline-block; background: var(--color-status-neutral-background-solid-enabled); }
+.sdot--info { background: var(--color-status-info-background-solid-enabled); }
+.sdot--success { background: var(--color-status-success-background-solid-enabled); }
+.sdot--warning { background: var(--color-status-warning-background-solid-enabled); }
+.sdot--danger { background: var(--color-status-danger-background-solid-enabled); }
 /* Hollow: a state that has not started — queued, draft, offline. */
-.sdot.hollow { background: transparent; box-shadow: inset 0 0 0 var(--border-width-emphasis) var(--color-border-control); }
-.sdot-row { display: inline-flex; align-items: center; gap: var(--space-sm); font-size: var(--type-body-md-size); color: var(--color-fg-default); }
+.sdot.hollow { background: transparent; box-shadow: inset 0 0 0 var(--border-width-emphasis) var(--color-neutral-stroke-control-enabled); }
+.sdot-row { display: inline-flex; align-items: center; gap: var(--space-sm); font-size: var(--type-body-md-size); color: var(--color-neutral-foreground-default-enabled); }
 
 /* ── THUMBNAIL ──────────────────────────────────────────
    A small fixed image in a row or a grid. Radius is --radius-inner, because a
@@ -2235,7 +2296,7 @@
    The box still never changes between states, which is what the states note
    below is really protecting: size, radius and clipping are all here, and a
    column of tiles holds its rhythm while half of them are still arriving. */
-.thumb { --thumb-size: var(--ref-dimension-600); inline-size: var(--thumb-size); block-size: var(--thumb-size); flex-shrink: 0; border-radius: var(--radius-inner); overflow: clip; overflow-clip-margin: 6px; display: inline-flex; align-items: center; justify-content: center; position: relative; }
+.thumb { --thumb-size: var(--ref-size-600); inline-size: var(--thumb-size); block-size: var(--thumb-size); flex-shrink: 0; border-radius: var(--radius-inner); overflow: clip; overflow-clip-margin: 6px; display: inline-flex; align-items: center; justify-content: center; position: relative; }
 /* The image carries the frame's radius itself: the frame clips with a 6px margin
    so a focused dismiss ring can paint outside it, and that margin let square
    photo corners through. */
@@ -2246,7 +2307,7 @@
    stops standing IN for the object and starts BEING the content, which is a
    different component (media preview) with its own aspect ratios and framing.
    Losing them also removes the ambiguity that let two sizes sit in one list. */
-.thumb.sm { --thumb-size: var(--ref-dimension-400); }
+.thumb.sm { --thumb-size: var(--ref-size-400); }
 /* THE RUNG THAT SEATS BOTH ACTIONS UNDER A FINGER, and the number is derived
    rather than chosen. A tile that must be both REMOVABLE and OPENABLE on touch
    needs a 44 dismiss corner and a contiguous 44 for the picking surface, and the
@@ -2263,7 +2324,7 @@
    does not grow because a finger arrived. And a .lg that rendered at the default
    size on a pointer would be a class identical to its base, which is the defect
    this component already documented once at .thumb.blank. */
-.thumb.lg { --thumb-size: var(--ref-dimension-1200); }
+.thumb.lg { --thumb-size: var(--ref-size-1200); }
 /* AND THE BADGE COMES IN OFF THE CORNER, because at this size it can. 2px is what
    a 48px tile can spare — the badge is 18 of it and every pixel between the pill
    and the frame is one the picture does not get. A 96px tile has the room, and the
@@ -2325,10 +2386,10 @@
    Selected keeps the ring, so the two states speak on different channels and
    a hovered tile can never be mistaken for the chosen one.
 
-   Mixed from --color-fg-default, NOT --color-bg-overlay, and that is the whole
+   Mixed from --color-neutral-foreground-default-enabled, NOT --color-neutral-background-overlay-rest, and that is the whole
    subtlety: the scrim token is a fixed rgba(20,19,18,.45) and is not
    mode-flipped, so over a dark-mode tile it measured 1.00:1 — a literally
-   invisible hover. --color-fg-default inverts with the mode, giving a dark
+   invisible hover. --color-neutral-foreground-default-enabled inverts with the mode, giving a dark
    veil on a light tile and a light one on a dark tile. Measured against the
    sunken fill: 1.37:1 light, 1.57:1 dark. Perceptible in both, and light
    enough that the image underneath still reads.
@@ -2338,7 +2399,7 @@
    already chosen should say nothing, it is already the answer. */
 .thumb > button.pick::after {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: color-mix(in oklab, var(--color-fg-default) 16%, transparent);
+  background: color-mix(in oklab, var(--color-neutral-foreground-default-enabled) 16%, transparent);
   opacity: 0; transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
 }
 .thumb > button.pick:hover::after { opacity: 1; }
@@ -2356,7 +2417,7 @@
    the fill is now a SURFACE (emphasis) rather than a scrim, its foreground is the
    matching on-emphasis token — the two flip together, which a hardcoded white
    would not. */
-.thumb .more { position: absolute; inset: 0; border-radius: inherit; display: flex; align-items: center; justify-content: center; background: var(--color-bg-emphasis); color: var(--color-fg-on-emphasis); font-size: var(--type-caption-size); font-weight: var(--type-label-weight); }
+.thumb .more { position: absolute; inset: 0; border-radius: inherit; display: flex; align-items: center; justify-content: center; background: var(--color-neutral-background-emphasis-enabled); color: var(--color-neutral-foreground-on-emphasis-enabled); font-size: var(--type-caption-size); font-weight: var(--type-label-weight); }
 /* ── THUMBNAIL STATES ──
    An uploaded image passes through the same frame from empty to loaded, so the
    frame is what stays fixed: same size, same radius, same clipping in every
@@ -2379,7 +2440,7 @@
    load-bearing rather than advisory, which is why <Thumbnail> falls back to it
    when it has no src. */
 .thumb.blank, .thumb.uploading, .thumb.processing {
-  background: var(--color-bg-surface-sunken); color: var(--color-fg-subtle);
+  background: var(--color-neutral-background-surface-sunken-enabled); color: var(--color-neutral-foreground-subtle-enabled);
 }
 /* AND A FLOOR UNDER ANY PHOTOGRAPH. An <img> that fails leaves a hole exactly the
    size of the tile, and with the frame painting nothing that hole is invisible
@@ -2393,7 +2454,7 @@
    an offline pane every one of them fails, and this is the rule that makes them
    read as empty frames instead of gaps. */
 .thumb:has(> img), .thumb:has(> button.pick > img) {
-  background: var(--color-bg-surface-sunken);
+  background: var(--color-neutral-background-surface-sunken-enabled);
 }
 /* BLANK — nothing yet, and nothing wrong. The glyph follows the tile's SHAPE,
    which is the one thing about a placeholder that is never incidental: a square
@@ -2410,19 +2471,19 @@
    the pulse says "this is becoming something", where a spinner says "something
    is being done to what is already here". */
 .thumb.uploading { animation: qds-thumb-pulse var(--motion-ambient-duration) var(--motion-ambient-easing) infinite; }
-@keyframes qds-thumb-pulse { 50% { background: var(--color-bg-selected); } }
+@keyframes qds-thumb-pulse { 50% { background: var(--color-neutral-background-interaction-toggled); } }
 /* PROCESSING — the file has landed and the system is working on it. The spinner
    is centred in the frame, over the image once there is one, dimmed behind it so
    the mark stays legible on any photograph. */
 /* The scrim carries the frame's radius itself. The frame clips with a 6px margin
    so a focused dismiss ring can paint outside it, and that margin let the scrim's
    square corners through. */
-.thumb.processing::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--color-bg-overlay); }
+.thumb.processing::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--color-neutral-background-overlay-rest); }
 /* The spinner sits on the dimming scrim, not the page, so its head and track are
    white in every theme — same reasoning as .more above, and for the same reason
    the accent head could not stay: at about 3:1 on the scrim, the part that shows
    motion was the part that disappeared. */
-.thumb.processing > .spinner { position: relative; border-color: color-mix(in oklab, var(--ref-neutral-0) 30%, transparent); border-top-color: var(--ref-neutral-0); }
+.thumb.processing > .spinner { position: relative; border-color: color-mix(in oklab, var(--ref-color-neutral-solid-0) 30%, transparent); border-top-color: var(--ref-color-neutral-solid-0); }
 /* REMOVABLE — the dismiss sits inside the top trailing corner, not overlapping
    the edge: the frame is only 48px and a control hanging off it collides with
    whatever the tile sits beside. It carries its own dark disc because the thing
@@ -2431,7 +2492,7 @@
    with whatever is behind it, so over a bright photo the white glyph fell to
    about 2.6:1. An opaque emphasis fill is the same value on every image. */
 /* A SURFACE OVER MEDIA, NOT AN INVERSE SURFACE, and the distinction is the whole
-   change. This badge used to take --color-bg-emphasis / --color-fg-on-emphasis,
+   change. This badge used to take --color-neutral-background-emphasis-enabled / --color-neutral-foreground-on-emphasis-enabled,
    which is the INVERSE-SURFACE family — toast, tooltip, selection bar, selected
    chip, the user's own chat bubble. That family is defined by contradicting the
    page, and it inverts with the mode to keep doing so: near-black pill with a
@@ -2465,7 +2526,7 @@
   inset-block-start: var(--thumb-x-inset); inset-inline-end: var(--thumb-x-inset);
   inline-size: var(--thumb-x-size); block-size: var(--thumb-x-size);
   padding: 0; border-radius: var(--radius-pill);
-  border: var(--border-width-default) solid var(--color-border-muted);
+  border: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
   /* TRANSLUCENT, BECAUSE IT IS SITTING ON SOMEBODY ELSE'S PICTURE. An opaque pill
      reads as punched out of the image; letting a little of it through reads as
      floating on top, which is what it is. color-mix to transparent is the idiom
@@ -2491,13 +2552,13 @@
      arbitrary backdrop, so thinning it would weaken exactly the guarantee the
      translucency spends. A crisp ring around a slightly-transparent fill is also
      what makes the shape read at 18px. */
-  background: color-mix(in oklab, var(--color-bg-surface-raised) 85%, transparent);
-  color: var(--color-fg-default);
+  background: color-mix(in oklab, var(--color-neutral-background-surface-raised-enabled) 85%, transparent);
+  color: var(--color-neutral-foreground-default-enabled);
   box-shadow: var(--elevation-raised);
 }
 /* Hover keeps the same alpha, or the pill would snap to opaque under the cursor
    and read as a different control. */
-.thumb > button.x:hover { background: color-mix(in oklab, var(--color-bg-hover) 85%, transparent); color: var(--color-fg-default); }
+.thumb > button.x:hover { background: color-mix(in oklab, var(--color-neutral-background-interaction-hovered) 85%, transparent); color: var(--color-neutral-foreground-default-enabled); }
 /* The focus ring COMPOSES with the lift rather than replacing it. button.x's own
    focus rule sets box-shadow outright, and at equal specificity this sheet loads
    later — so without restating both, focusing the badge would have dropped its
@@ -2598,7 +2659,7 @@
 }
 
 .thumb-stack { display: inline-flex; }
-.thumb-stack > .thumb { box-shadow: 0 0 0 var(--border-width-emphasis) var(--color-bg-surface); }
+.thumb-stack > .thumb { box-shadow: 0 0 0 var(--border-width-emphasis) var(--color-neutral-background-surface-enabled); }
 .thumb-stack > .thumb + .thumb { margin-inline-start: calc(var(--space-sm) * -1); }
 
 /* ── NUMBER INPUT ───────────────────────────────────────
@@ -2624,27 +2685,36 @@
 .control.stepper { padding-inline: 0; }
 .control.stepper > button.step {
   align-self: stretch; flex-shrink: 0; position: relative;
-  /* SQUARE ON THE FIELD'S INNER HEIGHT, which is the rung MINUS its two borders.
+  /* SQUARE ON THE FIELD'S INNER HEIGHT AT A FINE POINTER — touch widens it, see the
+     coarse block below. The rung MINUS its two borders.
      `align-self: stretch` fills the content box, so a 36px field gives a 34px
      button; matching the rung itself made it 36x34 and the comment above claimed
      a square for the whole migration. The width follows the rung rather than
      being pinned to md — .sm previously got a 36-wide button in a 28-tall field,
      a 10px error that no story rendered. */
   inline-size: calc(var(--size-control-md) - 2 * var(--border-width-default));
-  /* --color-fg-default, not muted. The glyph IS the control here: there is no
+  /* --color-neutral-foreground-default-enabled, not muted. The glyph IS the control here: there is no
      label beside it to carry the meaning, and at the muted role a 16px minus on
      a white field read as disabled next to the value it changes. Muted is for a
      glyph that accompanies text. */
-  border: none; background: transparent; color: var(--color-fg-default);
+  border: none; background: transparent; color: var(--color-neutral-foreground-default-enabled);
   cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 /* A hairline each side of the value, so the three parts read as one control with
    two ends rather than as a field with buttons parked against it. */
-/* --color-border-default, not -muted. Muted is the faintest role in the system,
-   tuned for a line INSIDE a surface that is already bounded — a table row, a card
-   header seam. These two hairlines have to hold their own against the field's own
-   --color-border-control edge running around all three parts, and at muted they
-   read as smudges rather than as the seams that divide one control into three. */
+/* --color-neutral-stroke-control-enabled, THE SAME ROLE AND WIDTH AS THE FIELD'S OWN EDGE.
+   This was --color-neutral-stroke-default-enabled until 2026-10-01, on the argument that the
+   seams should sit one step below the outer edge: muted was correctly rejected as too faint,
+   and default was taken as the step down from control. Reviewed and reversed — default is
+   #d9d9d9 against the edge's #717171, which is not one step down, it is a different order of
+   weight. On a 220px field the two seams read as smudges while the edge reads as a line, and
+   the three-part control looks like a field with two ghosts in it.
+
+   The role is also the right one on its own terms. --color-neutral-stroke-default-enabled is
+   for card edges and captioned seams — decoration inside an already-bounded surface.
+   These two hairlines divide one control into THREE INTERACTIVE REGIONS, which makes them
+   control boundaries, and that role carries the 3:1 non-text contrast the others do not.
+   The width never differed: both are --border-width-default. */
 /* THERE IS NO .control.sm.stepper — RETIRED v170. A stepper is a value being
    nudged repeatedly, so its two targets matter more than the row it saves; at
    the small rung they are 26px squares, and the pair sits either side of a
@@ -2671,15 +2741,45 @@
 
    Coarse-only: at a fine pointer the visible square IS the target. */
 @media (pointer: coarse) {
+  /* WIDER THAN SQUARE ON TOUCH, and this is the one place the stepper stops being one.
+     At a fine pointer the button is square on the field's inner box and that reads as a
+     deliberate end-cap. Under a coarse pointer the rung collapses to --size-touch-min, so
+     the square is 42 wide inside a 44-tall field — it CLEARS the floor via the overlay
+     below, but it does not look like it: a 42px end on a field 220px wide or more reads as
+     a hairline sliver next to the value, and the two controls a thumb actually aims at are
+     the narrowest thing on the row.
+
+     56 rather than 48 or 64. 48 (--size-control-touch-lg) is only 4px past the floor and
+     does not change the read; 64 leaves 92px for the value at the 220px minimum, which is
+     tight once a 4-digit count and a caret are in it. 56 leaves 108 and is a third wider
+     than the square.
+
+     Width only. The HEIGHT stays stretched to the field's inner box, because a stepper end
+     taller than the field it sits in would break the single-control read that the two seams
+     exist to create.
+
+     Both brands, deliberately: Default and Spacious differ in density, and a thumb does
+     not. Under coarse they already share --size-control-md: 44, so one value is correct
+     for both and a per-brand split here would be density leaking into ergonomics. */
+  .control.stepper > button.step { inline-size: var(--ref-size-700); }   /* 56 */
+  /* The overlay now FOLLOWS the button's width rather than pinning 44. At 42 wide it was
+     reclaiming the 2px the borders took off both axes; at 56 the width already clears the
+     floor and a centred 44 would make the target NARROWER than the thing drawn under it —
+     the one shape worse than a small target is a target that lies about where it is.
+
+     + the seam border, and this is the SAME trap the note above records for negative insets:
+     an absolutely positioned child is sized against its ancestor's PADDING box, so a plain
+     `width: 100%` measured 55 against a 56px button — the seam's 1px, missing from the one
+     axis nobody would check. Measured, not assumed. */
   .control.stepper > button.step::after {
     content: ''; position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: var(--size-touch-min); height: var(--size-touch-min);
+    width: calc(100% + var(--border-width-default)); height: var(--size-touch-min);
   }
 }
-.control.stepper > button.step:first-child { border-inline-end: var(--border-width-default) solid var(--color-border-default); }
-.control.stepper > button.step:last-child { border-inline-start: var(--border-width-default) solid var(--color-border-default); }
-/* THE SEAMS MUTE WITH THE CONTROL. The rule above picks --color-border-default over
+.control.stepper > button.step:first-child { border-inline-end: var(--border-width-default) solid var(--color-neutral-stroke-control-enabled); }
+.control.stepper > button.step:last-child { border-inline-start: var(--border-width-default) solid var(--color-neutral-stroke-control-enabled); }
+/* THE SEAMS MUTE WITH THE CONTROL. The rule above picks --color-neutral-stroke-default-enabled over
    -muted so the hairlines hold their own against the field's own edge — and that
    reasoning has a premise that DISABLED removes. Once the outer edge drops to muted
    the seam is not holding its own against anything, it is simply the loudest line
@@ -2693,12 +2793,12 @@
    disables on its own at a bound (Bound=At min), and the control is still live then
    — muting that seam would say the whole field is dead because the value reached a
    limit. */
-.control.stepper.disabled > button.step:first-child { border-inline-end-color: var(--color-border-muted); }
-.control.stepper.disabled > button.step:last-child { border-inline-start-color: var(--color-border-muted); }
+.control.stepper.disabled > button.step:first-child { border-inline-end-color: var(--color-neutral-stroke-muted-enabled); }
+.control.stepper.disabled > button.step:last-child { border-inline-start-color: var(--color-neutral-stroke-muted-enabled); }
 .control.stepper > button.step .ms { font-size: var(--size-icon-sm); --icon-stroke: var(--icon-stroke-sm); }
-.control.stepper > button.step:hover { background: var(--color-bg-hover); color: var(--color-fg-default); }
-.control.stepper > button.step:active { background: var(--color-bg-active); }
-.control.stepper > button.step:disabled { color: var(--color-fg-disabled); cursor: not-allowed; background: transparent; }
+.control.stepper > button.step:hover { background: var(--color-neutral-background-interaction-hovered); color: var(--color-neutral-foreground-default-enabled); }
+.control.stepper > button.step:active { background: var(--color-neutral-background-interaction-pressed); }
+.control.stepper > button.step:disabled { color: var(--color-neutral-foreground-disabled-rest); cursor: not-allowed; background: transparent; }
 /* Inset, so the ring never overlaps the field's own edge or the hairline. */
 .control.stepper > button.step:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 /* Centred, against the right-alignment .num carries everywhere else. A figure is
@@ -2724,12 +2824,12 @@
    Same chassis as the date field: a typeable control with a clock glyph, and a
    list of times as its aid. The list is a scrolling column of one-tap values,
    because most time picks are on the half hour. */
-.time-list { width: 160px; max-height: 224px; overflow-y: auto; background: var(--color-bg-surface-raised); border: var(--border-width-default) solid transparent; border-radius: var(--radius-overlay); box-shadow: var(--elevation-overlay); padding: var(--space-2xs); }
-.time-opt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: var(--size-control-md); padding: 0 var(--space-md); border-radius: var(--radius-control); font-size: var(--type-body-md-size); font-variant-numeric: tabular-nums; color: var(--color-fg-default); cursor: pointer; }
-.time-opt:hover { background: var(--color-bg-hover); }
-.time-opt.on { background: var(--color-bg-selected); font-weight: var(--type-label-weight); }
-.time-opt.off { color: var(--color-fg-disabled); text-decoration: line-through; cursor: not-allowed; }
-.time-zone { font-size: var(--type-caption-size); color: var(--color-fg-subtle); }
+.time-list { width: 160px; max-height: 224px; overflow-y: auto; background: var(--color-neutral-background-surface-raised-enabled); border: var(--border-width-default) solid transparent; border-radius: var(--radius-overlay); box-shadow: var(--elevation-overlay); padding: var(--space-2xs); }
+.time-opt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: var(--size-control-md); padding: 0 var(--space-md); border-radius: var(--radius-control); font-size: var(--type-body-md-size); font-variant-numeric: tabular-nums; color: var(--color-neutral-foreground-default-enabled); cursor: pointer; }
+.time-opt:hover { background: var(--color-neutral-background-interaction-hovered); }
+.time-opt.on { background: var(--color-neutral-background-interaction-toggled); font-weight: var(--type-label-weight); }
+.time-opt.off { color: var(--color-neutral-foreground-disabled-rest); text-decoration: line-through; cursor: not-allowed; }
+.time-zone { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); }
 
 /* ── CAROUSEL ───────────────────────────────────────────
    A horizontal set the user pages through when the content is visual and the
@@ -2743,7 +2843,7 @@
 .carousel { position: relative; display: grid; grid-template-rows: auto auto; }
 .carousel-track { grid-area: 1 / 1; display: flex; gap: var(--space-md); overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-block-end: var(--space-2xs); }
 .carousel-track::-webkit-scrollbar { height: 0; }
-.carousel-slide { flex: 0 0 auto; scroll-snap-align: start; border-radius: var(--radius-inner); overflow: hidden; background: var(--color-bg-surface-sunken); }
+.carousel-slide { flex: 0 0 auto; scroll-snap-align: start; border-radius: var(--radius-inner); overflow: hidden; background: var(--color-neutral-background-surface-sunken-enabled); }
 /* Same system ring — see .nav-item. A slide reachable by keyboard has to show
    which one it is, and the track scrolls it into view. */
 .carousel-slide:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -2752,13 +2852,13 @@
    DOM order so they paint over it; align-self does the centring with no magic
    number for the footer's height. A 36px arrow never wins the row's sizing
    against a slide, so the track still drives the height. */
-.carousel-arrow { grid-area: 1 / 1; align-self: center; position: relative; z-index: var(--z-raised); inline-size: var(--size-control-md); block-size: var(--size-control-md); border-radius: var(--radius-pill); border: var(--border-width-default) solid var(--color-border-muted); background: var(--color-bg-surface-raised); box-shadow: var(--elevation-raised); color: var(--color-fg-default); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.carousel-arrow { grid-area: 1 / 1; align-self: center; position: relative; z-index: var(--z-raised); inline-size: var(--size-control-md); block-size: var(--size-control-md); border-radius: var(--radius-pill); border: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); background: var(--color-neutral-background-surface-raised-enabled); box-shadow: var(--elevation-raised); color: var(--color-neutral-foreground-default-enabled); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .carousel-arrow.prev { justify-self: start; margin-inline-start: calc(var(--space-md) * -1); }
 .carousel-arrow.next { justify-self: end; margin-inline-end: calc(var(--space-md) * -1); }
 /* :not(:disabled) — CSS :hover matches a disabled button, so without the guard
    a dead arrow lit up under the pointer and offered feedback for a click it
    would never take. */
-.carousel-arrow:hover:not(:disabled) { background: var(--color-bg-hover); }
+.carousel-arrow:hover:not(:disabled) { background: var(--color-neutral-background-interaction-hovered); }
 /* At a bound the arrow is REMOVED, and this is the one place in the system
    that departs from disabled-not-hidden.
 
@@ -2796,29 +2896,29 @@
    an asymmetric radius: the corner nearest its author stays tight so the shape
    itself says who spoke, which is what keeps the thread readable without
    colour. Incoming takes a surface fill, outgoing the emphasis surface. */
-.chat { display: flex; flex-direction: column; background: var(--color-bg-surface); border: var(--border-width-default) solid var(--color-border-muted); border-radius: var(--radius-container); overflow: hidden; }
+.chat { display: flex; flex-direction: column; background: var(--color-neutral-background-surface-enabled); border: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); border-radius: var(--radius-container); overflow: hidden; }
 .chat-log { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-lg); overflow-y: auto; }
 .chat-msg { display: flex; gap: var(--space-sm); align-items: flex-end; max-width: 78%; }
 .chat-msg.me { align-self: flex-end; flex-direction: row-reverse; }
-.chat-bubble { padding: var(--space-sm) var(--space-md); border-radius: var(--radius-container); background: var(--color-bg-surface-sunken); color: var(--color-fg-default); font-size: var(--type-body-md-size); line-height: var(--type-body-md-line); border-end-start-radius: var(--radius-inner); }
-.chat-msg.me .chat-bubble { background: var(--color-bg-emphasis); color: var(--color-fg-on-emphasis); border-end-start-radius: var(--radius-container); border-end-end-radius: var(--radius-inner); }
-.chat-msg .who { font-size: var(--type-caption-size); color: var(--color-fg-subtle); margin-block-end: var(--space-2xs); }
-.chat-meta { display: flex; align-items: center; gap: var(--space-xs); margin-block-start: var(--space-2xs); font-size: var(--type-caption-size); color: var(--color-fg-subtle); }
+.chat-bubble { padding: var(--space-sm) var(--space-md); border-radius: var(--radius-container); background: var(--color-neutral-background-surface-sunken-enabled); color: var(--color-neutral-foreground-default-enabled); font-size: var(--type-body-md-size); line-height: var(--type-body-md-line); border-end-start-radius: var(--radius-inner); }
+.chat-msg.me .chat-bubble { background: var(--color-neutral-background-emphasis-enabled); color: var(--color-neutral-foreground-on-emphasis-enabled); border-end-start-radius: var(--radius-container); border-end-end-radius: var(--radius-inner); }
+.chat-msg .who { font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); margin-block-end: var(--space-2xs); }
+.chat-meta { display: flex; align-items: center; gap: var(--space-xs); margin-block-start: var(--space-2xs); font-size: var(--type-caption-size); color: var(--color-neutral-foreground-subtle-enabled); }
 .chat-msg.me .chat-meta { justify-content: flex-end; }
 .chat-msg.pending .chat-bubble, .chat-msg.failed .chat-bubble { opacity: .6; }
 /* Failed reads like pending — the message is dimmed because it is not yet a
    message, not recoloured, which would make the user's own words look like the
    error. The danger tone lives in the meta line beneath, where the reason and
    the retry already are. */
-.chat-msg.failed .chat-meta { color: var(--color-feedback-danger-fg); }
-.chat-msg.failed .chat-meta .qi, .chat-msg.failed .chat-meta .ms { color: var(--color-feedback-danger-fg); }
+.chat-msg.failed .chat-meta { color: var(--color-status-danger-foreground-default-enabled); }
+.chat-msg.failed .chat-meta .qi, .chat-msg.failed .chat-meta .ms { color: var(--color-status-danger-foreground-default-enabled); }
 /* Retry stays a link. The meta line carries the danger tone; the action inside it
    keeps the link colours so it reads as the same affordance it is everywhere else. */
-.chat-msg.failed .chat-meta .lnk { color: var(--color-fg-link); }
-.chat-msg.failed .chat-meta .lnk:hover { color: var(--color-fg-link-hover); }
-.chat-composer { display: flex; align-items: flex-end; gap: var(--space-sm); padding: var(--space-md); border-block-start: var(--border-width-default) solid var(--color-border-muted); background: var(--color-bg-surface); }
+.chat-msg.failed .chat-meta .lnk { color: var(--color-neutral-foreground-link-enabled); }
+.chat-msg.failed .chat-meta .lnk:hover { color: var(--color-neutral-foreground-link-hovered); }
+.chat-composer { display: flex; align-items: flex-end; gap: var(--space-sm); padding: var(--space-md); border-block-start: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled); background: var(--color-neutral-background-surface-enabled); }
 .chat-typing { display: inline-flex; gap: var(--space-2xs); align-items: center; }
-.chat-typing i { width: 5px; height: 5px; border-radius: var(--radius-pill); background: var(--color-fg-disabled); animation: chat-typing 1.2s infinite ease-in-out; }
+.chat-typing i { width: 5px; height: 5px; border-radius: var(--radius-pill); background: var(--color-neutral-foreground-disabled-rest); animation: chat-typing 1.2s infinite ease-in-out; }
 .chat-typing i:nth-child(2) { animation-delay: .15s; }
 .chat-typing i:nth-child(3) { animation-delay: .3s; }
 @keyframes chat-typing { 0%, 60%, 100% { opacity: .35; } 30% { opacity: 1; } }
@@ -2830,12 +2930,12 @@
    one already carries a transparent border; here it is simply re-inked. */
 @media print {
   .select-menu, .menu, .popover, .toast, .cal, .modal, .drawer, .time-list, .carousel-arrow {
-    border-color: var(--color-border-muted); box-shadow: none;
+    border-color: var(--color-neutral-stroke-muted-enabled); box-shadow: none;
   }
   /* .drawer.left declares its transparent edge at 0,2,0, so the 0,1,0 rule
      above cannot re-ink it. Match the specificity, and ink the edge that
      variant actually uses. */
-  .drawer.left { border-inline-end-color: var(--color-border-muted); }
+  .drawer.left { border-inline-end-color: var(--color-neutral-stroke-muted-enabled); }
 }
 
 /* Placed LAST in this file on purpose. A media query adds no specificity, so this
@@ -2999,8 +3099,8 @@
      covers the long edge of any screen. Two stacked sheets each paint their own,
      which is correct: the confirm dims the drawer it is asking about. */
   body > :is(.modal, .drawer, .popover) {
-    --sheet-scrim: 0 0 0 100vmax var(--color-bg-overlay);
-    --sheet-peek: var(--ref-dimension-700);
+    --sheet-scrim: 0 0 0 100vmax var(--color-neutral-background-overlay-rest);
+    --sheet-peek: var(--ref-size-700);
     z-index: var(--z-modal);
     position: fixed; inset-inline: 0; inset-block-end: 0; inset-block-start: auto;
     inline-size: auto; max-inline-size: none; min-inline-size: 0;
@@ -3172,11 +3272,11 @@
      it because .drawer-b never zeroed its top in the first place. */
   body > :is(.modal, .drawer, .popover).full
        > :is(.modal-h, .drawer-h, .popover-h) {
-    border-block-end: var(--border-width-default) solid var(--color-border-muted);
+    border-block-end: var(--border-width-default) solid var(--color-neutral-stroke-muted-enabled);
   }
   body > :is(.modal, .drawer, .popover).full
        > :is(.modal-f, .drawer-f, .popover-f) {
-    border-block-start-color: var(--color-border-muted);
+    border-block-start-color: var(--color-neutral-stroke-muted-enabled);
   }
   body > .modal.full > .modal-h + .modal-b { padding-block-start: var(--space-lg); }
   body > .popover.full > .popover-h + .popover-b { padding-block-start: var(--popover-pad); }
@@ -3312,7 +3412,7 @@
   .cal-day { height: var(--size-touch-min); }
 
   /* The month steppers were the one thing in this component the floor missed.
-     They size off --ref-dimension-400 — a raw reference dimension, not a control
+     They size off --ref-size-400 — a raw reference dimension, not a control
      rung — so the day cells collapsed to 44 around them and they stayed at 32.
      Grown outright rather than given button.x's centred ::after: that idiom is
      for art bounded by the thing it sits on, and nothing bounds these. The
@@ -3332,7 +3432,7 @@
      one rectangle the background shorthand already positions. */
   .cal-day.range {
     --cal-band-inset: var(--space-2);
-    background: linear-gradient(var(--color-bg-selected), var(--color-bg-selected))
+    background: linear-gradient(var(--color-neutral-background-interaction-toggled), var(--color-neutral-background-interaction-toggled))
                 50% 50% / 100% calc(100% - var(--cal-band-inset) * 2) no-repeat;
   }
 }
@@ -3408,7 +3508,7 @@
    The header has a declared block-size matching the shell's mobile header, so it
    grows by the top inset as well as padding by it — the alternative squashes it. */
 .search-view-h {
-  block-size: calc(var(--ref-dimension-700) + var(--safe-inset-top));
+  block-size: calc(var(--ref-size-700) + var(--safe-inset-top));
   padding-block-start: var(--safe-inset-top);
 }
 .search-view-h,
@@ -3455,4 +3555,1091 @@
     padding-block-end:   calc(var(--page-inset) + var(--safe-inset-bottom));
     padding-left:        calc(var(--page-inset) + var(--safe-inset-left));
   }
+}
+
+/* ══ MOBILE TOP BAR ══════════════════════════════════════════════════════════
+   THE SUB-PAGE BAR, and it is not the shell's header. .shell > .hd is the app's
+   ROOT bar — nav toggle, brandmark, up to two global actions — and it says where
+   you are in the product. This says where you are in a TASK: a back control, the
+   screen's own title, and at most one action belonging to that screen. A phone
+   has both, never at the same time, which is why this is a sibling component and
+   not a variant.
+
+   IT OWNS THE TOP EDGE, so it consumes the status-bar inset and its children do
+   not add it again — the same rule .search-view-h and the shell header already
+   follow. block-size GROWS by the inset rather than absorbing it, or the bar
+   squashes to nothing under a notch. On a document that has not opted into
+   viewport-fit=cover every env() is 0 and these terms vanish, which is correct:
+   without cover the layout viewport IS the safe region.
+
+   THE LEADING PADDING IS DERIVED, NOT TYPED. The back control is a 44px touch
+   target around a 24px glyph, so it carries 10px of its own centring; subtracting
+   that from --page-inset lands the ART on the page's leading edge instead of the
+   BUTTON's box, which is what the eye reads. It computes to exactly 6px on touch
+   (16 - 10) and 10px on a pointer (16 - 6), so the glyph sits at 16 either way
+   and the number never has to be re-typed when a rung moves. Same argument the
+   shell header's flush trim makes, said as padding because this bar's leading
+   control is always present and always first.
+
+   THE TITLE IS THE PAGE TITLE OF THIS SCREEN, so it takes the page title's
+   WEIGHT — --ref-font-weight-exception, 600, the one weight this system gates
+   behind approval and grants to that role only. It does NOT take the page
+   title's SIZE: 24 is a heading sitting in a page, and this is a label sitting in
+   a 56px bar beside two controls. --type-body-lg-size is the rung that fits, and
+   it is already 18 below the turn without anything here asking for it. */
+.topbar {
+  display: flex; align-items: center;
+  /* BRAND-TUNABLE, and the knob has a default rather than a home in foundation.css
+     — the same shape --badge-pad-x already has. Default reads 8: the back glyph is
+     already held on --page-inset by the flush trim, so the gap is measuring from
+     the ART rather than from the button's box, and 16 from a mark that is itself
+     16 from the edge pushed the title a third of the way across a 393px bar.
+     Spacious sets 16, because its whole argument is that the same composition gets
+     more room; it is the one brand where the title can afford to start later. */
+  gap: var(--topbar-gap, var(--space-sm));
+  block-size: calc(var(--ref-size-700) + var(--safe-inset-top));
+  padding-block-start: var(--safe-inset-top);
+  padding-inline: calc(var(--page-inset) + var(--safe-inset-left))
+                  calc(var(--page-inset) + var(--safe-inset-right));
+  background: var(--color-neutral-background-surface-enabled);
+  color: var(--color-neutral-foreground-default-enabled);
+}
+/* THE ART LANDS ON THE LEADING EDGE, NOT THE BOX. --btn-flush-trim is recomputed
+   per rung as (width - art) / -2, so pulling the button out by it puts the GLYPH
+   on --page-inset whatever the rung is. That self-correction is the reason to use
+   the system's trim rather than type a padding: the spec for this bar was "6px on
+   the left", which is the right answer for a 44px control box and the wrong one
+   for this system's icon button, which is 36 below the turn. 6 would have put the
+   glyph at 12 and left the bar's leading edge ragged against the content under it.
+   The trim expresses the INTENT — art at 16 — instead of one rung's arithmetic.
+
+   TWENTY, NOT TWENTY-FOUR, and this was measured rather than reasoned. The first
+   version of this rule asked for --size-icon-lg on the argument that a mobile bar
+   runs a 24px icon standard, which is what the shell header's own comment says at
+   length. It is not what the system draws: the mobile master size rule
+   (`:is(.btn, .nav-item, …) .ms` below the turn) sets --size-icon-md and is
+   declared after .ms.lg, so the shell's own .nav-toggle — glyph markup `ms lg`,
+   plus a rule asking for lg explicitly — renders at 20, and so do its trailing
+   actions. QDS_MOBILE agrees and errors on anything larger: "the master size is
+   20; larger reads as emphasis the control has not earned." Asking for 24 here
+   produced that error in all four specimens. This bar's control is the same class
+   of thing as the toggle it replaces, so it draws what the toggle draws.
+
+   Size and stroke in ONE declaration, which is the pairing iconScale reads from
+   the rendered result; --btn-icon-art must agree with it or the trim is computed
+   from an art size the glyph is not drawing. */
+.topbar > .btn.icon { --btn-icon-art: var(--size-icon-md); margin-inline-start: var(--btn-flush-trim); }
+.topbar > .btn.icon .ms { font-size: var(--size-icon-md); --icon-stroke: var(--icon-stroke-md); }
+.topbar > .ttl {
+  margin: 0; min-width: 0; flex: 0 1 auto;
+  font-size: var(--type-body-lg-size); line-height: var(--type-body-lg-line);
+  font-weight: var(--type-page-title-weight);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* AT MOST ONE, and the cap is the shell header's argument one step tighter. That
+   bar allows two because it is the product's; this one belongs to a single screen
+   and its leading edge is already spent on Back. A second action here is a menu. */
+.topbar > .acts {
+  display: flex; align-items: center; gap: var(--space-xs);
+  margin-inline-start: auto; flex-shrink: 0;
+}
+/* TABS SIT ON THE BAR, not under a gap. .tabs carries no block margin of its own,
+   so adjacency is already flush — this rule exists to say that the flushness is
+   INTENDED and to stop a utility margin being added between them later. The two
+   read as one surface: the bar names the screen, the tabs divide it, and a gap
+   between them would make the tabs look like page content that happens to be
+   first. The selected tab needs nothing here — .tab.on already takes
+   --color-brand-background-selection-enabled for both its label and its 2px
+   indicator, which is the cobalt accent and resolves lighter in dark mode. */
+.topbar + .tabs { margin-block-start: 0; }
+
+/* ── CHART ──────────────────────────────────────────────
+   A chart is a COMPOSITION, not a component. Seven types ship, and they are not
+   seven implementations: one shell (title, legend, plot box, axes, tooltip,
+   states, data table) with three mark layers underneath it, chosen because a
+   mark is a different kind of shape, never because a type wanted its own look.
+
+   THE SHELL OWNS COLOUR, TYPE AND STATE. The consumer owns GEOMETRY — a bar's
+   height, a path's `d`, a donut's dash lengths — exactly as .data-grid owns the
+   table and not the rows. Nothing below asks a product to name a colour, a size
+   or a weight; the whole visual surface is reachable through the type class, the
+   four show* toggles and data-series.
+
+   WHY THE BAR FAMILY IS HTML AND THE REST IS SVG. Two mechanisms looks like an
+   inconsistency and is the opposite — it is the one decision that makes the
+   stacked-bar gap honest. Segments in a flex column separate with `gap`, so the
+   gap is real at every scale, survives a 1%-of-total segment, and needs no
+   arithmetic from the consumer. Drawn as SVG rects the same gap would have to be
+   subtracted from every extent by hand, and the first person to skip the
+   subtraction ships a stack with no separation at all. Lines, areas and arcs
+   have no flex equivalent — they are paths — so those are SVG. The shell does
+   not change between them.
+
+   TEXT IS NEVER INSIDE THE SVG. A viewBox scales its contents, so `font-size:
+   var(--type-body-sm-size)` on an SVG <text> renders at whatever fraction the
+   box happened to shrink to — 12px of token arriving as 8px of ink, and
+   silently, since the declaration is correct and the scale is somewhere else.
+   Every label here is HTML laid over or beside the canvas, which is also what
+   lets Spacious raise the tick size the way it raises every other caption. */
+
+.chart {
+  display: flex; flex-direction: column; gap: var(--space-md);
+  min-inline-size: 0;
+  /* ONE STEP UP FROM CAPTION, and the whole chart moves with it. Axis ticks
+     inherit this and the legend restates it, so chart chrome sits on body-sm
+     rather than the smallest step on the ramp: 12px is right for a dense table
+     caption and reads as undersized on a plot someone is scanning from across a
+     desk. Everything at this rank moved together - ticks, legend, data labels,
+     the target label and the donut's centre label - because leaving any one of
+     them a step behind reads as a mistake rather than a hierarchy. */
+  font-size: var(--type-body-sm-size); line-height: var(--type-body-sm-line);
+  color: var(--color-neutral-foreground-muted-enabled);
+
+  /* The four chart-layer constants. These are declared HERE, visible and named,
+     rather than inlined at their use sites — a chart has a handful of quantities
+     that no semantic token owns because no other component has the question, and
+     burying them in a rule is how they become seven slightly different numbers.
+     They are not a styling API: a product sets the type class, not these. */
+  --chart-plot-h: 240px;        /* plot box; .chart--spark and .chart--donut override */
+  --chart-seg-gap: 2px;         /* between stacked segments and donut arcs */
+  --chart-dim: 0.28;            /* non-focused series while another is hovered */
+  --chart-area-top: 0.32;       /* the fill's opacity AT THE LINE; it fades to 0 at the baseline */
+  --chart-donut-w: 20px;        /* arc thickness, in the donut's own user units */
+  --chart-bar-w: var(--space-24); /* bar thickness — a cap, so dense charts thin below it */
+  --chart-cat-gap: var(--space-xs);    /* between categories - SHARED by .chart-bars and .chart-ax.x */
+  --chart-bar-r: var(--radius-inner);  /* all four corners, bar and track alike — BRAND-OWNED, so 4 in Default (crisp) and 6 in Spacious */
+}
+
+/* HEADER. Heading-4 is the ceiling on purpose: a chart almost always sits inside
+   a card or a section that already carries the page's heading level, and a chart
+   titled at heading-2 competes with the thing it is evidence for. */
+.chart-h { display: flex; flex-direction: column; gap: var(--space-2xs); }
+.chart-ttl {
+  margin: 0;
+  font-size: var(--type-heading-4-size); line-height: var(--type-heading-4-line);
+  font-weight: var(--type-heading-4-weight); letter-spacing: var(--ref-letter-spacing-tight);
+  color: var(--color-neutral-foreground-default-enabled);
+}
+/* THE SUBTITLE STAYS ON body-sm, which is not the chart making its own choice -
+   it is the pairing the system already uses for a heading-4 with a description
+   under it. `.section > .hd` is heading-4 + body-sm and `.card .sub` is body-sm,
+   and .chart-ttl is heading-4, so a chart header IS a section header. The two
+   places that pair heading-4 with body-md - `.drawer-h .sub` and `.empty .desc` -
+   are a full-height overlay header and a centred empty state, both more prominent
+   surfaces than a chart sitting in a card. Raised to body-md once while the ticks
+   and legend were being raised, and put back: the ticks were undersized against
+   the plot, the subtitle was never out of step with its own pattern. */
+.chart-sub { margin: 0; font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); }
+
+/* ── Series colour ──
+   ONE PROPERTY, SET BY ONE ATTRIBUTE. --series is the only colour channel a mark
+   reads, and data-series is the only thing that sets it, so a bar, its legend
+   swatch and its tooltip dot cannot disagree. Scoped to .chart rather than left
+   bare: a global [data-series] selector would reach any markup that happened to
+   use the attribute for something else.
+
+   THE ROOT COUNTS AS A CARRIER. A single-series chart declares its colour once
+   on the figure — the sparkline does exactly this — and a descendant selector
+   alone does not match the element it is scoped to, so --series never resolved,
+   `stroke: var(--series)` fell back to `none` and the line rendered nothing at
+   all. Both forms are listed for that reason. A mark with no stroke is invisible
+   rather than wrong-coloured, which is why it survived a visual pass and was
+   caught by reading the computed value.
+
+   ASSIGN BY STABLE KEY, NOT BY POSITION — the same instruction the categorical
+   badge carries, and it matters more here. A series that is teal on Monday and
+   violet on Tuesday because a filter dropped one row is a chart that lies about
+   continuity. Six is the ceiling; a seventh category is an "Other" bucket. */
+/* THE DEFAULT SERIES IS THE BRAND'S, so a chart that uses one colour needs no
+   attribute at all and the simplest case carries the least markup. A chart that
+   is not distinguishing between KINDS has nothing for hue to encode, and the
+   page is quieter for not spending a seventh colour on it — the same trade the
+   progress bar already makes by taking the accent.
+
+   WHICH TO USE IS A JUDGEMENT, AND THE DESIGNER MAKES IT. The useful rule of
+   thumb is about the page as much as the chart:
+     a dashboard that IS a wall of charts     -> categorical, data-series 1..6
+     one or two charts supporting a page      -> the brand default, no attribute
+   Chart count feeds into it too, and neither signal decides on its own — a
+   single dense chart can earn categorical hues and a small dashboard of related
+   summaries can stay on the accent. The brand is the DEFAULT because the second
+   case is the common one in an operational tool, not because the first is wrong.
+
+   SPECIFICITY DOES THE SWITCHING. This is (0,1,0) and every [data-series] rule
+   below is (0,1,1), so declaring a family on a mark beats the default without
+   anything being unset. */
+.chart {
+  --series: var(--color-brand-background-primary-enabled);
+  --series-tint: var(--color-brand-background-tint-enabled);
+  --rank-1: var(--color-brand-background-rank-1-enabled);
+  --rank-2: var(--color-brand-background-rank-2-enabled);
+  --rank-3: var(--color-brand-background-rank-3-enabled);
+}
+.chart[data-series="1"], .chart [data-series="1"] { --series: var(--color-categorical-1-background-strong-enabled); --series-tint: var(--color-categorical-1-background-enabled); --rank-1: var(--color-categorical-1-background-rank-1-enabled); --rank-2: var(--color-categorical-1-background-rank-2-enabled); --rank-3: var(--color-categorical-1-background-rank-3-enabled); }
+.chart[data-series="2"], .chart [data-series="2"] { --series: var(--color-categorical-2-background-strong-enabled); --series-tint: var(--color-categorical-2-background-enabled); --rank-1: var(--color-categorical-2-background-rank-1-enabled); --rank-2: var(--color-categorical-2-background-rank-2-enabled); --rank-3: var(--color-categorical-2-background-rank-3-enabled); }
+.chart[data-series="3"], .chart [data-series="3"] { --series: var(--color-categorical-3-background-strong-enabled); --series-tint: var(--color-categorical-3-background-enabled); --rank-1: var(--color-categorical-3-background-rank-1-enabled); --rank-2: var(--color-categorical-3-background-rank-2-enabled); --rank-3: var(--color-categorical-3-background-rank-3-enabled); }
+.chart[data-series="4"], .chart [data-series="4"] { --series: var(--color-categorical-4-background-strong-enabled); --series-tint: var(--color-categorical-4-background-enabled); --rank-1: var(--color-categorical-4-background-rank-1-enabled); --rank-2: var(--color-categorical-4-background-rank-2-enabled); --rank-3: var(--color-categorical-4-background-rank-3-enabled); }
+.chart[data-series="5"], .chart [data-series="5"] { --series: var(--color-categorical-5-background-strong-enabled); --series-tint: var(--color-categorical-5-background-enabled); --rank-1: var(--color-categorical-5-background-rank-1-enabled); --rank-2: var(--color-categorical-5-background-rank-2-enabled); --rank-3: var(--color-categorical-5-background-rank-3-enabled); }
+.chart[data-series="6"], .chart [data-series="6"] { --series: var(--color-categorical-6-background-strong-enabled); --series-tint: var(--color-categorical-6-background-enabled); --rank-1: var(--color-categorical-6-background-rank-1-enabled); --rank-2: var(--color-categorical-6-background-rank-2-enabled); --rank-3: var(--color-categorical-6-background-rank-3-enabled); }
+
+/* ── Rank: one family, ordered shades ──
+   WHEN THE SERIES ARE THE SAME MEASURE AT DIFFERENT TIMES, hue is the wrong
+   channel. This year / last year / the year before are not three categories, and
+   three hues assert that they are — hue carries IDENTITY everywhere else in this
+   system, so spending it on an ordinal axis makes the chart claim three unrelated
+   things and leaves the reader to work out from the legend that they are one.
+   data-series still picks the family; data-rank picks the step inside it.
+
+   RANK 1 IS THE PROMINENT ONE. Rank is ORDER, not importance-in-general: the
+   thing being foregrounded is usually the current period, and it is rank 1
+   because it is first in the ordering the chart is about.
+
+   IT SETS --series AND NOTHING ELSE, which is why this works unchanged on every
+   chart type: a bar's fill, a line's stroke, an area's gradient stops and a
+   donut arc all read that one property. There is no per-type rank rule and there
+   must never be one.
+
+   SAME SPECIFICITY AS THE FAMILY RULE, (0,1,1) both, so these have to come after
+   it in source order — that is what lets a rank override the default --series
+   without !important. Omit data-rank and nothing changes. */
+.chart[data-rank="1"], .chart [data-rank="1"] { --series: var(--rank-1); }
+.chart[data-rank="2"], .chart [data-rank="2"] { --series: var(--rank-2); }
+.chart[data-rank="3"], .chart [data-rank="3"] { --series: var(--rank-3); }
+
+/* ── Legend ──
+   Shown only with more than one series. A legend against a single series names
+   the thing the title already named, and spends a row doing it.
+
+   BELOW THE PLOT ON A CARTESIAN CHART, and centred under it. The key is a lookup,
+   consulted once the shape has been read — put it above and it is the first thing
+   between the title and the data, which is the wrong order for the one part of
+   the chart nobody reads first. It sits after the plot in the MARKUP rather than
+   being moved with `order`, so what a screen reader hears matches what the page
+   shows; `order` would have split the two.
+
+   THE DONUT IS THE EXCEPTION and overrides this to sit on the right — a ring is
+   as tall as it is wide, so a legend underneath leaves dead space either side of
+   it. See the .chart--donut block. */
+:is(.chart--bar, .chart--grouped, .chart--stacked, .chart--line, .chart--area) > .chart-legend {
+  justify-content: center;
+}
+.chart-legend { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-md); margin: 0; padding: 0; list-style: none; }
+.chart-key {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-default-enabled);
+}
+.chart-swatch {
+  inline-size: var(--space-sm); block-size: var(--space-sm); flex: none;
+  border-radius: var(--radius-inner); background: var(--series);
+}
+/* A FILTERING LEGEND IS A BUTTON, and only then. Carbon lets the legend toggle
+   series, which is genuinely useful on a dense chart and is also a control — so
+   it takes a real <button>, a real focus ring and aria-pressed, not a div with a
+   click handler. A legend that does not filter stays an <li> and is not
+   focusable, because a tab stop that does nothing is worse than no tab stop. */
+button.chart-key {
+  background: none; border: 0; padding: var(--space-2xs) var(--space-xs); margin: calc(-1 * var(--space-2xs)) calc(-1 * var(--space-xs));
+  border-radius: var(--radius-control); cursor: pointer; font: inherit;
+}
+button.chart-key:hover { background: var(--color-neutral-background-interaction-hovered); }
+button.chart-key:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.chart-key[aria-pressed="false"] { color: var(--color-neutral-foreground-subtle-enabled); }
+.chart-key[aria-pressed="false"] .chart-swatch { background: var(--color-neutral-background-disabled-rest); }
+
+/* ── Plot box ──
+   A three-cell grid: y ticks, canvas, x ticks. `auto 1fr` rather than a fixed
+   gutter so a y axis reading "1,250,000" gets the width it needs instead of
+   clipping, and so a chart with no y axis spends nothing on one. */
+/* THE PLOT STANDS APART FROM ITS CHROME, AND NOT EQUALLY ON BOTH SIDES. The
+   figure is one flex column on --space-md, which is right between a title and its
+   subtitle or a legend and the table under it, and too tight either side of the
+   drawing - the reader's eye has to cross out of prose into a coordinate space
+   and back. The margin opens that crossing without touching the gaps between the
+   chrome items, which is the one thing a single flex `gap` cannot express.
+
+   MORE ABOVE THAN BELOW, because the two sides are different kinds of boundary.
+   Above the plot is a block of PROSE - a title and a sentence about the chart -
+   and the gap there is where the reader stops reading and starts looking: 36px.
+   Below it is the legend, which is part of the chart's own apparatus and should
+   stay with the drawing it explains, not drift toward the table: 24px. Equal
+   margins made the legend look like a third block rather than part of the plot.
+
+   NOT ON THE SPARKLINE, which has no chrome to be separated from: it is a 40px
+   shape sitting directly under a number inside a metric card, and air there would
+   break the pairing the sparkline exists for. */
+.chart-plot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  /* THE GAP BETWEEN THE LABELS AND THE DRAWING, and it was near zero: 2px under
+     the canvas and 4px beside it, which is close enough that a tick reads as part
+     of the plot rather than as the thing labelling it. 8px below and 12px beside.
+
+     MORE BESIDE THAN BELOW because the two gaps do different work. Under the
+     canvas the x labels are already separated by the zero line, which draws its
+     own edge; beside it there is nothing between the last digit and the gridline
+     it names, so the space has to be the separator. The column gap is also what
+     the horizontal variant's category names take from their bars. */
+  gap: var(--space-sm) var(--space-md);
+  margin-block: var(--space-xl) var(--space-md);
+}
+.chart--spark .chart-plot { margin-block: 0; }
+.chart-canvas {
+  grid-area: 1 / 2; position: relative;
+  block-size: var(--chart-plot-h); min-inline-size: 0;
+}
+/* THE CHART IS ONE TAB STOP, not one per datum. Forty bars is forty tab stops
+   and a keyboard trap in everything but name; Carbon's model — enter the chart,
+   then arrow between points — is the one that scales, and it needs exactly one
+   focusable element. The ring goes on the canvas because the canvas is the
+   figure's interactive extent, and because .chart-plot is HTML, --focus-ring
+   applies here unchanged rather than being reinvented for SVG. */
+.chart-canvas[tabindex] { border-radius: var(--radius-control); }
+.chart-canvas:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Paint order inside the plot ──
+   THE GRID WAS ON TOP OF THE DATA, and nothing in the markup said so. The
+   gridlines are position:absolute and the svg was position:static, and a
+   positioned element paints above a non-positioned one whatever the DOM order —
+   so the muted hairlines were drawn OVER every line, area and arc. The renderer
+   confirms it: elementsFromPoint at a crossing returned the gridline above
+   .chart-line. It is subtle because the grid is low-contrast, and it is exactly
+   backwards: a gridline is scaffolding for reading a value, the series IS the
+   value, and scaffolding does not occlude the thing it supports.
+
+   The order is declared here rather than left to position and source order,
+   because that accident is what produced the bug:
+
+     1  gridlines        scaffolding, furthest back
+     2  target line      an annotation: above the grid, below the data
+     3  series marks     the subject — svg paths and arcs
+     4  bars + hit zones bar marks, and the transparent hover layer over a line
+     5  target label     must stay readable wherever it lands
+
+   SMALL INTEGERS, AND NO --z-* TOKEN. The z-index scale is for page chrome —
+   dropdowns, overlays, toasts — and these are five layers INSIDE one component.
+   Borrowing --z-raised for a gridline would claim a chart gridline belongs on
+   the same ladder as a sticky header. They stay below --z-raised (10) so chart
+   internals can never compete with page chrome, and deliberately WITHOUT
+   isolation: a tooltip escaping the plot still needs its --z-popover to count
+   against the page, and an isolated stacking context here would trap it. */
+.chart-gridline   { z-index: 1; }
+.chart-target     { z-index: 2; }
+.chart-svg        { position: relative; z-index: 3; }
+.chart-bars       { z-index: 4; }
+.chart-target-lbl { z-index: 5; }
+.chart-center     { z-index: 5; }
+.chart-endpoint   { z-index: 4; }
+
+/* ── Axes and grid ──
+   HORIZONTAL GRIDLINES ONLY, by default and nearly always. A gridline exists to
+   let the eye carry a value across to the axis, and on a time or category x axis
+   there is no value to carry — the vertical lines only draw a cage. .showgrid-x
+   exists for the scatter-shaped case that genuinely reads both ways.
+
+   Every gridline and every y tick is placed by the SAME --at, declared once per
+   row by the consumer. A grid drawn from one source and labelled from another is
+   how a chart ends up with a line at 75% captioned 80. */
+.chart-gridline {
+  position: absolute; inset-inline: 0; inset-block-end: var(--at);
+  block-size: var(--border-width-default); background: var(--color-neutral-stroke-muted-enabled);
+}
+/* THE ZERO LINE IS AN AXIS, NOT A GRIDLINE. It is where the bars stand, so it
+   takes the stronger neutral — without that, a bar chart reads as floating. */
+.chart-gridline.zero { background: var(--color-neutral-stroke-default-enabled); }
+.chart-ax { position: relative; display: flex; color: var(--color-neutral-foreground-muted-enabled); font-variant-numeric: tabular-nums; }
+.chart-ax.y { grid-area: 1 / 1; inline-size: auto; justify-content: flex-start; }
+.chart-ax.x { grid-area: 2 / 2; justify-content: space-between; gap: var(--chart-cat-gap); }
+/* THE Y TICKS STACK IN ONE GRID CELL, and the reason is width. Absolutely
+   positioned children contribute NOTHING to their parent's intrinsic size, so
+   an .chart-ax.y full of them sized to zero and every label hung off to the
+   LEFT of the chart — invisible on a wide card, where the surface padding
+   happened to catch the overhang, and 37px past the edge at 500px wide. The
+   grid cell is the fix: every tick occupies the same cell, so the auto column
+   measures the WIDEST of them and reserves exactly that, which is also what
+   lets a y axis reading "1,250,000" take the room it needs.
+   Each tick then sits at the bottom of that cell and is pushed up by --at with
+   RELATIVE offset, which moves it without taking it out of flow. */
+/* LEFT-ALIGNED, WHICH PUTS THE VALUE AXIS ON THE SAME RAIL AS THE TITLE. The
+   gutter is `auto`, so it is exactly as wide as the widest tick; aligning to its
+   END made every shorter label start further right, and the ragged edge faced the
+   card - "0" floating in from the left while "8,000" sat against it. Aligning to
+   the START puts every tick on one left rail with the title and subtitle above,
+   and the raggedness moves to the inside edge where the gridline absorbs it.
+
+   THE TRADE IS REAL AND WORTH NAMING: a numeric column is conventionally right-
+   aligned so magnitudes line up, and tabular figures are still on so the digits
+   do. What is given up is "0" and "8,000" ending at the same x; what is bought is
+   one vertical edge down the whole card instead of two. On a chart whose ticks
+   are all the same width the two are identical.
+
+   CATEGORY NAMES ARE NOT AFFECTED. In .horizontal the y gutter carries names
+   rather than values, and those stay flush to the bars they label - a name
+   drifting away from its own bar is a different and worse problem. */
+.chart-ax.y { display: grid; grid-template-rows: minmax(0, 1fr); justify-items: start; }
+.chart-ax.y .chart-tick {
+  grid-area: 1 / 1; align-self: end; justify-self: start; position: relative;
+  inset-block-end: var(--at); transform: translateY(50%); white-space: nowrap;
+}
+.chart-ax.x .chart-tick { flex: 1 1 0; min-inline-size: 0; text-align: center; }
+/* THE CATEGORY AXIS IS DEFAULT INK, THE VALUE AXIS IS MUTED, and the split is by
+   ROLE rather than by axis. A category name is content - it names the thing the
+   mark stands for, and the reader looks at it as much as at the bar. A value tick
+   is scaffolding: it exists to be read ACROSS to, in passing, and full-strength
+   ink on a column of repeated numbers draws the eye to the gridline rather than
+   the data.
+
+   WHICH AXIS CARRIES WHICH SWAPS WITH .horizontal, so writing this as "x is dark"
+   would have been right for one orientation and backwards for the other - a
+   horizontal bar chart puts the names on the y axis and the scale along the
+   bottom. The override below is the whole reason this is two rules instead of
+   one declaration. */
+.chart-ax.x .chart-tick { color: var(--color-neutral-foreground-default-enabled); }
+.chart.horizontal .chart-ax.x .chart-tick { color: var(--color-neutral-foreground-muted-enabled); }
+.chart.horizontal .chart-ax.y .chart-tick { color: var(--color-neutral-foreground-default-enabled); }
+/* ONE LINE, CLIPPED — never wrapped and never rotated. A wrapped x label changes
+   the plot height on a data change, and a rotated one is unreadable at caption
+   size. A category whose name does not fit is the signal to turn the chart
+   horizontal, which is what .horizontal is for and what the contract says. */
+.chart-ax.x .chart-tick { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Bar family ── */
+/* THE BARS AND THE X AXIS SHARE ONE GAP, and they have to: both lay out the same
+   number of equal slots across the same width, so a gap that differs between them
+   changes the slot width and every label drifts from its bar. It is a PROGRESSIVE
+   error, zero at the centre and worst at the ends, which is why it reads as
+   "slightly off" rather than as broken - measured at 4.8px on a grouped chart
+   after the group gap was widened and the axis was left behind. */
+.chart-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: var(--chart-cat-gap); }
+/* A SLOT PER CATEGORY, equal width, so the bars line up with the x ticks above
+   without either side knowing the count. flex:1 1 0 and min-inline-size:0 are
+   both load-bearing — 1 1 auto would let a wide stack push its neighbours
+   narrower, and the chart would stop being comparable across categories. */
+.chart-col { flex: 1 1 0; min-inline-size: 0; block-size: 100%; display: flex; align-items: flex-end; justify-content: center; position: relative; }
+.chart-bar {
+  inline-size: 100%; block-size: var(--v, 0%); background: var(--series);
+  transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
+}
+/* RADIUS ON ALL FOUR CORNERS, and the track carries the same one. A rounded cap
+   does soften the end the eye measures from — that is a real cost and the reason
+   the radius is 6px against a 24px bar rather than a pill. What pays for it: the
+   TRACK. Bar and track share an edge shape, so the eye reads the bar against a
+   ground of identical geometry rather than against the bare axis, and the top of
+   the bar is judged by where the fill stops inside a known slot. Both ends are
+   rounded equally, so nothing shifts the bar's apparent centre.
+
+   BORDER-RADIUS SELF-CLAMPS at half the shorter side, which is what keeps a 2px
+   stacked sliver from becoming a lozenge — no min() or per-size override needed.
+
+   NO OUTLINE, still. An outline on a solid fill is the "over-encoded" look the
+   whole visual direction is against, and the track already does the job an
+   outline would have been reached for. */
+.chart-bar { border-radius: var(--chart-bar-r); }
+
+/* A BAR IS A MEASURED LENGTH, AND ITS WIDTH IS NOT DATA. Only one dimension of a
+   bar carries a value; the other is a drawing decision, and the wider it gets the
+   more the mark reads as a filled REGION and the less as a length measured from
+   the baseline. Left at the column width — flex: 1 1 0 — three categories in a
+   900px card give three 290px slabs and the eye ends up comparing the gaps.
+
+   A CAP, NOT A FIXED WIDTH, and the difference matters at density: a 30-category
+   chart has 8px slots, and a fixed 12px bar would overlap its neighbours while a
+   cap simply thins with them. Centred in its slot, which .chart-col already does.
+
+   THICKNESS IS THE CROSS AXIS, so horizontal swaps which property holds it. Both
+   are caps on the non-value dimension; neither touches --v.
+
+   SMALL-MULTIPLE WIDTH IS A SIDE EFFECT WORTH NAMING — two charts of different
+   category counts draw bars of the same width up to the cap, so they can be read
+   side by side without one looking emphasised. */
+.chart-bar { max-inline-size: var(--chart-bar-w); }
+.chart.horizontal .chart-bar { max-inline-size: none; max-block-size: var(--chart-bar-w); }
+/* NARROWER INSIDE A GROUP, at two thirds the single-series thickness. Three bars
+   at the full width make one 76px block that reads as a fat mark with seams in it
+   rather than as three bars. */
+.chart--grouped { --chart-bar-w: var(--space-16); }
+
+/* ── The track ──
+   A GROUND THE BAR IS READ AGAINST, the full height of the plot in the sunken
+   surface — the same token the donut's .chart-arc.track and the progress bar's
+   own track already take, so "track" means one thing across the system.
+
+   OPT-IN, and the reason is that a track makes a CLAIM: it draws the axis
+   maximum as a container, which reads as "out of this much". That is true and
+   useful when the top of the scale is a real ceiling — a quota, a capacity, 100%
+   — and quietly false when it is just niceMax() rounding the tallest bar up. It
+   also doubles the ink on a dense chart, where the slots become a comb. So the
+   chart asks for it rather than getting it by default.
+
+   SINGLE-SERIES ONLY. Not on GROUPED, where one ground behind three bars does not
+   say which bar it belongs to and three grounds inside one group is the cage the
+   grouping gap exists to avoid. Not on STACKED either, and that one is about what
+   the track would MEAN: a stack already shows its own total, so a ground behind it
+   adds a second, outer total and the reader is asked to hold two — the segments
+   against the stack, and the stack against the track. The empty remainder also
+   reads as another segment, which is the one thing a stack must not do.
+
+   CENTRED WITHOUT KNOWING THE DIRECTION: inset-inline: 0 plus margin-inline:
+   auto centres an absolutely positioned box in its column, and unlike a 50% +
+   translateX(-50%) pair it is still centred under RTL.
+
+   Z-INDEX 0 IS LOAD-BEARING. The track is absolutely positioned and the bar is
+   not, so without a declared order the track would paint OVER the bar — exactly
+   the trap that had gridlines covering the data. The bar is pinned to 1 for the
+   same reason. */
+.chart--bar.track .chart-col::before {
+  content: ''; position: absolute; z-index: 0;
+  inset-block: 0; inset-inline: 0; margin-inline: auto;
+  inline-size: var(--chart-bar-w); max-inline-size: 100%;
+  background: var(--color-neutral-background-surface-sunken-enabled);
+  border-radius: var(--chart-bar-r);
+}
+/* Horizontal swaps the axis the track runs along, the same swap the bar makes. */
+.chart--bar.track.horizontal .chart-col::before {
+  inset-inline: 0; margin-inline: 0; inline-size: auto;
+  inset-block: 0; margin-block: auto;
+  block-size: var(--chart-bar-w); max-block-size: 100%;
+}
+/* POSITIONED, BUT DELIBERATELY NOT A STACKING CONTEXT. The bar needs position
+   for the track to sit behind it and for the hit zone to hang off it — but it
+   must NOT take a z-index, and that is not a style preference: any z-index here
+   creates a stacking context, and the tooltip inside the bar is then clamped
+   inside it whatever --z-popover says. The symptom reads as a translucent panel:
+   a tooltip is ~129px wide over a 24px bar, so it overhangs the neighbouring
+   columns, and their bars — equal z-index, later in DOM — paint straight over it.
+   Measured: two bars overlapping the panel by 24px each, on top of it.
+   The bar still paints above the track without a z-index, because the track is a
+   ::before and therefore earlier in DOM among positioned siblings. */
+.chart-bar { position: relative; }
+
+/* THE TARGET IS WIDER THAN THE MARK. Thinning the bar thins what the pointer has
+   to find, and a tooltip you have to aim for is worse than no tooltip; this
+   restores the slot as the hover zone without widening the ink. Single-series
+   only — inside a GROUP the neighbours are 1px apart, so overlapping zones would
+   make which bar you are hovering a question of DOM order. */
+.chart--bar .chart-bar::before {
+  content: ''; position: absolute; inset-block: 0;
+  inset-inline: calc(-1 * var(--space-8));
+}
+
+/* THE HIT COLUMNS ARE CONTIGUOUS, and this is not cosmetic. Line and area charts
+   reuse .chart-bars / .chart-col as an invisible hover layer over the svg, and
+   .chart-bars carries --space-xs for the BAR case — which here puts a dead strip
+   between every pair of columns where the pointer is over nothing and the
+   tooltip vanishes mid-sweep. There is no bar to separate, so there is no gap. */
+/* A LINE'S X AXIS MEASURES POSITIONS, NOT BANDS, and that is a different layout
+   from the bar family's. A bar occupies a BAND and its label belongs under the
+   band's centre, so equal slots are right. A line's point i sits at i/(n-1) - the
+   first ON the left edge, the last ON the right - while an equal-slot label sits
+   at (i+0.5)/n. The two only agree in the middle, and at six points the ends were
+   40px apart.
+
+   HALF-WIDTH END SLOTS FIX BOTH AT ONCE. With the first and last slots at half
+   grow, the total is n-1 shares: a middle slot spans one full share and centres
+   exactly on i/(n-1), and the end slots are the half-bands around the first and
+   last points. The end LABELS then align to their outer edge rather than their
+   centre, which puts them on the point and keeps them inside the plot - the same
+   treatment the horizontal value axis already uses at 0% and 100%.
+   The hover columns take the identical rule, so a tooltip belongs to the point
+   nearest the pointer rather than to a band offset from it. */
+:is(.chart--line, .chart--area) { --chart-cat-gap: 0; }
+:is(.chart--line, .chart--area) .chart-bars > .chart-col:first-child,
+:is(.chart--line, .chart--area) .chart-bars > .chart-col:last-child,
+:is(.chart--line, .chart--area) .chart-ax.x > .chart-tick:first-child,
+:is(.chart--line, .chart--area) .chart-ax.x > .chart-tick:last-child { flex-grow: .5; }
+:is(.chart--line, .chart--area) .chart-ax.x > .chart-tick:first-child { text-align: start; }
+:is(.chart--line, .chart--area) .chart-ax.x > .chart-tick:last-child  { text-align: end; }
+
+/* GROUPED: THE GAP IS THE GROUPING, and it is two gaps of different sizes rather
+   than one gap and a stroke. Bars inside a category are separated by --space-xs
+   and the groups by --space-lg — a 4:1 ratio, which is what makes the group read
+   as a unit at a glance instead of as five evenly-spaced bars.
+
+   THE INNER GAP WAS ONE HAIRLINE and that was too tight: at --border-width-default
+   three bars fused into a single stepped block, so the thing the eye picked out
+   first was the silhouette of the group rather than the bars being compared. The
+   ratio matters more than either number — close the outer gap toward the inner
+   one and the grouping disappears; open the inner one past about half the outer
+   and the groups stop cohering. */
+.chart--grouped .chart-col { gap: var(--space-xs); align-items: flex-end; }
+.chart--grouped { --chart-cat-gap: var(--space-lg); }
+
+/* STACKED: one column, segments meeting, no gap and no strokes.
+
+   THE SEGMENTS TOUCH, like the donut's arcs. The gap was there to resolve two
+   adjacent fills, and measurement says the colour already does it: adjacent
+   categorical fills are ΔE 0.09–0.17 apart and adjacent ramp steps 0.09, so every
+   boundary this system can draw is at least a just-noticeable step without any
+   device at all. What the gap cost was the solid column — three parts drawn as
+   three objects rather than one bar split three ways.
+
+   DARKEST AT THE BOTTOM. column-reverse puts the first segment at the base, so
+   rank 1 — the darkest step in light, the lightest in dark — is the one the
+   column stands on. It reads as weight: the strongest ink at the foot, the ramp
+   lightening upward, and a stack that looks stable rather than top-heavy. It also
+   puts the first series in the data at the base, where a reader looks for it.
+   justify-content is flex-START because column-reverse moves main-start to the
+   bottom; flex-end here would pin the stack to the top of the plot.
+
+   SMALL SEGMENTS STILL KEEP THEIR INK. A segment at 0.4% of the total is ~1px
+   tall and sub-pixel rendering can drop it entirely — the datum disappearing
+   exactly where it is most likely to matter. The floor survives the gap's removal
+   because it was never about the gap. */
+/* align-items IS RESTATED HERE BECAUSE THE AXIS TURNED. The base .chart-col sets
+   align-items: flex-end to stand bars on the baseline, which is the BLOCK axis
+   while the column is laid out as a row. Flipping to column-reverse makes the
+   cross axis horizontal, so that same declaration silently became "push the
+   segments to the right edge" - measured 27-47px of offset from the category
+   label, scaling with the column width. Centre is what it has to be. */
+.chart--stacked .chart-col { flex-direction: column-reverse; justify-content: flex-start; align-items: center; gap: 0; }
+.chart--stacked .chart-bar { min-block-size: var(--border-width-emphasis); }
+
+/* THE RADIUS BELONGS TO THE STACK, NOT TO EACH SEGMENT. Rounding all four
+   corners of every segment — correct for a single bar — turns a touching stack
+   into a row of lozenges with notches where they meet. The outer ends take it
+   instead, so the column reads as one bar whose ends are rounded, and the
+   internal boundaries stay flat because they are not ends of anything.
+   first-child is the BOTTOM under column-reverse. */
+.chart--stacked .chart-bar { border-radius: 0; }
+.chart--stacked .chart-bar:first-child {
+  border-end-start-radius: var(--chart-bar-r); border-end-end-radius: var(--chart-bar-r);
+}
+.chart--stacked .chart-bar:last-child {
+  border-start-start-radius: var(--chart-bar-r); border-start-end-radius: var(--chart-bar-r);
+}
+
+/* HORIZONTAL. For long category labels, which is the only reason to reach for it
+   — a horizontal bar gives the label a full line of reading width instead of a
+   clipped tick. The axes swap with the bars; nothing else changes. */
+.chart.horizontal .chart-bars { flex-direction: column; align-items: stretch; justify-content: flex-start; }
+.chart.horizontal .chart-col { block-size: auto; flex: 1 1 0; align-items: center; justify-content: flex-start; }
+.chart.horizontal .chart-bar { inline-size: var(--v, 0%); block-size: 100%; }
+.chart.horizontal .chart-gridline { inset-block: 0; inset-inline-start: var(--at); inset-inline-end: auto; inline-size: var(--border-width-default); block-size: auto; }
+.chart.horizontal .chart-ax.y { grid-area: 1 / 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; text-align: end; }
+.chart.horizontal .chart-ax.y .chart-tick { position: static; transform: none; flex: 1 1 0; display: flex; align-items: center; }
+.chart.horizontal .chart-ax.x .chart-tick { flex: 0 0 auto; position: absolute; inset-inline-start: var(--at); transform: translateX(-50%); }
+/* THE END LABELS PULL INSIDE. A tick centred on its gridline is right for every
+   tick except the two at the ends, where half the label sits outside the plot —
+   measured at 12px past the card edge for "10k" at the 100% end. The first
+   aligns its leading edge to the axis start and the last its trailing edge to
+   the end, which is the conventional axis treatment and the only two ticks whose
+   gridline is the boundary rather than a position within it. */
+.chart.horizontal .chart-ax.x .chart-tick:first-child { transform: none; }
+.chart.horizontal .chart-ax.x .chart-tick:last-child  { transform: translateX(-100%); }
+/* Horizontal needs no reversal: plain `row` already puts the first segment at the
+   start, which is where the base of a horizontal stack is. The rounded ends swap
+   to the inline axis with it. */
+.chart.horizontal .chart--stacked .chart-col, .chart--stacked.horizontal .chart-col { flex-direction: row; justify-content: flex-start; }
+.chart--stacked.horizontal .chart-bar:first-child {
+  border-end-start-radius: 0; border-end-end-radius: 0;
+  border-start-start-radius: var(--chart-bar-r); border-end-start-radius: var(--chart-bar-r);
+}
+.chart--stacked.horizontal .chart-bar:last-child {
+  border-start-start-radius: 0; border-start-end-radius: 0;
+  border-start-end-radius: var(--chart-bar-r); border-end-end-radius: var(--chart-bar-r);
+}
+.chart--stacked.horizontal .chart-bar { min-inline-size: var(--border-width-emphasis); min-block-size: 0; }
+
+/* ── SVG marks: line, area, sparkline, donut ──
+   vector-effect ON EVERY STROKE. The canvas is a fluid box and the viewBox is
+   fixed, so the drawing is scaled on every resize — without this a 2px line is
+   2px at one width and 0.7px at another, and the chart quietly loses weight as
+   the column narrows. The stroke is a PROPERTY of the series, like the icon
+   line, not a shape that scales with it. */
+.chart-svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
+.chart-line {
+  fill: none; stroke: var(--series);
+  stroke-width: var(--border-width-emphasis); stroke-linecap: round; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+/* AREA = LINE + FILL, and the fill is the tint that already exists for this
+   series. No second colour, no gradient, no edge treatment: the line carries the
+   value and the fill says "this is an amount, read down to zero". */
+/* A GRADIENT, FADING TO NOTHING AT THE BASELINE. A flat fill puts as much ink at
+   zero as it does under the line, which is the wrong emphasis twice over: the
+   value lives at the TOP edge, and the bottom of the band is the part most likely
+   to sit behind a gridline or another series.
+
+   THE REFERENCE IS MARKUP, THE COLOUR IS CSS. An SVG gradient has to be a real
+   <linearGradient> with an id, and the id has to be unique on the page — that
+   part only the consumer can generate. Everything else stays here: the stops take
+   --series like every other mark, because <stop> accepts stop-color from CSS, and
+   the gradient element is placed INSIDE the [data-series] group so --series
+   actually reaches it. In <defs> at the top of the svg it would inherit from the
+   svg instead and every series would come out the same colour.
+
+   --grad FALLS BACK TO THE TINT, and that fallback is the reason the reference is
+   passed as a custom property rather than written as a fill= attribute. A
+   presentation attribute loses to any CSS rule, so `fill: var(--series-tint)`
+   here would silently beat `fill="url(#g)"` in the markup and no gradient would
+   ever appear; and a chart that omits the def gets the flat tint rather than the
+   black that a dangling url() paints. */
+.chart-area { fill: var(--grad, var(--series-tint)); stroke: none; }
+.chart-grad > .from { stop-color: var(--series); stop-opacity: var(--chart-area-top); }
+.chart-grad > .to   { stop-color: var(--series); stop-opacity: 0; }
+/* OVERLAPPING areas, and only overlapping ones. The gradient already fades, so
+   this is no longer a different FILL — it is the same fill with its top stop
+   pulled down far enough that two bands read through each other. Past two series
+   an overlap is unreadable whatever the opacity; that is a LINE chart, and the
+   contract says so. */
+.chart--area.overlap { --chart-area-top: 0.18; }
+
+/* DONUT. One circle per segment, drawn with stroke-dasharray.
+
+   NO GAPS, UNLIKE THE STACKED BAR, and the two are not inconsistent — they are
+   answering different geometry. A stacked bar's segments share a straight edge
+   that the eye reads as one continuous length, so a gap is what says "these are
+   parts". A ring already has a shared centre and a closed outline: the segments
+   are read as wedges of one whole whether or not they touch, so a gap buys
+   nothing and costs the solid shape, leaving a wireframe of arcs.
+
+   WHAT SEPARATES THEM IS THE COLOUR, and it is enough on its own. Ordered shades
+   differ in lightness; categorical hues differ in hue — measured, adjacent
+   categorical wedges are ΔE 0.09–0.17 apart, which is as separable as the ramp's
+   own 0.09 steps. An earlier version of this note claimed the equal-LUMINANCE
+   pairs would merge; that reasoned from the wrong metric. Luminance ratio
+   describes a text-on-background problem, not a boundary between two hues.
+   What equal luminance does cost is PRINT and some colour vision deficiencies,
+   where the hue difference is gone and the boundary with it. The data table
+   un-clips for both, which is the answer rather than a gap.
+
+   butt caps are still required: a round cap adds half the stroke width at both
+   ends, which now overlaps the neighbour instead of eating a gap.
+
+   THE LEGEND SITS BESIDE IT, not under it. A ring is as tall as it is wide, so a
+   legend below leaves a column of dead space either side of it and pushes the
+   card taller than it needs to be; a ring plus a stacked legend fills a wide card
+   the way the shape actually wants to. flex-wrap rather than a media query does
+   the narrow case: when the legend cannot hold its 160px basis beside the ring it
+   wraps underneath on its own. */
+.chart--donut {
+  --chart-plot-h: 220px;
+  flex-direction: row; flex-wrap: wrap; align-items: center;
+  column-gap: var(--space-xl);
+}
+.chart--donut > .chart-h,
+.chart--donut > .chart-table,
+.chart--donut > .chart-state { flex: 1 0 100%; }
+/* SQUARE, AND DECLARED. The canvas only had a height; in a flex row the svg's
+   inline-size: 100% would resolve against a basis the svg itself was setting. */
+.chart--donut > .chart-plot { flex: 0 0 auto; inline-size: var(--chart-plot-h); }
+.chart--donut > .chart-legend {
+  flex: 1 1 160px; flex-direction: column; flex-wrap: nowrap;
+  align-items: flex-start; gap: var(--space-sm);
+}
+.chart--donut .chart-plot { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.chart--donut .chart-canvas { grid-area: 1 / 1; }
+.chart-arc {
+  fill: none; stroke: var(--series); stroke-width: var(--chart-donut-w);
+  stroke-linecap: butt; transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
+}
+/* THE TRACK IS NOT A SEGMENT. It carries the sunken surface so an empty or
+   part-filled donut still reads as a ring rather than as a broken one. */
+.chart-arc.track { stroke: var(--color-neutral-background-surface-sunken-enabled); }
+/* CENTRE SUMMARY. Optional, and it holds ONE number plus its label — a centre
+   that needs two lines of explanation is a chart that should have been a stat.
+
+   LABEL FIRST, THEN THE FIGURE, which is the order the metric card already uses:
+   a muted caption naming the measure, then the number. The donut centre was the
+   one place in the system that inverted it. Reading order is the argument — you
+   learn what is being counted before you read how many — and so is consistency,
+   since a donut and a metric card often sit on the same dashboard and should not
+   disagree about which line comes first. The DOM order carries it, so a screen
+   reader hears the same sequence; nothing is reordered in CSS.
+
+   THE HOLE IS SIZED FOR THE TEXT, NOT THE OTHER WAY ROUND. A donut carrying a
+   centre value is a ring with a label in it, and the ring was taking half the
+   diameter: hole 50% of outer, which left a 30px number in 103px of space and
+   read as cramped. Thinning the arc to 20 units and pushing the centreline out
+   to 46 keeps the OUTER diameter exactly where it was and takes the hole to 64%
+   — 103px to 132px of clear width at the default size, and the largest square
+   that fits inside it from 73px to 93px.
+
+   THE TWO NUMBERS ARE COUPLED AND THE CONSUMER OWNS ONE OF THEM. Hole radius is
+   R - --chart-donut-w/2, where R is the circle's `r` in the markup; the drawing
+   has to keep R + w/2 inside the viewBox or the ring clips. Change one and check
+   the other.
+
+   max-inline-size IS NOT A GUARD ON THE VALUE, and the difference matters. 42% is
+   the largest square that fits inside a 64% hole (d / sqrt 2), and it does bound
+   the LABEL, which wraps. A formatted figure like "240.7k" is ONE UNBREAKABLE
+   TOKEN: it overflows the box rather than being held by it — measured 101px of
+   text in a 92px box — and only clears the arc because the hole is bigger than
+   both (8.4px of clearance). Nothing here can save a centre value that is too
+   long, and clipping one would be worse than letting it touch the ring: a
+   truncated number is a wrong number.
+
+   SO THE CONSTRAINT IS EDITORIAL, and the contract already carries it. The centre
+   takes a FORMATTED value through valueFormat - "240.7k", not "240,712" - and the
+   rule that it holds one number plus a short label is what keeps it inside the
+   hole. A centre that needs more room is a chart that should have been a stat. */
+.chart-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--space-2xs);
+  pointer-events: none; text-align: center;
+  max-inline-size: 42%; margin-inline: auto;
+}
+.chart-center .val {
+  font-size: var(--type-heading-2-size); line-height: var(--type-heading-2-line);
+  font-weight: var(--type-heading-2-weight); letter-spacing: var(--ref-letter-spacing-tight);
+  color: var(--color-neutral-foreground-default-enabled); font-variant-numeric: tabular-nums;
+}
+.chart-center .lbl { font-size: var(--type-body-sm-size); color: var(--color-neutral-foreground-muted-enabled); }
+
+/* SPARKLINE. No axes, no legend, no grid, no tooltip — a trend shape next to a
+   number, and every one of those parts would make it a chart competing with the
+   number it supports. It gets no title either: the metric it sits under is the
+   title. Height is the one thing it declares. */
+.chart--spark { --chart-plot-h: 40px; gap: 0; }
+.chart--spark .chart-plot { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.chart--spark .chart-canvas { grid-area: 1 / 1; }
+.chart--spark .chart-line { stroke-width: var(--border-width-emphasis); }
+/* The only mark a sparkline may carry, and only the LAST point: "where it ended"
+   is the one fact the shape itself does not give you.
+
+   HTML, NOT SVG, and the reason is the stretch. The spark path is drawn with
+   preserveAspectRatio="none" so the line fills the box at any width; a circle in
+   that same space renders as an ellipse, wider than tall by exactly the
+   distortion factor. Drawing it in a SECOND svg at the default ratio does not
+   rescue it — "meet" letterboxes a 100x100 viewBox into a 151x40 box, so the
+   whole coordinate space shrinks to 40 wide and centres, and the dot lands ~53px
+   left of the line it was supposed to cap. Measured, before this was HTML. A
+   div has neither problem: round at every width, sized in px, and positioned by
+   the same percentage the path was.
+
+   The canvas gives up half the dot's width as end padding so the mark sits
+   fully inside its box — the line ends at the content edge and the dot centres
+   on it, rather than the dot hanging over the card's padding. */
+.chart--spark .chart-canvas { padding-inline-end: calc(var(--space-6) / 2); }
+.chart-endpoint {
+  position: absolute; inset-inline-end: calc(var(--space-6) / 2); inset-block-start: var(--at);
+  inline-size: var(--space-6); block-size: var(--space-6);
+  transform: translate(50%, -50%);
+  border-radius: var(--radius-pill); background: var(--series);
+}
+
+/* ── Target / reference line ──
+   DASHED, and this is the one place a dashed line is correct: it says "this is
+   not data". A solid reference line at series weight is read as a seventh
+   series. It takes the strong neutral rather than a categorical, for the same
+   reason — a target is not a category. */
+.chart-target {
+  position: absolute; inset-inline: 0; inset-block-end: var(--at);
+  block-size: 0; border-block-start: var(--border-width-default) dashed var(--color-neutral-stroke-strong-enabled);
+}
+.chart.horizontal .chart-target { inset-block: 0; inset-inline-start: var(--at); inset-inline-end: auto; inline-size: 0; border-block-start: 0; border-inline-start: var(--border-width-default) dashed var(--color-neutral-stroke-strong-enabled); }
+.chart-target-lbl {
+  position: absolute; inset-inline-end: 0; inset-block-end: var(--at);
+  transform: translateY(50%);
+  padding-inline: var(--space-2xs);
+  background: var(--color-neutral-background-surface-enabled);
+  color: var(--color-neutral-foreground-default-enabled);
+  font-size: var(--type-body-sm-size); white-space: nowrap;
+}
+
+/* ── Marker: the hovered position ──
+   HOVER, LIKE EVERY OTHER CHART IN THIS SYSTEM. A bar lights its slot and opens a
+   panel on hover; a donut quiets its neighbours and opens a panel on hover; a line
+   does the same, and the marker is just what "lights up" means for a shape whose
+   marks are a path rather than discrete objects. One interaction model across the
+   set is worth more than a second model that is individually defensible.
+
+   IT LIVES INSIDE ITS OWN HIT COLUMN, and that is what makes it CSS rather than
+   state. One marker per column, hidden, revealed by :hover on that column — no
+   runtime holding "which position is current", nothing to clear, and no event
+   handler to forget. The earlier click version needed all three.
+
+   --at IS GONE WITH IT. A marker inside its column only has to know where the
+   point sits WITHIN that column, and the half-width end slots already put that at
+   the centre for every middle column and at the outer edge for the two ends. Three
+   rules, no arithmetic, and it stays correct when the chart is resized.
+
+   KEYBOARD GETS THE SAME THING THROUGH :focus. The canvas remains the single tab
+   stop; arrows move focus between columns, which are focusable by script only, and
+   a focused column shows its marker exactly as a hovered one does.
+
+   POINTER-EVENTS NONE IS STILL LOAD-BEARING. The marker paints above the marks at
+   z-index 5 so the dashed line is visible over them, and the hit layer that
+   receives the pointer sits below it at 4 — without this the marker would
+   intercept the pointer the instant it appeared and flicker against its own
+   hover. */
+/* A HIT COLUMN THAT IS A BUTTON HAS TO BE RESET, and the specimen showed exactly
+   why: left alone it renders the browser's own button — grey fill, bevelled
+   border, centred inherited font — and seven of them stacked across the plot hid
+   the line completely. The same narrow reset the row elements take.
+
+   tabindex="-1" IS THE OTHER HALF, and it is the contract talking: ONE tab stop
+   per chart, on the canvas. Seven buttons is seven tab stops, and at forty points
+   it is the keyboard trap the single-tab-stop rule exists to prevent. The column
+   stays clickable and focusable by script; the canvas stays the thing Tab lands
+   on, and arrows move the selection from there. */
+button.chart-col {
+  appearance: none; -webkit-appearance: none;
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; cursor: pointer;
+}
+
+.chart-marker {
+  position: absolute; inset-block: 0; inset-inline-start: 50%;
+  inline-size: 0; z-index: 5; pointer-events: none;
+  border-inline-start: var(--border-width-default) dashed var(--color-neutral-stroke-strong-enabled);
+  opacity: 0; transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
+}
+/* The two end columns are half-width, so their point is on the outer edge rather
+   than at the centre — the same geometry that aligns the end LABELS. */
+.chart-col:first-child > .chart-marker { inset-inline-start: 0; }
+.chart-col:last-child  > .chart-marker { inset-inline-start: 100%; }
+.chart-col:hover > .chart-marker,
+.chart-col:focus > .chart-marker,
+.chart-col:focus-visible > .chart-marker { opacity: 1; }
+/* THE DOT SITS ON THE SERIES, NOT ON THE LINE, which is why it takes --series and
+   --v rather than inheriting the marker's neutral. It INHERITS --series rather
+   than declaring a family: pinning data-series on it painted a teal dot on a
+   cobalt line in the first build, because the chart's own default never reached
+   it. On a multi-series chart the marker carries one point per series, each with
+   its own data-series. The ring is the SURFACE colour:
+   a dot in series ink on a line of the same ink has no edge, and the ring is what
+   separates the chosen point from the path running through it. A bar chart has no
+   point to mark, so it uses the marker without one. */
+.chart-point {
+  position: absolute; inset-block-end: var(--v); inset-inline-start: 0;
+  transform: translate(-50%, 50%);
+  inline-size: var(--space-8); block-size: var(--space-8);
+  border-radius: var(--radius-pill); background: var(--series);
+  box-shadow: 0 0 0 var(--border-width-emphasis) var(--color-neutral-background-surface-enabled);
+}
+/* ── The donut's panel ──
+   THE ARCS STAY THE HIT TARGET, because a wedge is the right shape to hover and
+   an HTML approximation of one is not. What cannot live in the SVG is the PANEL:
+   a viewBox scales its contents, so a tooltip drawn inside it would arrive at
+   whatever fraction the box shrank to - the same reason every label in this
+   system is HTML. foreignObject does not rescue it; the scaling applies there too.
+
+   SO THE PANEL IS AN HTML OVERLAY KEYED TO THE ARC, one anchor per segment
+   positioned at that segment's mid-angle, revealed by :has() on the arc with the
+   matching data-seg. Six rules because six is the palette ceiling, and index
+   matching is the price of the two halves living in different trees. It stays
+   declarative: no runtime, nothing to clear, the same posture as the line
+   marker. */
+.chart-segs { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.chart-seg {
+  position: absolute; inset-inline-start: var(--x); inset-block-start: var(--y);
+  inline-size: 0; block-size: 0;
+}
+.chart-seg > .tip {
+  position: absolute; inset-block-end: var(--space-xs); inset-inline-start: 0;
+  transform: translateX(-50%); opacity: 0; pointer-events: none;
+  transition: opacity var(--motion-hover-duration) var(--motion-hover-easing);
+}
+.chart-canvas:has(.chart-arc[data-seg="1"]:hover) .chart-seg[data-seg="1"] > .tip,
+.chart-canvas:has(.chart-arc[data-seg="2"]:hover) .chart-seg[data-seg="2"] > .tip,
+.chart-canvas:has(.chart-arc[data-seg="3"]:hover) .chart-seg[data-seg="3"] > .tip,
+.chart-canvas:has(.chart-arc[data-seg="4"]:hover) .chart-seg[data-seg="4"] > .tip,
+.chart-canvas:has(.chart-arc[data-seg="5"]:hover) .chart-seg[data-seg="5"] > .tip,
+.chart-canvas:has(.chart-arc[data-seg="6"]:hover) .chart-seg[data-seg="6"] > .tip { opacity: 1; }
+
+/* THE TOOLTIP COMES TO THE DOT. Anchored off --v so it rides up and down with the
+   point rather than sitting at a fixed height — at a fixed height it is beside the
+   data on a low value and over the title on a high one. A plain .tip, and the
+   placement classes the component already ships (.bottom, .left, .right) are how
+   the markup flips it near an edge. */
+.chart-marker > .tip {
+  position: absolute; inset-block-end: calc(var(--v) + var(--space-md));
+  inset-inline-start: 0; transform: translateX(-50%);
+  opacity: 1; pointer-events: none; z-index: var(--z-popover);
+}
+.chart-marker > .tip.bottom { inset-block-end: auto; inset-block-start: calc(100% - var(--v) + var(--space-md)); }
+/* THE SELECTED TICK IS THE MARKER'S FOOT, and it reuses the emphasis surface the
+   tooltip itself takes — the two read as one object at opposite ends of the line.
+   Negative margin so the pill can be wider than its slot without moving its
+   neighbours, which an axis of narrow labels otherwise does on every click. */
+.chart-ax.x > .chart-tick.on {
+  background: var(--color-neutral-background-emphasis-enabled);
+  color: var(--color-neutral-foreground-on-emphasis-enabled);
+  border-radius: var(--radius-control);
+  padding-inline: var(--space-xs); margin-inline: calc(-1 * var(--space-xs));
+  overflow: visible;
+}
+
+/* ── Data labels ──
+   OFF BY DEFAULT. A number on every mark is the axis written twice, and on a
+   dense chart it is noise that hides the shape. They earn their place on a short
+   bar chart that is really a ranked list — which is also the chart where the
+   axis can then come off. */
+.chart-dlabel {
+  position: absolute; inset-inline: 0; inset-block-end: calc(var(--v, 0%) + var(--space-2xs));
+  text-align: center; font-size: var(--type-body-sm-size); font-variant-numeric: tabular-nums;
+  color: var(--color-neutral-foreground-default-enabled); pointer-events: none;
+}
+.chart.horizontal .chart-dlabel { inset-block: 0; inset-inline: calc(var(--v, 0%) + var(--space-2xs)) auto; display: flex; align-items: center; text-align: start; }
+
+/* ── Hover ──
+   DIMMING IS FOR MARKS THAT TOUCH, which is why the donut keeps it and the bar
+   family does not. A ring's arcs share edges: there is no space between one wedge
+   and the next, so the only way to isolate the one being read is to quiet its
+   neighbours. BARS ARE ALREADY ISOLATED — every bar is a discrete object with a
+   gap either side, and there is nothing to disentangle. Dimming six of them to
+   pick out a seventh changes the whole chart on every pointer move, which is a
+   lot of motion for a glance, and it answers one event with two simultaneous
+   changes when the tooltip is already the answer.
+
+   NOTHING MOVES ON HOVER ANYWHERE. The panel IS the feedback: it appears at the
+   mark, names the value, and leaves when the pointer does. Every other candidate
+   - dimming the rest, tinting the slot behind the bar, lifting the arc - is a
+   second change answering one event, and adds no information the panel is not
+   already carrying.
+
+   THE DONUT HELD OUT LONGEST and still lost the argument. Its arcs touch, so
+   dimming looked like the only way to isolate one; but a panel pinned at the
+   segment does the isolating by naming it, and the whole ring flickering as the
+   pointer crosses a boundary is worse on a shape where every boundary is adjacent
+   to the next. --chart-dim stays declared, unused by the system, because a
+   product that genuinely needs an isolate-on-hover mode should reach for the
+   quantity this system already chose rather than inventing a second one. */
+.chart-bar:hover, .chart-arc:hover { cursor: pointer; }
+
+/* ── States ──
+   EMPTY, LOADING AND ERROR ARE NOT CHART CODE. .chart-state is a slot and
+   nothing more: empty and error hold an .empty (compact), loading holds a
+   .progress. Three components already answer these questions across the system,
+   and a chart that answered them again would be three more surfaces to keep in
+   step with them for no gain. What the chart owns is that the box does not
+   collapse — the plot keeps its height so the card does not jump when the data
+   arrives. */
+.chart-state {
+  display: none; align-items: center; justify-content: center;
+  min-block-size: var(--chart-plot-h);
+}
+.chart.nodata .chart-state, .chart.loading .chart-state, .chart.error .chart-state { display: flex; }
+.chart.nodata .chart-plot, .chart.loading .chart-plot, .chart.error .chart-plot,
+.chart.nodata .chart-legend, .chart.loading .chart-legend, .chart.error .chart-legend { display: none; }
+.chart.loading .chart-state { flex-direction: column; gap: var(--space-sm); padding-inline: var(--space-xl); }
+
+/* ── The data, in a table ──
+   EVERY CHART CARRIES ITS NUMBERS. The canvas is an image to a screen reader
+   whatever is drawn in it, and a label saying "bar chart of weekly throughput"
+   describes the picture without handing over a single value. The table IS the
+   accessible chart; the drawing is a second presentation of it.
+   Clipped, not display:none and not offscreen — a zero-size clip keeps the table
+   in the accessibility tree while taking no layout, which is the same technique
+   and the same reasoning as the stacked .data-grid header. No global .sr-only
+   utility exists in this system and this does not invent one: two consumers,
+   both stated where they are. .shown reveals it, which is worth offering — a
+   "show data" toggle helps far more people than it costs. */
+.chart-table { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.chart-table.shown { position: static; inline-size: 100%; block-size: auto; overflow: visible; clip-path: none; white-space: normal; }
+
+/* ── Print and forced colors ──
+   A chart is the most likely thing on an operational page to be printed, and
+   categorical fills are exactly what a greyscale printer flattens — the palette
+   separates by hue, and hue is the first thing to go. The table comes out with
+   it so the numbers survive the trip. */
+@media print {
+  .chart-table { position: static; inline-size: 100%; block-size: auto; overflow: visible; clip-path: none; white-space: normal; margin-block-start: var(--space-md); }
+}
+/* Under a forced palette every fill collapses to the system's own colours, so
+   the only honest thing a chart can do is stop pretending the drawing carries
+   the data and show the table instead. */
+@media (forced-colors: active) {
+  .chart-table { position: static; inline-size: 100%; block-size: auto; overflow: visible; clip-path: none; white-space: normal; }
 }
