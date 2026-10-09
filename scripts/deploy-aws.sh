@@ -256,6 +256,10 @@ remote "$WORK/deploy-remote.sh" 1800 || die "Deploy failed on the box — see ab
 
 say "Checking from here"
 code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "http://$HOST_IP/products" || true)
-echo "  http://$HOST_IP/products → $code (307 to /login is the password gate — that means it is up)"
+case "$code" in
+  200|302|307) echo "  http://$HOST_IP/products → $code (a redirect to /login is the password gate — it is up)" ;;
+  000) echo "  ⚠ No answer from $HOST_IP — the VPN may have dropped. The box itself reported healthy above." ;;
+  *)   echo "  ⚠ http://$HOST_IP/products → $code — check the site." ;;
+esac
 [ -n "${BUCKET:-}" ] && aws s3 rm "s3://$BUCKET/$STAMP" --recursive --only-show-errors >/dev/null 2>&1 || true
 say "Done. Open http://$HOST_IP/products"
