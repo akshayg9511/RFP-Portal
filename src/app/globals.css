@@ -7122,23 +7122,44 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
   white-space: normal;
 }
 
-/* The grid is its own scroll area (both axes), so the three-tier header
-   stays put while you scroll through styles and the pinned columns stay put
-   while you scroll across the cost bands. */
-.bs-scroll {
-  overflow: auto;
-  max-block-size: calc(100dvh - 210px);
-  overscroll-behavior: contain;
-}
-.bs-grid thead {
+/* ux/14b — the PAGE scrolls (filters move away) and only the column
+   header stays. The header is its own strip, sticky against the shell's
+   scroller and kept level with the rows' sideways scroll in JS. Fixed
+   layout so both tables share exact column widths. */
+.bs-grid { table-layout: fixed; min-inline-size: 0; }
+.bs-grid.is-landed, .bs-grid.is-landed.is-ddp { min-inline-size: 0; }
+.bs-head {
   position: sticky;
-  inset-block-start: 0;
-  z-index: calc(var(--z-sticky) + 2);
+  inset-block-start: calc(-1 * var(--page-inset));
+  z-index: calc(var(--z-sticky) + 5);
+  overflow: hidden;
+  background: var(--color-neutral-background-table-head-enabled);
+  border: 1px solid var(--color-neutral-stroke-default-enabled);
+  border-block-end: 0;
+  border-start-start-radius: var(--radius-container);
+  border-start-end-radius: var(--radius-container);
 }
-.bs-grid thead th { background: var(--color-neutral-background-table-head-enabled); }
-.bs-grid thead th.bs-q,
-.bs-grid thead th.bs-band-q { background: var(--color-neutral-background-table-head-enabled); }
-.bs-grid thead .bs-sticky { z-index: calc(var(--z-sticky) + 3); }
+.bs-head .bs-grid { margin: 0; }
+.bs-head th { background: var(--color-neutral-background-table-head-enabled); }
+.bs-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-block-size: none;
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+/* Every pinned cell is opaque and above the scrolling cells, so nothing
+   slides visibly underneath it (the overlay Akshay saw). */
+.bs-body td.bs-sticky { background: var(--color-neutral-background-surface-enabled); z-index: var(--z-sticky); }
+.bs-body .bs-row.is-open td.bs-sticky { background: var(--color-neutral-background-muted-enabled); }
+/* The hover tint is translucent: lay it over the opaque surface. */
+.bs-body .bs-row:hover td.bs-sticky {
+  background:
+    linear-gradient(var(--color-neutral-background-interaction-hovered), var(--color-neutral-background-interaction-hovered)),
+    var(--color-neutral-background-surface-enabled);
+}
+.bs-grid .bs-c-vendor { overflow: hidden; }
+.bs-grid .bs-vendor { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Catalog: Expand all / Collapse all beside the count (Tony, 9 Oct). */
 .fb-meta-row { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-md); }
@@ -7157,3 +7178,26 @@ thead .bs-sticky { background: var(--color-neutral-background-table-head-enabled
 /* The landed and DDP blends are the subtotals the sum arrives at. */
 .bc-chain-sum th,
 .bc-chain-sum td { font-weight: var(--type-emphasis-weight); color: var(--color-neutral-foreground-default-enabled); }
+
+/* ux/14b — Compare bids fills the screen under the pinned style header and
+   scrolls in BOTH axes itself, so the vendor-name row stays on top and the
+   row labels stay on the left (Akshay, 9 Oct: "I can't see the vendor
+   names"). 61px = top bar; the rest clears the floating allocation bar. */
+.bc-table {
+  overflow: auto;
+  max-block-size: calc(100dvh - 61px - var(--pd-h, 240px) - 96px);
+  overscroll-behavior: contain;
+}
+.bc-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: calc(var(--z-sticky) + 1);
+}
+.bc-table thead th.bc-rowhead { z-index: calc(var(--z-sticky) + 2); }
+
+/* Bid summary header strip: compact tiers so the rows keep the screen. */
+.bs-head th { padding-block: 6px; line-height: 1.25; }
+.bs-head .bs-sub-band { padding-block: 6px 2px; }
+/* The pinned Clean sheet header sits at the corner too: above both the
+   scrolling vendor headers and the pinned body cells. */
+.bc-table thead th.bc-clean { z-index: calc(var(--z-sticky) + 2); }

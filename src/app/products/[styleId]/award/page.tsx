@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { SelBarMenu } from "@/components/SelBarMenu";
+import { useStickyHeight } from "@/components/FilterBar";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/ds/components";
 import { useApi } from "@/lib/useApi";
@@ -97,6 +98,9 @@ export function ProductAward({
    * pinned footer carries the commit. Compare bids is one click away.
    */
   const [tab, setTab] = React.useState<Tab>("allocate");
+  // The pinned header's height, so Compare bids can fill exactly the rest of
+  // the screen with its own sticky vendor row (Akshay, 9 Oct).
+  const pdRef = useStickyHeight("--pd-h");
 
   /**
    * The style drawer holds the real gallery — every image at full size plus
@@ -442,7 +446,7 @@ export function ProductAward({
         in Compare bids, Allocate, Strategies." So you always know which
         product you are on and can switch tabs without scrolling back up.
       */}
-      <div className="pd-sticky">
+      <div className="pd-sticky" ref={pdRef}>
         <ProductHeader
           data={data}
           bidCount={data.bids.length}

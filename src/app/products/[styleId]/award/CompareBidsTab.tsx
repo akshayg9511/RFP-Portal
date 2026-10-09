@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Badge, Icon } from "@/ds/components";
-import { money, percent, unitCost, units } from "@/lib/format";
+import { moneyCompact, percent, unitCost, units } from "@/lib/format";
 import { computeQuote, type BucketTotals, type QuoteValues } from "@/domain/quote";
 import {
   BASIS_LABEL,
@@ -309,7 +309,7 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
           <tr className="bc-save">
             <th scope="row" className="bc-rowhead">
               Saving vs current landed
-              <span className="bc-sub">at full volume · today&rsquo;s cost at the vendor&rsquo;s COO</span>
+              <span className="bc-sub">full volume · vendor&rsquo;s COO</span>
             </th>
             {cleanSheet ? <td className="bc-clean" /> : null}
             {bids.map((b) => {
@@ -317,7 +317,7 @@ export function CompareBidsTab({ data }: { data: ProductBids }) {
               return (
                 <td key={b.vendorId} className="bc-num">
                   <span className={per >= 0 ? "bc-pos" : "bc-neg"}>
-                    {money(per * planUnits)}
+                    {moneyCompact(per * planUnits)}
                   </span>
                   <span className="bc-sub">{unitCost(Math.abs(per))}/unit</span>
                 </td>
