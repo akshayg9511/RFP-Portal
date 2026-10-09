@@ -470,7 +470,6 @@ function BidSummaryInner() {
   );
 }
 
-type Price = NonNullable<FlatRow["price"]>;
 type MaybeModes = { ocean: number | null; air: number | null; blend: number | null };
 
 /**
